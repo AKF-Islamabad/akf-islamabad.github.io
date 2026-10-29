@@ -6,7 +6,7 @@
 <title>Alkhidmat Islamabad Portals</title>
 <meta name="description" content="One sign-in for every Alkhidmat Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-MOV7vF0zaEed/LGthkRwKyyhjO5F6wTFXfPpvmlRhyQ='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-edFzeRZtS7niAKuXLKMscIEFKv7XcZ4WTAMAtE5972s='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -127,7 +127,7 @@ const ICONS = {
   check: "M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9", truck: "M1 4h14v12H1zM15 8h4l3 4v4h-7M5.5 19a2 2 0 1 0 0-.1M18.5 19a2 2 0 1 0 0-.1",
   heart: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z", users: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8",
   logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9", moon: "M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z", arrow: "M7 17L17 7M8 7h9v9",
-  shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z", plus: "M12 5v14M5 12h14", search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3",
+  shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z", cart: "M6 6h15l-1.5 9h-12zM6 6L5 3H2M9 20a1 1 0 1 0 0-.1M18 20a1 1 0 1 0 0-.1", settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z", plus: "M12 5v14M5 12h14", search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3",
 };
 function icon(name, size = 20) {
   const ns = "http://www.w3.org/2000/svg", s = document.createElementNS(ns, "svg");
@@ -136,6 +136,11 @@ function icon(name, size = 20) {
   const p = document.createElementNS(ns, "path"); p.setAttribute("d", ICONS[name] || ICONS.grid); s.append(p); return s;
 }
 const initials = n => String(n || "?").replace(/^(Dr|Mr|Ms|Mrs|Hafiz)\.?\s+/i, "").split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase();
+/* old portal logins are usernames: "adminofficer" means adminofficer@<login domain> */
+const loginEmail = v => { v = String(v || "").trim().toLowerCase(); return v.includes("@") || !(CFG && CFG.emailDomain) ? v : v + "@" + CFG.emailDomain; };
+/* approval role inside Procurement / Store / Tasks (who approves which step) */
+const ORG_ROLES = [["staff", "Staff"], ["hod", "HOD (Head of Department)"], ["finance", "Finance Department"], ["manager_hr", "Manager Admin & HR"], ["regional_manager", "Regional Manager"], ["president", "President"], ["gen_sec", "General Secretary (view only)"], ["admin_officer", "Admin Officer (procurement)"], ["store_officer", "Store Officer"]];
+const roleSelect = cur => { const s = el("select", { class: "input" }, ORG_ROLES.map(([v, t]) => el("option", { value: v, text: t }))); s.value = cur || "staff"; return s; };
 const safeHref = u => /^(https:\/\/|\/(?!\/))/.test(String(u || "")) ? u : "#";
 const fmt = iso => { try { return new Date(iso).toLocaleString(undefined, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; } };
 
@@ -194,7 +199,7 @@ async function loadMe() {
 async function loadAdmin() {
   try {
     const [people, modules, tabs, access, tabAccess, depts, audit, usage] = await Promise.all([
-      q(sb.from("core_profiles").select("id,email,full_name,designation,dept,is_super,active,must_change_password").order("full_name")),
+      q(sb.from("core_profiles").select("id,email,full_name,designation,dept,is_super,active,must_change_password,org_role").order("full_name")),
       q(sb.from("core_modules").select("*").order("sort")),
       q(sb.from("core_module_tabs").select("*").order("sort")),
       q(sb.from("core_module_access").select("user_id,module_key,preset")),
@@ -232,22 +237,22 @@ function authCard(title, body) {
 
 function signIn() {
   let mode = "in";
-  const email = el("input", { class: "input", type: "email", autocomplete: "username", required: true, maxlength: 254 });
+  const email = el("input", { class: "input", type: "text", autocomplete: "username", required: true, maxlength: 254, autocapitalize: "none", spellcheck: "false" });
   const pw = el("input", { class: "input", type: "password", autocomplete: "current-password", required: true, maxlength: 128 });
   const msg = el("div");
   const btn = el("button", { class: "btn", type: "submit", text: "Sign in" });
   const pwField = el("label", { class: "f" }, "Password", pw);
   const swap = el("button", { class: "linkbtn", type: "button", text: "Forgot your password?" });
   swap.addEventListener("click", () => { mode = mode === "in" ? "reset" : "in"; pwField.hidden = mode === "reset"; pw.required = mode === "in"; btn.textContent = mode === "in" ? "Sign in" : "Send reset link"; swap.textContent = mode === "in" ? "Forgot your password?" : "Back to sign in"; msg.replaceChildren(); });
-  const form = el("form", { class: "grid", style: "display:grid;gap:14px" }, el("label", { class: "f" }, "Work e-mail", email), pwField, msg, btn, el("div", { class: "row small muted" }, swap));
+  const form = el("form", { class: "grid", style: "display:grid;gap:14px" }, el("label", { class: "f" }, "Work e-mail or username", email), pwField, msg, btn, el("div", { class: "row small muted" }, swap));
   form.addEventListener("submit", async ev => {
     ev.preventDefault(); btn.disabled = true; msg.replaceChildren();
     try {
       if (mode === "reset") {
-        await sb.auth.resetPasswordForEmail(email.value.trim().toLowerCase(), { redirectTo: location.origin + location.pathname });
+        await sb.auth.resetPasswordForEmail(loginEmail(email.value), { redirectTo: location.origin + location.pathname });
         msg.append(el("div", { class: "notice ok", text: "If this e-mail has an account, a reset link is on its way. Check your inbox." }));   // same answer either way: no account fishing
       } else {
-        const { error } = await sb.auth.signInWithPassword({ email: email.value.trim().toLowerCase(), password: pw.value });
+        const { error } = await sb.auth.signInWithPassword({ email: loginEmail(email.value), password: pw.value });
         if (error) msg.append(el("div", { class: "notice bad", text: /rate|too many/i.test(error.message) ? "Too many attempts. Wait a few minutes and try again." : "E-mail or password is incorrect." }));
       }
     } catch (e) { fail(e, "Could not sign in"); }
@@ -288,11 +293,11 @@ function topBar() {
 
 function home() {
   const hour = new Date().getHours(), greet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const tabs = S.me.is_super ? [["portals", "My portals"], ["people", "People & access"], ["setup", "Portals & departments"], ["activity", "Activity & usage"]] : [];
+  const tabs = S.me.is_super ? [["portals", "My portals"], ["people", "People & access"], ["setup", "Portals & departments"], ["settings", "Settings"], ["activity", "Activity & usage"]] : [];
   return el("main", { class: "wrap" },
     el("div", { class: "hero" }, el("h2", { text: `${greet}, ${S.me.full_name.split(" ")[0]}` }), el("p", { text: S.portals.length ? "Choose a portal. It opens in a new tab and you stay signed in." : "" })),
     tabs.length ? el("nav", { class: "tabs", "aria-label": "Sections" }, tabs.map(([k, t]) => el("button", { class: S.tab === k ? "on" : "", text: t, onclick: () => { S.tab = k; render(); if (k !== "portals" && !S.admin) loadAdmin(); } }))) : el("div", { style: "height:18px" }),
-    S.tab === "portals" || !S.me.is_super ? tiles() : !S.admin ? el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })) : S.tab === "people" ? people() : S.tab === "setup" ? setup() : activity());
+    S.tab === "portals" || !S.me.is_super ? tiles() : !S.admin ? el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })) : S.tab === "people" ? people() : S.tab === "setup" ? setup() : S.tab === "settings" ? settings() : activity());
 }
 
 function tiles() {
@@ -315,7 +320,7 @@ function people() {
     const needle = S.q.trim().toLowerCase();
     const list = A.people.filter(p => (!needle || (p.full_name + " " + p.email).toLowerCase().includes(needle)) && (!S.dept || p.dept === S.dept));
     tbody.replaceChildren(...list.map(p => el("tr", {},
-      el("td", {}, el("b", { text: p.full_name }), el("span", { class: "sub", text: p.email }), el("span", { class: "sub", text: [p.designation, (A.depts.find(d => d.code === p.dept) || {}).name].filter(Boolean).join(" · ") })),
+      el("td", {}, el("b", { text: p.full_name }), el("span", { class: "sub", text: p.email }), el("span", { class: "sub", text: [p.designation, (A.depts.find(d => d.code === p.dept) || {}).name, p.is_super ? "" : ((ORG_ROLES.find(r => r[0] === p.org_role) || [])[1] || "")].filter(Boolean).join(" · ") })),
       el("td", {}, p.is_super ? el("span", { class: "tag brand", text: "Super Admin" }) : null, " ", p.active ? el("span", { class: "tag ok", text: "Active" }) : el("span", { class: "tag bad", text: "Deactivated" }), p.must_change_password ? el("span", { class: "tag warn", text: "Temp password" }) : null),
       mods.map(m => el("td", {}, p.is_super ? el("span", { class: "muted small", text: "Everything" }) : accessButton(p, m))),
       el("td", {}, el("button", { class: "btn ghost sm", text: "Manage", onclick: () => managePerson(p) })))));
@@ -415,15 +420,15 @@ const deptSelect = cur => {
 
 function addPerson() {
   const name = el("input", { class: "input", maxlength: 120, required: true }), email = el("input", { class: "input", type: "email", maxlength: 254, required: true });
-  const desig = el("input", { class: "input", maxlength: 120 }), dept = deptSelect("");
+  const desig = el("input", { class: "input", maxlength: 120 }), dept = deptSelect(""), orgRole = roleSelect("staff");
   const how = el("select", { class: "input" }, el("option", { value: "invite", text: "E-mail an invitation (they choose a password)" }), el("option", { value: "temp", text: "Create a temporary password (I hand it over)" }));
   const msg = el("div");
-  dialog("Add person", [el("div", { class: "grid2" }, el("label", { class: "f" }, "Full name", name), el("label", { class: "f" }, "Work e-mail", email), el("label", { class: "f" }, "Designation", desig), el("label", { class: "f" }, "Department", dept)), el("label", { class: "f" }, "How they get in", how), msg,
+  dialog("Add person", [el("div", { class: "grid2" }, el("label", { class: "f" }, "Full name", name), el("label", { class: "f" }, "Work e-mail", email), el("label", { class: "f" }, "Designation", desig), el("label", { class: "f" }, "Department", dept), el("label", { class: "f" }, "Role in approvals", orgRole)), el("label", { class: "f" }, "How they get in", how), msg,
     el("p", { class: "small muted", text: "After adding, give them access to portals in the table." })],
     close => [el("button", { class: "btn ghost", text: "Cancel", onclick: close }), el("button", { class: "btn", text: "Add person", onclick: async ev => {
       msg.replaceChildren(); if (name.value.trim().length < 2 || !/^\S+@\S+\.\S+$/.test(email.value.trim())) return msg.append(el("div", { class: "notice bad", text: "Enter the full name and a valid e-mail." }));
       ev.target.disabled = true;
-      try { const r = await adminCall({ action: "create", full_name: name.value, email: email.value, designation: desig.value, dept: await dept.getCode(), send_invite: how.value === "invite" });
+      try { const r = await adminCall({ action: "create", full_name: name.value, email: email.value, designation: desig.value, dept: await dept.getCode(), org_role: orgRole.value, send_invite: how.value === "invite" });
         close(); toast(how.value === "invite" ? "Invitation sent" : "Person added"); if (r.temp_password) showSecret(name.value.trim(), r.temp_password); loadAdmin();
       } catch (e) { ev.target.disabled = false; fail(e, "The person was not added"); }
     } })]);
@@ -431,7 +436,7 @@ function addPerson() {
 
 function managePerson(p) {
   const self = p.id === S.me.id;
-  const name = el("input", { class: "input", value: p.full_name, maxlength: 120 }), desig = el("input", { class: "input", value: p.designation || "", maxlength: 120 }), dept = deptSelect(p.dept);
+  const name = el("input", { class: "input", value: p.full_name, maxlength: 120 }), desig = el("input", { class: "input", value: p.designation || "", maxlength: 120 }), dept = deptSelect(p.dept), orgRole = roleSelect(p.org_role);
   const sup = el("input", { type: "checkbox", disabled: self }); sup.checked = p.is_super;
   const from = el("select", { class: "input", "aria-label": "Copy access from" }, el("option", { value: "", text: "Copy all portal access from…" }),
     S.admin.people.filter(x => x.id !== p.id && !x.is_super && x.active).map(x => el("option", { value: x.id, text: `${x.full_name} (${x.designation || x.email})` })));
@@ -443,7 +448,7 @@ function managePerson(p) {
   } });
   const run = async (body, done, what) => { try { const r = await adminCall({ id: p.id, ...body }); toast(done); if (r.temp_password) showSecret(p.full_name, r.temp_password); await loadAdmin(); return true; } catch (e) { fail(e, what); return false; } };
   dialog(p.full_name, [el("div", { class: "small muted", text: p.email }),
-    el("div", { class: "grid2" }, el("label", { class: "f" }, "Full name", name), el("label", { class: "f" }, "Designation", desig), el("label", { class: "f" }, "Department", dept),
+    el("div", { class: "grid2" }, el("label", { class: "f" }, "Full name", name), el("label", { class: "f" }, "Designation", desig), el("label", { class: "f" }, "Department", dept), p.is_super ? null : el("label", { class: "f" }, "Role in approvals", orgRole),
       el("label", { class: "f" }, "Super Admin", el("span", { class: "row", style: "font-weight:600;color:var(--ink)" }, sup, self ? "You (cannot remove your own)" : "Full control of everything"))),
     p.is_super ? null : el("div", { class: "row" }, el("div", { style: "flex:1;min-width:200px" }, from), copyBtn),
     el("div", { class: "row" },
@@ -452,7 +457,7 @@ function managePerson(p) {
       self ? null : el("button", { class: "btn ghost sm", text: p.active ? "Deactivate" : "Activate", onclick: () => run({ action: "update", active: !p.active }, p.active ? "Deactivated — they can no longer sign in" : "Activated", "Status was not changed") }),
       self ? null : el("button", { class: "btn danger sm", text: "Delete", onclick: async () => { if (confirm(`Delete ${p.full_name}'s login and all portal access? This cannot be undone. Records they created stay.`)) { if (await run({ action: "delete" }, "Deleted", "The person was not deleted")) document.querySelector("dialog")?.close(); } } }))],
     close => [el("button", { class: "btn ghost", text: "Close", onclick: close }), el("button", { class: "btn", text: "Save", onclick: async () => {
-      const body = { action: "update", full_name: name.value, designation: desig.value, dept: await dept.getCode() }; if (!self && sup.checked !== p.is_super) body.is_super = sup.checked;
+      const body = { action: "update", full_name: name.value, designation: desig.value, dept: await dept.getCode() }; if (!p.is_super) body.org_role = orgRole.value; if (!self && sup.checked !== p.is_super) body.is_super = sup.checked;
       if (await run(body, "Saved", "Changes were not saved")) close(); } })]);
 }
 
@@ -478,6 +483,63 @@ function setup() {
       el("div", { class: "row" }, newDept, newCode, el("button", { class: "btn sm", text: "Add department", onclick: async () => {
         const code = newCode.value.trim().toUpperCase(); if (!/^[A-Z0-9_-]{2,20}$/.test(code) || newDept.value.trim().length < 2) return toast("Enter a name and a short CODE (letters / digits)", true);
         try { await q(sb.from("core_departments").insert({ code, name: newDept.value.trim() })); toast("Department added"); loadAdmin(); } catch (e) { fail(e, "The department was not added"); } } }))));
+}
+
+/* ---------- Super Admin: the ONE Settings place for every portal (stored where the portals read it) ---------- */
+const SETTING_DEFAULTS = { orgName: "Alkhidmat Foundation Islamabad Region", fiscalYear: "2026-27", escalationHours: 48, directPurchaseLimit: 100000, assetThreshold: 50000, actingApprover: "",
+  gst: 0.18, whtGoodsFiler: 0.04, whtGoodsNonFiler: 0.08, whtServicesFiler: 0.08, whtServicesNonFiler: 0.16, aiProvider: "builtin", aiModel: "gemini-2.5-flash", aiKey: "" };
+const SETTING_FIELDS = [
+  ["Organisation & approvals", [["orgName", "Organisation name on documents", "text"], ["fiscalYear", "Fiscal year", "text"], ["escalationHours", "Escalate a waiting request after (hours)", "number"],
+    ["directPurchaseLimit", "Direct-purchase limit (PKR) — above this, quotations + purchase committee are required", "number"], ["assetThreshold", "Record as an asset from (PKR per item)", "number"],
+    ["actingApprover", "Acting approver when the President is away", "acting"]]],
+  ["Taxes (%)", [["gst", "GST", "pct"], ["whtGoodsFiler", "WHT goods — filer", "pct"], ["whtGoodsNonFiler", "WHT goods — non-filer", "pct"], ["whtServicesFiler", "WHT services — filer", "pct"], ["whtServicesNonFiler", "WHT services — non-filer", "pct"]]],
+  ["AI assistant (in the portals)", [["aiProvider", "Assistant", "ai"], ["aiModel", "Gemini model", "text"], ["aiKey", "Gemini key (leave empty to keep the saved one)", "secret"]]],
+];
+function settings() {
+  const box = el("section", { style: "padding-bottom:40px;display:grid;gap:16px" }, el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })));
+  (async () => {
+    let cur = {};
+    try { const r = await q(sb.from("portal_rows").select("data").eq("collection", "settings").eq("id", "global").maybeSingle()); cur = (r && r.data) || {}; }
+    catch (e) { box.replaceChildren(el("div", { class: "notice bad", text: "Settings could not be loaded." })); return fail(e, "Settings could not be loaded"); }
+    const v = { ...SETTING_DEFAULTS, ...cur }, inputs = {};
+    const field = ([k, label, type]) => {
+      let i;
+      if (type === "acting") { i = el("select", { class: "input" }, el("option", { value: "", text: "Nobody (President only)" }), ORG_ROLES.filter(r => !["staff", "hod"].includes(r[0])).map(([r, t]) => el("option", { value: r, text: t }))); i.value = v[k] || ""; }
+      else if (type === "ai") { i = el("select", { class: "input" }, el("option", { value: "builtin", text: "Built-in (free, offline)" }), el("option", { value: "gemini", text: "Google Gemini (needs a key)" })); i.value = v[k] || "builtin"; }
+      else if (type === "pct") i = el("input", { class: "input", type: "number", step: "0.5", min: "0", max: "100", value: String(Math.round(Number(v[k] || 0) * 1000) / 10) });
+      else if (type === "number") i = el("input", { class: "input", type: "number", min: "0", value: String(v[k] ?? "") });
+      else if (type === "secret") i = el("input", { class: "input", type: "password", autocomplete: "off", placeholder: v[k] ? "•••••• saved" : "not set" });
+      else i = el("input", { class: "input", value: String(v[k] ?? ""), maxlength: 120 });
+      inputs[k] = [i, type];
+      return el("label", { class: "f" }, label, i);
+    };
+    const save = el("button", { class: "btn", text: "Save settings", onclick: async () => {
+      const next = { ...cur }; const changed = [];
+      for (const [k, [i, type]] of Object.entries(inputs)) {
+        let val = type === "pct" ? Math.round(Number(i.value) * 10) / 1000 : type === "number" ? Number(i.value) : i.value.trim();
+        if (type === "secret" && !val) continue;
+        if ((type === "number" || type === "pct") && (!isFinite(val) || val < 0)) return toast("Numbers must be zero or more", true);
+        if (k === "orgName" && val.length < 3) return toast("Enter the organisation name", true);
+        if (JSON.stringify(next[k]) !== JSON.stringify(val)) { changed.push(k); next[k] = val; }
+      }
+      if (!changed.length) return toast("Nothing changed");
+      save.disabled = true;
+      try {
+        await q(sb.from("portal_rows").upsert({ collection: "settings", id: "global", data: next }, { onConflict: "collection,id" }));
+        cur = next; toast("Settings saved — every portal uses them now");
+        try {   // record it in the portals' tracking log, in my own name
+          const me = await q(sb.from("portal_rows").select("id").eq("collection", "users").eq("data->>email", S.me.email).maybeSingle());
+          const id = "set-" + Date.now().toString(36);
+          if (me) await q(sb.from("portal_rows").insert({ collection: "audit", id, data: { id, at: new Date().toISOString(), doc: "SETTINGS", action: "Settings changed", comment: changed.map(k => k === "aiKey" ? "aiKey: (new key)" : `${k}: ${next[k]}`).join(" · "), dept: "IT", by: S.me.full_name, role: "super", uid: me.id } }));
+        } catch (e) { }
+      } catch (e) { fail(e, "Settings were not saved"); }
+      save.disabled = false;
+    } });
+    box.replaceChildren(el("p", { class: "small muted", text: "One place for the rules every portal follows. Task departments and stages are set inside Tasks & Events (Task settings)." }),
+      ...SETTING_FIELDS.map(([title, fields]) => el("div", { class: "card", style: "padding:16px;display:grid;gap:12px" }, el("h3", { style: "margin:0;font-size:16px", text: title }), el("div", { class: "grid2" }, fields.map(field)))),
+      el("div", { class: "row" }, save));
+  })();
+  return box;
 }
 
 /* free-plan meter: database 500 MB and file storage 1 GB */
