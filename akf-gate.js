@@ -28,7 +28,7 @@
   window.AKF_GATE = async function (moduleKey) {
     const cfg = window.AKF_SUPABASE;
     if (!cfg || !cfg.url || !cfg.anonKey || typeof supabase === "undefined") { screen("Setup needed", "This portal's config.js is missing."); throw new Error("config"); }
-    const sb = supabase.createClient(cfg.url, cfg.anonKey);   // same project = the sign-in from the main page is reused
+    const sb = supabase.createClient(cfg.url, cfg.anonKey, { auth: { storageKey: "akf-portals-auth" } });   // the main page's sign-in slot, so it is reused here
     const { data } = await sb.auth.getSession();
     if (!data.session) { location.replace(HOME); throw new Error("signed out"); }
     sb.auth.onAuthStateChange(ev => { if (ev === "SIGNED_OUT") location.replace(HOME); });

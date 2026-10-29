@@ -6,7 +6,7 @@
 <title>Alkhidmat Islamabad Portals</title>
 <meta name="description" content="One sign-in for every Alkhidmat Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-Mfj3DPzBMkgeHjdQAVlSpZCD9w18qda1vJROmtkKIMg='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-MOV7vF0zaEed/LGthkRwKyyhjO5F6wTFXfPpvmlRhyQ='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -168,7 +168,8 @@ function configError() {
 async function start() {
   const err = configError();
   if (err) { S.view = "config"; S.configErr = err; return render(); }
-  sb = supabase.createClient(CFG.url, CFG.anonKey);   // same address + same key = one sign-in shared by every portal
+  /* own sign-in slot: the old Procurement & Store portal (same web address, different logins) keeps its own, so neither signs the other out */
+  sb = supabase.createClient(CFG.url, CFG.anonKey, { auth: { storageKey: "akf-portals-auth" } });   // shared by the main page and every new portal
   sb.auth.onAuthStateChange((ev, session) => {
     if (ev === "PASSWORD_RECOVERY") S.recovery = true;
     if (ev === "SIGNED_OUT") { S.session = null; S.me = null; S.view = "signin"; render(); }
@@ -391,7 +392,26 @@ function showSecret(name, pw) {
   dialog("Temporary password", [el("p", { text: `Give this to ${name} in person or by phone — not in a group chat. It is shown only once; they must choose their own password when they first sign in.` }), el("div", { class: "secret", text: pw })],
     close => [el("button", { class: "btn ghost", text: "Copy", onclick: async () => { try { await navigator.clipboard.writeText(pw); toast("Copied"); } catch (e) {} } }), el("button", { class: "btn", text: "Done", onclick: close })]);
 }
-const deptSelect = cur => { const s = el("select", { class: "input" }, el("option", { value: "", text: "— none —" }), S.admin.depts.filter(d => d.active || d.code === cur).map(d => el("option", { value: d.code, text: d.name }))); s.value = cur || ""; return s; };
+/* department picker with "Other…": a new name is saved as a department, so it can be picked next time */
+const deptSelect = cur => {
+  const s = el("select", { class: "input" }, el("option", { value: "", text: "— none —" }), S.admin.depts.filter(d => d.active !== false || d.code === cur).map(d => el("option", { value: d.code, text: d.name })), el("option", { value: "__other", text: "Other… (type a new department)" }));
+  const other = el("input", { class: "input", placeholder: "New department name, e.g. Media", maxlength: 80, hidden: true, style: "margin-top:6px" });
+  s.value = cur || ""; s.addEventListener("change", () => { other.hidden = s.value !== "__other"; if (!other.hidden) other.focus(); });
+  const box = el("div", {}, s, other);
+  box.getCode = async () => {
+    if (s.value !== "__other") return s.value;
+    const name = other.value.trim().replace(/\s+/g, " ");
+    if (name.length < 2) { const e = new Error("dept"); e.userMessage = "Type the new department's name (2+ letters)."; throw e; }
+    const same = S.admin.depts.find(d => d.name.toLowerCase() === name.toLowerCase());
+    if (same) return same.code;   // already exists: reuse it
+    const base = (name.toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "DEPT").slice(0, 16).padEnd(2, "X");
+    let code = base, n = 2; while (S.admin.depts.some(d => d.code === code)) code = `${base}_${n++}`.slice(0, 20);
+    await q(sb.from("core_departments").insert({ code, name }));
+    S.admin.depts.push({ code, name, active: true }); toast(`Department "${name}" added`);
+    return code;
+  };
+  return box;
+};
 
 function addPerson() {
   const name = el("input", { class: "input", maxlength: 120, required: true }), email = el("input", { class: "input", type: "email", maxlength: 254, required: true });
@@ -403,7 +423,7 @@ function addPerson() {
     close => [el("button", { class: "btn ghost", text: "Cancel", onclick: close }), el("button", { class: "btn", text: "Add person", onclick: async ev => {
       msg.replaceChildren(); if (name.value.trim().length < 2 || !/^\S+@\S+\.\S+$/.test(email.value.trim())) return msg.append(el("div", { class: "notice bad", text: "Enter the full name and a valid e-mail." }));
       ev.target.disabled = true;
-      try { const r = await adminCall({ action: "create", full_name: name.value, email: email.value, designation: desig.value, dept: dept.value, send_invite: how.value === "invite" });
+      try { const r = await adminCall({ action: "create", full_name: name.value, email: email.value, designation: desig.value, dept: await dept.getCode(), send_invite: how.value === "invite" });
         close(); toast(how.value === "invite" ? "Invitation sent" : "Person added"); if (r.temp_password) showSecret(name.value.trim(), r.temp_password); loadAdmin();
       } catch (e) { ev.target.disabled = false; fail(e, "The person was not added"); }
     } })]);
@@ -432,7 +452,7 @@ function managePerson(p) {
       self ? null : el("button", { class: "btn ghost sm", text: p.active ? "Deactivate" : "Activate", onclick: () => run({ action: "update", active: !p.active }, p.active ? "Deactivated — they can no longer sign in" : "Activated", "Status was not changed") }),
       self ? null : el("button", { class: "btn danger sm", text: "Delete", onclick: async () => { if (confirm(`Delete ${p.full_name}'s login and all portal access? This cannot be undone. Records they created stay.`)) { if (await run({ action: "delete" }, "Deleted", "The person was not deleted")) document.querySelector("dialog")?.close(); } } }))],
     close => [el("button", { class: "btn ghost", text: "Close", onclick: close }), el("button", { class: "btn", text: "Save", onclick: async () => {
-      const body = { action: "update", full_name: name.value, designation: desig.value, dept: dept.value }; if (!self && sup.checked !== p.is_super) body.is_super = sup.checked;
+      const body = { action: "update", full_name: name.value, designation: desig.value, dept: await dept.getCode() }; if (!self && sup.checked !== p.is_super) body.is_super = sup.checked;
       if (await run(body, "Saved", "Changes were not saved")) close(); } })]);
 }
 
