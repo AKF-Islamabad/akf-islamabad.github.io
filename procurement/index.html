@@ -12,9 +12,6 @@
 <!-- clickjacking guard: GitHub Pages cannot send X-Frame-Options, so the page stays hidden if another site frames it -->
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   --brand:#0B2E8A; --brand-2:#0B51A7; --brand-3:#1E6FD9;
@@ -458,12 +455,12 @@ button.rk{cursor:pointer} button.rk.on{border-color:var(--brand-3);background:va
 .shell.collapsed .side-toggle{display:grid}
 .shell.collapsed .side{width:72px;z-index:35;transition:width .2s ease,box-shadow .2s;padding:18px 12px}
 .shell.collapsed .side:hover{width:248px;padding:18px 14px;box-shadow:12px 0 40px -12px rgba(11,46,138,.55)}
-.shell.collapsed .side:not(:hover) .lbl{display:none}
-.shell.collapsed .side:not(:hover) .nav button{justify-content:center;padding:10px 0;position:relative}
-.shell.collapsed .side:not(:hover) .nav .count{position:absolute;top:2px;right:4px;font-size:9px;padding:0 4px;min-width:0}
-.shell.collapsed .side:not(:hover) .side-brand{justify-content:center;padding:4px 0 16px}
-.shell.collapsed .side:not(:hover) .side-user{padding:10px 6px;justify-items:center}
-.shell.collapsed .side:not(:hover) .side-user .row{flex-direction:column;gap:10px;margin-top:0}
+.shell.collapsed .side:not(:hover):not(:has(:focus-visible)) .lbl{display:none}
+.shell.collapsed .side:not(:hover):not(:has(:focus-visible)) .nav button{justify-content:center;padding:10px 0;position:relative}
+.shell.collapsed .side:not(:hover):not(:has(:focus-visible)) .nav .count{position:absolute;top:2px;right:4px;font-size:9px;padding:0 4px;min-width:0}
+.shell.collapsed .side:not(:hover):not(:has(:focus-visible)) .side-brand{justify-content:center;padding:4px 0 16px}
+.shell.collapsed .side:not(:hover):not(:has(:focus-visible)) .side-user{padding:10px 6px;justify-items:center}
+.shell.collapsed .side:not(:hover):not(:has(:focus-visible)) .side-user .row{flex-direction:column;gap:10px;margin-top:0}
 .side .nav button,.side-brand{white-space:nowrap}
 .side-user>.lbl{display:grid;gap:2px;min-width:0}
 .side-user>.lbl b,.side-user>.lbl span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1044,6 +1041,341 @@ table.tk-eg tr.sum td{border-top:2px solid var(--line);padding-top:6px}
 .tk-page .card-h{flex-wrap:wrap;row-gap:6px}
 .tk-page .card-h>.grow{min-width:140px}
 @media (max-width:560px){.tk-page .card-h input[type=date]{width:128px!important}}
+/* =====================================================================
+   AURORA — same design as Donor Management (erp/src/donor-app.html, "v8 AURORA DESIGN SYSTEM").
+   Glass navy sidebar with sliding white indicator, icon rail, glass top bar, aurora glow,
+   soft cards, gradient KPI icons, hero banner, gradient buttons with shine, branded loader.
+   ===================================================================== */
+:root{
+  --brand:#0B3D91; --brand-2:#0B51A7; --brand-3:#1A66CC;
+  --ice:#F0F6FF; --ice-2:#E1ECFC; --brand-300:#9DC0F2;
+  --bg:#F3F6FB; --surface:#FFFFFF; --surface-2:#F7F9FD; --surface-3:#EDF2F9;
+  --line:#E3E9F2; --line-2:#CDD7E5;
+  --ink:#0B1B33; --ink-2:#3A4B66; --ink-3:#6B7A93;
+  --ok:#0B7A50; --ok-bg:#E3F7EE; --warn:#9A5A00; --warn-bg:#FFF3DA; --bad:#C0262D; --bad-bg:#FDE7E8; --info:#0B51A7; --info-bg:#E5EEFD;
+  --teal:#0FA89A; --teal-50:#E6F7F5; --gold:#E7A93B; --accent:#19C2AE;
+  --grad:linear-gradient(135deg,#1A66CC 0%,#0B51A7 45%,#06368A 100%);
+  --grad-brand:linear-gradient(135deg,#1A66CC 0%,#0B51A7 45%,#06368A 100%);
+  --grad-hero:linear-gradient(120deg,#0B51A7 0%,#0A3F95 40%,#062E73 100%);
+  --grad-teal:linear-gradient(135deg,#19C2AE,#0E8F84);
+  --shadow-sm:0 1px 2px rgba(15,35,70,.04),0 1px 1px rgba(15,35,70,.03);
+  --shadow:0 2px 6px rgba(15,35,70,.04),0 10px 28px -12px rgba(15,35,70,.14);
+  --shadow-lg:0 24px 60px -20px rgba(8,30,70,.35),0 8px 20px -8px rgba(8,30,70,.12);
+  --ring:0 0 0 4px rgba(26,102,204,.16);
+  --r:18px; --r-sm:12px;
+  --ease:cubic-bezier(.22,1,.36,1); --spring:cubic-bezier(.34,1.56,.64,1);
+  --side-w:272px; --rail-w:80px;
+  --star:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1'%3E%3Cpath d='M28 4l7 17 17 7-17 7-7 17-7-17-17-7 17-7z'/%3E%3Ccircle cx='28' cy='28' r='6'/%3E%3C/g%3E%3C/svg%3E");
+  --star2:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1.2'%3E%3Cpath d='M32 6l8 18 18 8-18 8-8 18-8-18-18-8 18-8z'/%3E%3Cpath d='M32 18l4 10 10 4-10 4-4 10-4-10-10-4 10-4z'/%3E%3C/g%3E%3C/svg%3E");
+}
+:root[data-theme="dark"]{
+  --brand:#8DB3E6; --brand-2:#5B9BEA; --brand-3:#5B9BEA; --brand-300:#2F4262;
+  --ice:rgba(141,179,230,.07); --ice-2:rgba(141,179,230,.14);
+  --bg:#0A111F; --surface:#101A2C; --surface-2:#142036; --surface-3:#1A2842;
+  --line:#22314C; --line-2:#2F4262;
+  --ink:#E8EEF8; --ink-2:#B8C5D9; --ink-3:#8797AF;
+  --ok:#4ADE9B; --ok-bg:rgba(74,222,155,.12); --warn:#F5B451; --warn-bg:rgba(245,180,81,.12); --bad:#F87171; --bad-bg:rgba(248,113,113,.12); --info:#8DB3E6; --info-bg:rgba(141,179,230,.12);
+  --teal-50:rgba(25,194,174,.12);
+  --shadow-sm:none; --shadow:0 4px 18px rgba(0,0,0,.25); --shadow-lg:0 18px 48px rgba(0,0,0,.5);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --brand:#8DB3E6; --brand-2:#5B9BEA; --brand-3:#5B9BEA; --brand-300:#2F4262;
+    --ice:rgba(141,179,230,.07); --ice-2:rgba(141,179,230,.14);
+    --bg:#0A111F; --surface:#101A2C; --surface-2:#142036; --surface-3:#1A2842;
+    --line:#22314C; --line-2:#2F4262;
+    --ink:#E8EEF8; --ink-2:#B8C5D9; --ink-3:#8797AF;
+    --ok:#4ADE9B; --ok-bg:rgba(74,222,155,.12); --warn:#F5B451; --warn-bg:rgba(245,180,81,.12); --bad:#F87171; --bad-bg:rgba(248,113,113,.12); --info:#8DB3E6; --info-bg:rgba(141,179,230,.12);
+    --teal-50:rgba(25,194,174,.12);
+    --shadow-sm:none; --shadow:0 4px 18px rgba(0,0,0,.25); --shadow-lg:0 18px 48px rgba(0,0,0,.5);
+  }
+}
+body{font-family:"Segoe UI Variable Text","Segoe UI",Inter,system-ui,-apple-system,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);letter-spacing:-.003em;font-feature-settings:normal}
+h1,h2,h3,.kpi .val,.hero h2,.tk-hero h2{font-family:"Segoe UI Variable Display","Segoe UI",Inter,system-ui,sans-serif}
+::selection{background:rgba(26,102,204,.18)}
+*::-webkit-scrollbar{width:10px;height:10px}*::-webkit-scrollbar-thumb{background:#C9D3E2;border-radius:99px;border:3px solid transparent;background-clip:content-box}*::-webkit-scrollbar-thumb:hover{background:#A9B7CC;background-clip:content-box;border:3px solid transparent}
+:root[data-theme="dark"] *::-webkit-scrollbar-thumb{background:#2F4262;background-clip:content-box}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) *::-webkit-scrollbar-thumb{background:#2F4262;background-clip:content-box}}
+:focus-visible{outline-color:#1A66CC}
+
+/* ---------- motion primitives ---------- */
+@keyframes rise{from{opacity:0;transform:translateY(14px)}}
+@keyframes fade{from{opacity:0}}
+@keyframes pop{from{opacity:0;transform:scale(.94) translateY(8px)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(28px)}}
+@keyframes shine{0%{transform:translateX(-120%) skewX(-20deg)}100%{transform:translateX(220%) skewX(-20deg)}}
+@keyframes aurora{0%{transform:translate(0,0) scale(1)}50%{transform:translate(4%,-6%) scale(1.08)}100%{transform:translate(0,0) scale(1)}}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes pulseDot{0%{box-shadow:0 0 0 0 rgba(229,72,77,.55)}70%{box-shadow:0 0 0 8px rgba(229,72,77,0)}100%{box-shadow:0 0 0 0 rgba(229,72,77,0)}}
+@keyframes toastTime{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@keyframes navIn{from{opacity:0;transform:translateX(-10px)}}
+/* staggered page entrance ("backwards", never "both": no transform may stay on the page, it would trap pop-up windows) */
+.content>.page-body>*{animation:fade .4s var(--ease) backwards}
+.page-body>.stack>*:not(.overlay):not(:has(.overlay)){animation:rise .55s var(--ease) backwards}
+.content>.page-body>.tk-page>*:not(.overlay):not(:has(.overlay)){animation:rise .55s var(--ease) backwards}
+.page-body>.stack>.overlay{animation:fade .25s var(--ease)}
+.page-body>.stack>:has(.overlay){animation:none}
+.page-body>.stack>:nth-child(2),.tk-page>:nth-child(2){animation-delay:55ms}.page-body>.stack>:nth-child(3),.tk-page>:nth-child(3){animation-delay:110ms}.page-body>.stack>:nth-child(4),.tk-page>:nth-child(4){animation-delay:165ms}.page-body>.stack>:nth-child(5),.tk-page>:nth-child(5){animation-delay:220ms}.page-body>.stack>:nth-child(6),.tk-page>:nth-child(6){animation-delay:275ms}.page-body>.stack>:nth-child(n+7),.tk-page>:nth-child(n+7){animation-delay:330ms}
+.page-body .kpi{animation:rise .5s var(--ease) backwards}
+.page-body .kpi:nth-child(1){animation-delay:120ms}.page-body .kpi:nth-child(2){animation-delay:165ms}.page-body .kpi:nth-child(3){animation-delay:210ms}.page-body .kpi:nth-child(4){animation-delay:255ms}.page-body .kpi:nth-child(5){animation-delay:300ms}.page-body .kpi:nth-child(n+6){animation-delay:345ms}
+.page-body .tbl tbody tr:nth-child(-n+24){animation:fade .45s var(--ease) backwards}
+.page-body .tbl tbody tr:nth-child(2){animation-delay:22ms}.page-body .tbl tbody tr:nth-child(3){animation-delay:44ms}.page-body .tbl tbody tr:nth-child(4){animation-delay:66ms}.page-body .tbl tbody tr:nth-child(5){animation-delay:88ms}.page-body .tbl tbody tr:nth-child(6){animation-delay:110ms}.page-body .tbl tbody tr:nth-child(7){animation-delay:132ms}.page-body .tbl tbody tr:nth-child(8){animation-delay:154ms}.page-body .tbl tbody tr:nth-child(n+9){animation-delay:176ms}
+
+/* ---------- shell: glass navy sidebar with sliding indicator ---------- */
+.shell{grid-template-columns:var(--side-w) minmax(0,1fr)}
+.side{background:radial-gradient(120% 60% at 0% 0%,rgba(64,140,255,.35),transparent 60%),radial-gradient(90% 50% at 100% 100%,rgba(25,194,174,.18),transparent 60%),linear-gradient(180deg,#0A3B8C 0%,#072C6E 55%,#051F52 100%);color:#D6E3F7;box-shadow:4px 0 30px -18px rgba(5,25,70,.5);padding:0 12px 12px;gap:0}
+.side::before{content:"";position:absolute;inset:0;width:auto;height:auto;right:0;bottom:0;border-radius:0;pointer-events:none;opacity:.07;background:var(--star)}
+.side::after{display:none}
+.side-brand{gap:12px;padding:18px 6px 16px;margin:0 -12px;padding-left:18px;padding-right:12px;border-bottom:1px solid rgba(255,255,255,.08)}
+.side-brand img{width:46px;height:46px;border-radius:13px;box-shadow:0 6px 18px rgba(0,0,0,.35);transition:transform .4s var(--spring)}
+.side-brand:hover img{transform:rotate(-4deg) scale(1.05)}
+.side-brand b{color:#fff;font-size:13.5px;line-height:1.2;white-space:normal;letter-spacing:-.01em}
+.side-brand{gap:10px;min-height:106px}
+.side-brand span{font-size:11.5px;color:rgba(214,227,247,.7)}
+.side-brand .side-home{color:#9DC0F2;margin-top:3px}
+.side-brand .side-home:hover{color:#fff}
+.side .nav{position:relative;padding:12px 0;flex:1;min-height:0}
+.nav a,.nav button{position:relative;z-index:1;min-height:42px;gap:12px;padding:10px 12px;margin-bottom:2px;border-radius:12px;color:rgba(225,235,250,.82);font-weight:500;font-size:14px;transition:color .25s,background .25s}
+.nav button svg{color:rgba(225,235,250,.65);transition:transform .3s var(--spring),color .2s}
+.nav button:not(.active):hover{background:rgba(255,255,255,.07);color:#fff;transform:none}
+.nav button:hover svg{color:#fff;transform:translateX(2px) scale(1.08)}
+.nav button.active{background:transparent;color:#0B3D91;font-weight:700;box-shadow:none}
+.nav button.active svg{color:#1A66CC}
+.nav-ind{position:absolute;left:0;right:0;top:0;height:42px;border-radius:12px;background:#fff;box-shadow:0 8px 22px -8px rgba(0,0,0,.45);transition:transform .45s var(--ease),height .3s var(--ease),opacity .2s;z-index:0;pointer-events:none;opacity:0}
+.nav .count{background:#FF5A5F;color:#fff;border-radius:99px;animation:pulseDot 2.4s infinite}
+.nav button.active .count{background:#FF5A5F;color:#fff}
+.side-user{background:transparent;border:0;border-top:1px solid rgba(255,255,255,.08);border-radius:0;margin:0 -12px -12px;padding:14px 18px calc(14px + env(safe-area-inset-bottom,0px));backdrop-filter:none}
+.side-user b{color:#fff;font-size:13.5px}
+.side-user span{color:rgba(214,227,247,.7)}
+.side-user button{color:rgba(225,235,250,.85);border-radius:8px;transition:color .2s}
+.side-user button:hover{color:#fff}
+.side-pin{width:32px;height:32px;border-radius:9px;background:rgba(255,255,255,.08);transition:background .2s,transform .3s var(--spring)}
+.side-pin:hover{background:rgba(255,255,255,.18)}
+.side-pin .icon{width:16px;height:16px}
+.shell:not(.collapsed) .side-pin{background:#fff;color:#0B3D91}
+/* icon rail: rests at 80px and opens while the mouse or keyboard focus is on it; the pin keeps it open */
+.shell{transition:grid-template-columns .38s var(--ease)}
+.shell.collapsed{grid-template-columns:var(--rail-w) minmax(0,1fr)}
+.shell.collapsed .side{width:var(--rail-w);padding:0 12px 12px;transition:width .38s var(--ease),box-shadow .38s var(--ease)}
+.shell.collapsed .side:hover{width:var(--side-w);padding:0 12px 12px;box-shadow:30px 0 70px -24px rgba(5,25,70,.6)}
+.shell.collapsed .side:has(:focus-visible){width:var(--side-w);padding:0 12px 12px;box-shadow:30px 0 70px -24px rgba(5,25,70,.6)}
+.shell.collapsed .side:not(:hover):not(:has(:focus-visible)) .side-brand{justify-content:flex-start;padding:18px 12px 16px 17px}
+.shell.collapsed .side:not(:hover):not(:has(:focus-visible)) .nav button{justify-content:flex-start;padding:10px 0 10px 17px}
+.shell.collapsed .side:not(:hover):not(:has(:focus-visible)) .nav .count{position:absolute;top:4px;left:34px;right:auto;margin:0;padding:0 5px;font-size:10px;min-width:17px}
+.shell.collapsed .side:not(:hover):not(:has(:focus-visible)) .side-user{padding:12px 6px;justify-items:center}
+.nav button .lbl,.side-brand .lbl{animation:navIn .3s var(--ease) backwards}
+/* glass top bar + aurora glow */
+.main{position:relative;overflow-x:clip}   /* no isolation / z-index here: page pop-ups must stay above the sidebar and bottom bar */
+.main::before{content:"";position:absolute;left:-10%;right:-10%;top:-120px;height:420px;z-index:-1;pointer-events:none;background:radial-gradient(40% 60% at 15% 30%,rgba(26,102,204,.10),transparent 70%),radial-gradient(35% 55% at 70% 10%,rgba(25,194,174,.10),transparent 70%),radial-gradient(30% 50% at 95% 50%,rgba(110,91,214,.07),transparent 70%);animation:aurora 18s ease-in-out infinite}
+.topbar{background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:saturate(1.8) blur(18px);-webkit-backdrop-filter:saturate(1.8) blur(18px);border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent);box-shadow:none;min-height:68px;padding:10px 28px}
+.topbar h1{font-size:20px;font-weight:700;letter-spacing:-.02em}
+.topbar .sub{color:var(--ink-3)}
+.pg-title{padding-bottom:0}.pg-title::before,.pg-title::after{display:none}
+.search{border-radius:12px;border-color:var(--line);box-shadow:var(--shadow-sm);transition:box-shadow .2s,border-color .2s}
+.search:focus-within{box-shadow:var(--ring);border-color:#1A66CC}
+.iconbtn{border-radius:12px;border-color:var(--line);box-shadow:var(--shadow-sm);transition:background .2s,color .2s,border-color .2s,transform .2s var(--spring)}
+.iconbtn:hover{transform:translateY(-1px);border-color:var(--brand-300);color:var(--brand-2)}
+.iconbtn .pip{background:#FF5A5F;animation:pulseDot 2.4s infinite}
+.clock span{background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:var(--shadow-sm);border-radius:12px;font-weight:700}
+.me{border-color:var(--line);box-shadow:var(--shadow-sm);border-radius:14px}
+.avatar{background:linear-gradient(135deg,#3B82F6,#19C2AE);border-radius:10px}
+.content{padding:28px 32px 90px}
+.notif{border-radius:20px;box-shadow:var(--shadow-lg);transform-origin:top right;animation:pop .28s var(--spring)}
+.rolepill{background:var(--ice-2);color:var(--brand-2)}
+
+/* ---------- surfaces ---------- */
+.card{border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);background:var(--surface);transition:box-shadow .3s var(--ease),transform .3s var(--ease),border-color .3s}
+.card-h h3{font-size:16.5px;font-weight:700;letter-spacing:-.01em}
+.card-h h3::before{display:none}
+.card-h{flex-wrap:wrap;row-gap:8px}
+.card-h>.grow{min-width:min(200px,100%)}
+.card-h .desc{color:var(--ink-3)}
+/* KPI tiles: gradient icon square, blue / violet / teal / amber */
+.kpi{--k-grad:var(--grad-brand);--k-sh:rgba(11,81,167,.7);--k-ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 3v18h18M7 15l4-4 3 3 5-6'/%3E%3C/svg%3E");border:1px solid var(--line);border-left:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:20px;gap:2px;transition:transform .35s var(--ease),box-shadow .35s var(--ease),border-color .3s}
+.kpi::before{content:"";width:44px;height:44px;border-radius:14px;justify-self:start;margin-bottom:10px;background:var(--k-ic) center/21px no-repeat,var(--k-grad);box-shadow:0 8px 18px -8px var(--k-sh)}
+.kpi::after{display:none}
+.kpi:nth-child(4n+2){--k-grad:linear-gradient(135deg,#7B6CF0,#5543C9);--k-sh:rgba(85,67,201,.7)}
+.kpi:nth-child(4n+3){--k-grad:var(--grad-teal);--k-sh:rgba(14,143,132,.7)}
+.kpi:nth-child(4n+4){--k-grad:linear-gradient(135deg,#F7B84B,#E08A1E);--k-sh:rgba(224,138,30,.7)}
+.kpi.tone-ok{--k-grad:var(--grad-teal);--k-sh:rgba(14,143,132,.7);--k-ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E")}
+.kpi.tone-warn{--k-grad:linear-gradient(135deg,#F7B84B,#E08A1E);--k-sh:rgba(224,138,30,.7);--k-ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E");background:linear-gradient(180deg,#FFF9EC,#FFFFFF);border-color:#F4D79A}
+.kpi.tone-bad{--k-grad:linear-gradient(135deg,#FF7A7E,#D9363C);--k-sh:rgba(217,54,60,.7);--k-ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01'/%3E%3C/svg%3E");background:linear-gradient(180deg,#FFF3F3,#FFFFFF);border-color:#F3B4B6}
+.kpi.tone-brand{--k-grad:var(--grad-brand);--k-sh:rgba(11,81,167,.7)}
+.kpi.tone-brand,.kpi.tone-ok{border-left-color:var(--line)}
+:root[data-theme="dark"] .kpi.tone-warn,:root[data-theme="dark"] .kpi.tone-bad{background:var(--surface);border-color:var(--line)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .kpi.tone-warn,:root:not([data-theme="light"]) .kpi.tone-bad{background:var(--surface);border-color:var(--line)}}
+.kpi .lbl{font-size:13px;color:var(--ink-3);font-weight:600}
+.kpi .val{font-size:30px;font-weight:800;letter-spacing:-.03em;color:var(--ink)}
+.kpi.tone-warn .val,.kpi.tone-bad .val,.kpi.tone-ok .val,.kpi.tone-brand .val{color:var(--ink)}
+.kpi:not(:disabled):hover{transform:translateY(-4px);box-shadow:0 22px 44px -22px rgba(11,40,90,.45);border-color:var(--brand-300)}
+.kpi:not(:disabled):active{transform:translateY(-1px) scale(.99)}
+.kpi:disabled{opacity:1;cursor:default}
+.tk-kpis .kpi.on{box-shadow:0 0 0 2px #1A66CC,var(--shadow)}
+.rk,.sa,.stepcard,.kt,.im,.ua-box{border-radius:14px}
+.sa{border-color:var(--line);transition:transform .25s var(--spring),box-shadow .25s,border-color .2s}
+.sa:hover:not(:disabled){transform:translateY(-3px);box-shadow:0 14px 30px -16px rgba(11,81,167,.45);border-color:var(--brand-300)}
+.sa-ic,.formcard .ric{background:var(--grad-brand);color:#fff;box-shadow:0 8px 18px -8px rgba(11,81,167,.7)}
+.sa-in .sa-ic{background:var(--grad-teal);color:#fff;box-shadow:0 8px 18px -8px rgba(14,143,132,.7)}
+.sa-out .sa-ic{background:linear-gradient(135deg,#F7B84B,#E08A1E);color:#fff;box-shadow:0 8px 18px -8px rgba(224,138,30,.7)}
+.formcard{transition:transform .25s var(--spring),box-shadow .25s,border-color .2s}
+.formcard:hover{transform:translateY(-3px);box-shadow:0 14px 30px -16px rgba(11,81,167,.45);border-color:var(--brand-300)}
+.stepnum{background:var(--grad-brand);color:#fff;border-radius:9px;box-shadow:0 6px 14px -6px rgba(11,81,167,.8)}
+
+/* ---------- dashboard hero ---------- */
+.hero,.tk-hero{position:relative;overflow:hidden;isolation:isolate;border-radius:24px;padding:28px 30px;color:#fff;background:radial-gradient(260px 220px at calc(100% - 350px) 120%,rgba(25,194,174,.42),transparent 70%),var(--grad-hero);box-shadow:0 30px 60px -30px rgba(6,46,115,.65)}
+.hero::before,.tk-hero::before{content:"";position:absolute;z-index:-1;width:320px;height:320px;right:-60px;top:-120px;left:auto;bottom:auto;border-radius:50%;background:#2E8BFF;filter:blur(40px);opacity:.55;pointer-events:none;animation:aurora 14s ease-in-out infinite}
+.hero::after,.tk-hero::after{content:"";position:absolute;z-index:-1;inset:0;pointer-events:none;background:var(--star2);opacity:.09}
+.hero>*,.tk-hero>*{position:relative;z-index:1}
+.hero h2,.tk-hero h2{font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1.15}
+.hero p,.tk-hero p{color:rgba(255,255,255,.82);font-size:14.5px}
+.hero .stat{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(8px);border-radius:16px}
+.hero .stat b{font-size:22px;font-weight:800}
+.hero .stat span{font-size:11.5px;color:rgba(255,255,255,.72);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.hero img{border-radius:16px;box-shadow:0 10px 30px -10px rgba(0,0,0,.6);transition:transform .4s var(--spring)}
+.hero:hover img{transform:rotate(-4deg) scale(1.05)}
+.tk-chip2{backdrop-filter:blur(8px)}
+@media (max-width:860px){.hero,.tk-hero{padding:22px}.hero h2,.tk-hero h2{font-size:24px}}
+
+/* ---------- buttons ---------- */
+.btn{border-radius:12px;font-weight:650;position:relative;overflow:hidden;isolation:isolate;transition:transform .25s var(--spring),box-shadow .25s var(--ease),background .2s,border-color .2s,color .2s}
+.btn:active:not([disabled]){transform:scale(.97)}
+.btn-sm{border-radius:10px}
+.btn-primary,.auth-btn,.ai-fab{background:var(--grad-brand);box-shadow:0 10px 22px -12px rgba(11,81,167,.9),inset 0 1px 0 rgba(255,255,255,.18)}
+.btn-primary:hover:not([disabled]),.auth-btn:hover:not([disabled]){filter:none;background:var(--grad-brand);transform:translateY(-1px);box-shadow:0 16px 30px -14px rgba(11,81,167,.9),inset 0 1px 0 rgba(255,255,255,.2)}
+.auth-btn{position:relative;overflow:hidden;isolation:isolate}
+.btn-primary::after,.btn-ok::after,.auth-btn::after{content:"";position:absolute;top:0;bottom:0;left:0;width:45%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);transform:translateX(-120%) skewX(-20deg);z-index:-1;pointer-events:none}
+.btn-primary:hover:not([disabled])::after,.btn-ok:hover:not([disabled])::after,.auth-btn:hover:not([disabled])::after{animation:shine .9s var(--ease)}
+.btn-ok{background:linear-gradient(135deg,#18B784,#0E8A5F);box-shadow:0 10px 22px -12px rgba(14,138,95,.9)}
+.btn-ghost{background:var(--surface);border-color:var(--line-2);box-shadow:var(--shadow-sm)}
+.btn-ghost:hover:not([disabled]){border-color:#1A66CC;color:var(--brand-2);background:var(--surface);transform:translateY(-1px)}
+.btn-soft{background:var(--ice-2);color:var(--brand-2)}
+.btn-soft:hover:not([disabled]){background:var(--ice-2);filter:brightness(.97);transform:translateY(-1px)}
+.btn-bad{transition:background .2s,color .2s,transform .25s var(--spring)}
+.ai-fab{transition:transform .25s var(--spring),box-shadow .25s}
+.ai-fab:hover{filter:none;transform:translateY(-2px)}
+.seg{background:var(--surface-3);border-radius:12px}
+.seg button{border-radius:9px;transition:background .2s,color .2s}
+.seg button.active{box-shadow:var(--shadow-sm),0 1px 3px rgba(15,35,70,.1)}
+
+/* ---------- inputs ---------- */
+.input,.select,.textarea{border-radius:12px;border-color:var(--line-2);background-color:var(--surface);transition:border-color .2s,box-shadow .2s,background .2s}
+.input:hover,.select:hover,.textarea:hover{border-color:#B5C4DA}
+.input:focus,.select:focus,.textarea:focus{border-color:#1A66CC;box-shadow:var(--ring)}
+.field > span{color:var(--ink-2);font-weight:650}
+.input-box input{border-radius:12px;background:var(--surface-2);border:1.5px solid var(--line)}
+.input-box input:focus{border-color:#1A66CC;box-shadow:var(--ring)}
+.tk-quick{border-radius:16px;border-color:var(--line)}
+.tk-quick:focus-within{border-color:#1A66CC;box-shadow:var(--ring)}
+.tk-search{border-radius:12px}
+
+/* ---------- tables, tags, lists ---------- */
+.tbl-wrap{border-radius:14px;border-color:var(--line)}
+.tbl th{background:var(--surface-2);font-size:11.5px;letter-spacing:.06em;color:var(--ink-3);font-weight:600;text-transform:uppercase}
+.tbl td{border-bottom-color:var(--line)}
+.tbl tbody tr{transition:background .2s}
+.tbl tbody tr:nth-child(even) td{background:transparent}
+.tbl tbody tr:hover td{background:var(--ice)}
+.tbl tr.click td:first-child{box-shadow:inset 3px 0 0 transparent;transition:box-shadow .25s,background .2s}
+.tbl tr.click:hover td:first-child{box-shadow:inset 3px 0 0 #1A66CC}
+.tbl tr.click:hover td{background:var(--ice)!important}
+.tag{border-radius:99px;font-weight:650;padding:3px 10px;font-size:12px;letter-spacing:0}
+.tag-neutral{background:var(--surface-3);color:var(--ink-2)}
+.chip,.tk-chip{border-radius:99px}
+.item{border-radius:14px;border-color:var(--line);transition:transform .25s var(--ease),box-shadow .25s,border-color .25s,background .2s}
+button.item{border-left:1px solid var(--line)}
+button.item:hover{transform:translateX(3px);border-color:var(--brand-300);border-left-color:var(--brand-300);box-shadow:var(--shadow);background:var(--surface)}
+.notice{border-radius:14px}
+.empty{border-radius:16px;border-color:var(--line-2)}
+.actions{border-radius:16px;background:linear-gradient(180deg,var(--ice),var(--surface) 70%);border-color:var(--line)}
+.tk-card{border-radius:14px;transition:transform .25s var(--ease),box-shadow .25s,border-color .25s}
+.tk-card:hover{transform:translateY(-2px);border-color:var(--brand-300);box-shadow:var(--shadow)}
+.tk-col{border-radius:18px}
+.tk-evcard,.tk-ai-card{transition:transform .25s var(--ease),box-shadow .25s,border-color .2s}
+.tk-evcard:hover,.tk-ai-card:hover{transform:translateX(3px);border-color:var(--brand-300);box-shadow:var(--shadow)}
+.tk-ai-ico,.tk-evdate.lg{background:var(--grad-brand)}
+.tk-flow span.now,.tk-cal .day.today .dn{background:var(--grad-brand)}
+.bar i{background:linear-gradient(90deg,#1A66CC,#19C2AE)}
+.track-head{border-radius:16px;background:linear-gradient(135deg,var(--ice),var(--teal-50));border-color:var(--brand-300)}
+
+/* ---------- modals, toasts ---------- */
+.overlay{background:rgba(6,20,45,.45);backdrop-filter:blur(6px) saturate(1.2);-webkit-backdrop-filter:blur(6px) saturate(1.2);animation:fade .25s var(--ease)}
+.modal{border-radius:24px;border:1px solid var(--line);box-shadow:var(--shadow-lg);animation:pop .45s var(--spring)}
+@media (max-width:699px){.modal{border-radius:24px 24px 0 0}}
+.modal-h{background:var(--surface);color:var(--ink);border-bottom:1px solid var(--line);padding:20px 24px}
+.modal-h h3{font-size:18px;font-weight:700;letter-spacing:-.015em}
+.modal-h .muted,.modal-h .sm{color:var(--ink-3)!important}
+.modal-h .iconbtn{background:var(--surface);border-color:var(--line);color:var(--ink-2)}
+.modal-b{padding:20px 24px}
+.modal-f{background:var(--surface-2);padding-left:24px;padding-right:24px}
+.toasts{top:calc(18px + env(safe-area-inset-top,0px));right:18px;left:auto;bottom:auto;transform:none;width:min(380px,calc(100vw - 32px));gap:10px}
+.toast{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:14px 16px 16px;font-weight:500;box-shadow:var(--shadow-lg);position:relative;overflow:hidden;align-items:flex-start;animation:slideIn .45s var(--spring)}
+.toast>svg{flex:none;width:28px;height:28px;padding:5px;border-radius:9px;background:var(--ice-2);color:var(--brand-2)}
+.toast.ok,.toast.bad{background:var(--surface);color:var(--ink)}
+.toast.ok>svg{background:var(--ok-bg);color:var(--ok)}.toast.bad>svg{background:var(--bad-bg);color:var(--bad)}
+.toast::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:#1A66CC;transform-origin:left;animation:toastTime 3.2s linear forwards}
+.toast.ok::after{background:#18B784}.toast.bad::after{background:#E5484D}
+@media (max-width:980px){.toasts{top:calc(10px + env(safe-area-inset-top,0px));right:12px;left:12px;bottom:auto;width:auto}}
+.ai-panel{border-radius:20px;animation:pop .35s var(--spring)}
+.pop{border-radius:20px}
+
+/* ---------- sign-in & boot screens ---------- */
+.auth{background:radial-gradient(60% 40% at 80% 0%,rgba(26,102,204,.10),transparent 70%),radial-gradient(50% 40% at 0% 100%,rgba(25,194,174,.08),transparent 70%),var(--bg)}
+.auth-bg i{background:radial-gradient(circle,rgba(46,139,255,.5),transparent 65%);opacity:.5;filter:blur(20px);animation:aurora 16s ease-in-out infinite}
+.auth-bg i:nth-child(2n){background:radial-gradient(circle,rgba(25,194,174,.45),transparent 65%)}
+.auth-stage{animation:pop .6s var(--spring) backwards .1s}
+.auth-card{border-radius:28px;box-shadow:var(--shadow-lg),0 0 0 1px var(--line)}
+.toggle-box{background:radial-gradient(35% 35% at 20% 25%,rgba(46,139,255,.75),transparent 70%),radial-gradient(30% 30% at 75% 70%,rgba(25,194,174,.5),transparent 70%),radial-gradient(28% 28% at 80% 20%,rgba(110,91,214,.45),transparent 70%),#062E73}
+.toggle-box::before{inset:0;width:auto;height:auto;border-radius:0;opacity:.08;background:var(--star2)}
+.toggle-box::after{display:none}
+.auth-logo{border-radius:30px}
+.auth-logo-sm img{border-radius:13px;box-shadow:0 6px 18px rgba(0,31,82,.25);transition:transform .4s var(--spring)}
+.auth-logo-sm:hover img{transform:rotate(-4deg) scale(1.05)}
+.role{border-radius:14px;transition:transform .25s var(--spring),box-shadow .25s,border-color .25s;animation:rise .5s var(--ease) backwards}
+.role:nth-child(2){animation-delay:.05s}.role:nth-child(3){animation-delay:.1s}.role:nth-child(4){animation-delay:.15s}.role:nth-child(5){animation-delay:.2s}.role:nth-child(n+6){animation-delay:.25s}
+.role:hover{transform:translateY(-3px);border-color:var(--brand-300)}
+.role .ric{background:var(--grad-brand);color:#fff}
+
+/* ---------- phone bottom bar ---------- */
+@media (max-width:980px){
+  .shell,.shell.collapsed{grid-template-columns:minmax(0,1fr)}
+  .mobilenav{background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top-color:var(--line)}
+  .mobilenav button{transition:color .2s,transform .25s var(--spring)}.mobilenav button:active{transform:scale(.92)}
+  .mobilenav button.active{background:var(--ice-2);color:var(--brand-2)}
+  .mobilenav .count{background:#FF5A5F}
+  .content{padding:14px 14px 96px}
+  .topbar{padding:10px 14px;min-height:60px}
+  .topbar h1{font-size:17px}
+  .kpi .val{font-size:24px}
+  .kpi{padding:16px}
+  .kpi::before{width:36px;height:36px;border-radius:12px;margin-bottom:6px;background-size:18px,auto}
+  .hero h2,.tk-hero h2{font-size:22px}
+}
+
+/* ---------- branded loading overlay (same as Donor Management) ---------- */
+.ak-loader{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;background:radial-gradient(60% 50% at 50% 40%,rgba(11,81,167,.28),rgba(5,20,52,.55));backdrop-filter:blur(6px) saturate(1.2);-webkit-backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .25s var(--ease)}
+.ak-loader.on{opacity:1;pointer-events:auto}
+.ak-loader.boot{position:fixed;opacity:1;pointer-events:auto;background:radial-gradient(60% 50% at 50% 40%,rgba(26,102,204,.14),transparent 70%),radial-gradient(40% 40% at 80% 90%,rgba(25,194,174,.10),transparent 70%),var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none;animation:fade .3s var(--ease) .16s backwards}
+.ldr-card{min-width:280px;max-width:min(420px,90vw);padding:28px 30px 22px;border-radius:24px;background:var(--surface);border:1px solid var(--line);box-shadow:0 30px 80px -20px rgba(5,25,70,.55);text-align:center;transform:translateY(10px) scale(.97);transition:transform .45s var(--spring)}
+.ak-loader.on .ldr-card,.ak-loader.boot .ldr-card{transform:none}
+.ldr-ring{position:relative;width:96px;height:96px;margin:0 auto 16px}
+.ldr-ring i{position:absolute;inset:0;border-radius:50%;border:4px solid transparent;border-top-color:#0B51A7;border-right-color:#3B8BEB;animation:ldrSpin 1.1s linear infinite}
+.ldr-ring i+i{inset:9px;border-top-color:#19C2AE;border-right-color:transparent;border-left-color:#21C7B2;animation-duration:1.6s;animation-direction:reverse}
+.ldr-ring img{position:absolute;inset:22px;width:52px;height:52px;max-width:none;border-radius:14px;animation:ldrPulse 1.6s var(--ease) infinite}
+.ldr-t{display:block;font-size:15.5px;color:var(--ink)}
+.ldr-s{display:block;margin-top:8px;color:var(--ink-3);font-size:12.5px;min-height:1em}
+.ldr-bar{height:6px;margin-top:14px;border-radius:99px;background:var(--surface-3);overflow:hidden}
+.ldr-bar span{display:block;height:100%;width:3%;border-radius:99px;background:linear-gradient(90deg,#0B51A7,#19C2AE);transition:width .3s var(--ease)}
+.ldr-bar.ind span{width:40%;animation:ldrSlide 1.2s var(--ease) infinite}
+@keyframes ldrSpin{to{transform:rotate(360deg)}}
+@keyframes ldrPulse{0%,100%{transform:scale(1)}50%{transform:scale(.9)}}
+@keyframes ldrSlide{0%{transform:translateX(-110%)}100%{transform:translateX(260%)}}
+@media (prefers-reduced-motion:reduce){
+  .ak-loader .ldr-ring i{animation:ldrSpin 3s linear infinite!important}
+  .ak-loader .ldr-ring i+i{animation:ldrSpin 3s linear infinite reverse!important}
+  .ak-loader .ldr-bar.ind span{animation:ldrSlide 3s linear infinite!important}
+  .main::before,.hero::before,.tk-hero::before{animation:none!important}
+}
+@media print{.ak-loader{display:none!important}.main::before,.hero::before,.hero::after,.tk-hero::before,.tk-hero::after{display:none!important}}
 </style>
 </head>
 <body>
@@ -4713,7 +5045,7 @@ function buildNotifications(state,user){
 
 /* ---------- Login (animated sliding card) ---------- */
 function Login({users,onLogin,sbLogin}){
-  const [u,setU]=useState(""); const [p,setP]=useState(""); const [err,setErr]=useState(""); const [flip,setFlip]=useState(false); const [showPw,setShowPw]=useState(false); const [busy,setBusy]=useState(false);
+  const [u,setU]=useState(""); const [p,setP]=useState(""); const [err,setErr]=useState(""); const [flip,setFlip]=useState(false); const [showPw,setShowPw]=useState(false); const [busy,setBusy]=useState(false); useLoader(busy,"Signing in…");
   const cardRef=useRef(); const [tilt,setTilt]=useState({x:0,y:0});
   const go=(un,pw)=>{ if(sbLogin){ if(!un||!pw){ setErr("Enter your username and password."); return; } setBusy(true); sbLogin(un,pw).catch(e=>setErr(/invalid/i.test(e.message)?"Username or password is incorrect.":/rate|too many/i.test(e.message)?"Too many attempts. Wait a few minutes and try again.":errRef(e,"Could not sign in"))).finally(()=>setBusy(false)); return; }
     const user=users.find(x=>x.username===un&&x.password===pw); if(!user){ setErr("Username or password is incorrect."); return; } if(!user.active){ setErr("This account is deactivated. Contact the Super Admin."); return; } onLogin(user.id); };
@@ -4918,7 +5250,7 @@ function donorPreset(state,q){
 function DonorGoodsCard({state,A,canAct,onReceived}){
   const dq=useDonorQueue(true);
   const [recv,setRecv]=useState(null);      // queue item being received
-  const [busy,setBusy]=useState(false);
+  const [busy,setBusy]=useState(false); useLoader(busy,"Saving…");
   const [showDone,setShowDone]=useState(false); const [done,setDone]=useState(null); const [doneErr,setDoneErr]=useState("");
   const [,tick]=useState(0);
   useEffect(()=>{ dqLoad(15000); },[]);   // load on open (unless just loaded)
@@ -5661,7 +5993,7 @@ async function exportRegisterXlsx(state,range,blank){
   }catch(e){ window.__toast&&window.__toast(e.message,"bad"); }
 }
 function RegisterImport({state,A}){
-  const [res,setRes]=useState(null); const [busy,setBusy]=useState(false); const [done,setDone]=useState(null); const ref=useRef();
+  const [res,setRes]=useState(null); const [busy,setBusy]=useState(false); const [done,setDone]=useState(null); const ref=useRef(); useLoader(busy,"Reading the workbook…");
   const [store,setStore]=useState(STORES[0]); const [defType,setDefType]=useState("GDN-D"); const [mode,setMode]=useState(""); const [openDate,setOpenDate]=useState(""); const [view,setView]=useState("items");
   const onFile=async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return; setBusy(true); setDone(null);
     try{ await loadScript(XLSX_URL); const wb=XLSX.read(await f.arrayBuffer(),{type:"array"}); const r=parseRegisterWorkbook(wb);
@@ -5725,7 +6057,7 @@ function RegisterImport({state,A}){
 }
 function Imports({state,user,A}){
   const kinds=Object.keys(IMPORTS).filter(k=>PORTAL_IMPORTS.includes(k)&&IMPORTS[k].roles&&IMPORTS[k].roles.includes(user.role));
-  const [kind,setKind]=useState(kinds[0]); const [res,setRes]=useState(null); const [busy,setBusy]=useState(false); const ref=useRef();
+  const [kind,setKind]=useState(kinds[0]); const [res,setRes]=useState(null); const [busy,setBusy]=useState(false); const ref=useRef(); useLoader(busy,"Reading the file…");
   const c=IMPORTS[kind];
   const onFile=async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return; setBusy(true); try{ const r=await readExcel(f,kind); if(kind==="vendors") r.rows.forEach(x=>{ if(!x.error&&!state.vendors.some(v=>v.name.toLowerCase()===x.data.name.toLowerCase())&&r.rows.filter(y=>y.data.name===x.data.name).length>1) x.error="Duplicate vendor in file"; }); if(kind==="users") r.rows.forEach(x=>{ if(!x.error&&r.rows.filter(y=>y.data.username===x.data.username).length>1) x.error="Duplicate username in file"; }); setRes({file:f.name,...r}); }catch(x){ window.__toast(x.message,"bad"); } setBusy(false); };
   const good=res?res.rows.filter(r=>!r.error):[];
@@ -5879,8 +6211,16 @@ function App(){
   const readStore=uidv=>"akf-read-"+uidv;
   const loadRead=uidv=>{ try{ setReadKeys(JSON.parse(localStorage.getItem(readStore(uidv))||"{}")); }catch(e){ setReadKeys({}); } };
   const markRead=(uidv,keys)=>setReadKeys(prev=>{ const nx={...prev}; keys.forEach(k=>nx[k]=Date.now()); const ks=Object.keys(nx); if(ks.length>400) ks.sort((a,b)=>nx[a]-nx[b]).slice(0,ks.length-400).forEach(k=>delete nx[k]); try{ localStorage.setItem(readStore(uidv),JSON.stringify(nx)); }catch(e){} return nx; });
-  const [sideOpen,setSideOpen]=useState(()=>{ try{ return localStorage.getItem("akf-side")!=="closed"; }catch(e){ return true; } });
+  /* desktop sidebar rests as an icon rail (like Donor Management) unless the person pinned it open */
+  const [sideOpen,setSideOpen]=useState(()=>{ try{ return localStorage.getItem("akf-side")==="open"; }catch(e){ return false; } });
   useEffect(()=>{ try{ localStorage.setItem("akf-side",sideOpen?"open":"closed"); }catch(e){} },[sideOpen]);
+  /* sliding white indicator behind the active menu item */
+  const navRef=useRef(null);
+  useEffect(()=>{ const nav=navRef.current; if(!nav) return; const ind=nav.querySelector(".nav-ind"), a=nav.querySelector("button.active"); if(!ind) return;
+    if(!a){ ind.style.opacity="0"; return; }
+    const first=ind.style.opacity!=="1"; if(first) ind.style.transition="none";
+    ind.style.transform="translateY("+a.offsetTop+"px)"; ind.style.height=a.offsetHeight+"px"; ind.style.opacity="1";
+    if(first){ void ind.offsetWidth; ind.style.transition=""; } });
   /* QR deep link: index.html#track=ID opens that record once signed in */
   const [pendingTrack,setPendingTrack]=useState(()=>{ const m=/#track=([^&]+)/.exec(location.hash||""); return m?decodeURIComponent(m[1]):null; });
   const [theme,setTheme]=useState(()=>{ try{ return localStorage.getItem("akf-theme")||""; }catch(e){ return ""; } });
@@ -5941,8 +6281,8 @@ function App(){
   const meRec=state.users.find(u=>u.id===user.id)||user;
 
   return html`<div class=${"shell"+(sideOpen?"":" collapsed")}>
-    <aside class="side" aria-label="Main menu"><div class="side-brand"><img src=${LOGO} alt=""/><div class="lbl"><b>Alkhidmat Islamabad</b><span>${PORTAL_NAME}</span><a class="side-home" href=${PORTAL_HOME}>← All portals</a></div><button class="side-pin lbl" title=${sideOpen?"Collapse sidebar (opens on hover)":"Keep sidebar open"} aria-label="Toggle sidebar" onClick=${()=>setSideOpen(o=>!o)}><${Icon} name=${sideOpen?"back":"pin"}/></button></div>
-      <nav class="nav">${tabs.map(t=>html`<button class=${t.id===activeTab?"active":""} title=${t.label} onClick=${()=>setTab(t.id)}><${Icon} name=${t.icon}/><span class="lbl">${t.label}</span>${counts[t.id]?html`<span class="count">${counts[t.id]}</span>`:""}</button>`)}</nav>
+    <aside class="side" aria-label="Main menu"><div class="side-brand"><img src=${LOGO} alt=""/><div class="lbl"><b>Alkhidmat Foundation Islamabad</b><span>${PORTAL_NAME}</span><a class="side-home" href=${PORTAL_HOME}>← All portals</a></div><button class="side-pin lbl" title=${sideOpen?"Collapse sidebar (opens on hover)":"Keep sidebar open"} aria-label="Toggle sidebar" onClick=${()=>setSideOpen(o=>!o)}><${Icon} name=${sideOpen?"back":"pin"}/></button></div>
+      <nav class="nav" ref=${navRef}><i class="nav-ind" aria-hidden="true"/>${tabs.map(t=>html`<button class=${t.id===activeTab?"active":""} title=${t.label} onClick=${()=>setTab(t.id)}><${Icon} name=${t.icon}/><span class="lbl">${t.label}</span>${counts[t.id]?html`<span class="count">${counts[t.id]}</span>`:""}</button>`)}</nav>
       <div class="side-user"><div class="lbl"><b>${user.name}</b><span>${user.designation||ROLES[user.role].label}${user.role==="hod"?" · "+user.dept:""}</span></div><div class="row"><button title="My signature" onClick=${()=>setSignOpen(true)}><${Icon} name="pen"/><span class="lbl">${meRec.signature?"Signature":"Add signature"}</span></button><button title="Password" onClick=${()=>setPw(true)}><${Icon} name="lock"/><span class="lbl">Password</span></button><button title="My data" onClick=${()=>setMyData(true)}><${Icon} name="shield"/><span class="lbl">My data</span></button><button title="Sign out" onClick=${logout}><${Icon} name="logout"/><span class="lbl">Sign out</span></button></div></div></aside>
     <div class="main">
       <header class="topbar"><button class="iconbtn side-toggle" aria-label="Toggle sidebar" title="Show / hide sidebar" onClick=${()=>setSideOpen(o=>!o)}><${Icon} name="menu"/></button><div class="grow"><div class="row"><h1 class="pg-title">${titles[activeTab][0]}</h1>${readOnly&&html`<span class="viewonly"><${Icon} name="eye" cls="icon" style="width:13px"/>View only</span>`}</div><div class="sub">${titles[activeTab][1]}</div></div>
@@ -5976,7 +6316,36 @@ function Clock(){
   return html`<div class="clock" aria-label="Date and time"><span class="chip-d">${now.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}</span><span class="chip-t num">${tm[0]}<small>${(tm[1]||"").toUpperCase()}</small></span></div>`;
 }
 const initials=n=>String(n||"?").replace(/^(Dr|Mr|Ms|Mrs|Hafiz)\.?\s+/i,"").split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join("").toUpperCase();
-const BootScreen=({status,err})=>html`<div class="auth"><div class="auth-bg"><i/><i/><i/><i/></div><div class="auth-stage" style="max-width:520px"><div class="card" style="padding:28px;text-align:center;display:grid;gap:12px;justify-items:center">
+/* =====================================================================
+   LOADING OVERLAY (same as Donor Management): Alkhidmat logo inside two
+   counter-rotating rings + bar. Appears only after 160 ms so quick actions
+   never flash. Built with DOM calls only (no innerHTML).
+   ===================================================================== */
+let loaderT=0, loaderN=0;
+function showLoader(text,pct){
+  let el=document.getElementById("ak-loader");
+  if(!el){
+    el=document.createElement("div"); el.id="ak-loader"; el.className="ak-loader"; el.setAttribute("role","status"); el.setAttribute("aria-live","polite");
+    const mk=(tag,cls)=>{ const x=document.createElement(tag); if(cls) x.className=cls; return x; };
+    const card=mk("div","ldr-card"), ring=mk("div","ldr-ring"), img=mk("img"); img.alt=""; img.src=LOGO; ring.append(mk("i"),mk("i"),img);
+    const bar=mk("div","ldr-bar"); bar.append(mk("span"));
+    card.append(ring,mk("b","ldr-t"),bar,mk("small","ldr-s")); el.append(card); document.body.append(el);
+  }
+  el.querySelector(".ldr-t").textContent=text||"Please wait…"; el.querySelector(".ldr-s").textContent="";
+  setLoader(pct); loaderN++;
+  clearTimeout(loaderT); loaderT=setTimeout(()=>el.classList.add("on"),160);
+}
+function setLoader(pct,sub){
+  const el=document.getElementById("ak-loader"); if(!el) return;
+  const bar=el.querySelector(".ldr-bar"); bar.classList.toggle("ind",pct==null);
+  if(pct!=null) bar.firstElementChild.style.width=Math.max(3,Math.min(100,pct))+"%";
+  if(sub!=null) el.querySelector(".ldr-s").textContent=sub;
+}
+function hideLoader(){ loaderN=Math.max(0,loaderN-1); if(loaderN) return; clearTimeout(loaderT); const el=document.getElementById("ak-loader"); if(el) el.classList.remove("on"); }
+/* show the loader while a component's "busy" flag is on */
+const useLoader=(on,text)=>useEffect(()=>{ if(!on) return; showLoader(text); return ()=>hideLoader(); },[!!on]);
+const BootLoader=({text})=>html`<div class="ak-loader boot" role="status" aria-live="polite"><div class="ldr-card"><div class="ldr-ring"><i/><i/><img src=${LOGO} alt=""/></div><b class="ldr-t">${text}</b><div class="ldr-bar ind"><span/></div><small class="ldr-s"/></div></div>`;
+const BootScreen=({status,err})=>status==="loading"?html`<${BootLoader} text="Connecting to the office database…"/>`:html`<div class="auth"><div class="auth-bg"><i/><i/><i/><i/></div><div class="auth-stage" style="max-width:520px"><div class="card" style="padding:28px;text-align:center;display:grid;gap:12px;justify-items:center">
   <img src=${LOGO} alt="" style="width:84px;height:84px;border-radius:20px;box-shadow:0 20px 40px -20px rgba(11,46,138,.7)"/>
   ${status==="loading"&&html`<h2 style="margin:0">Connecting to the office database…</h2><div class="bar" style="width:220px"><i style="width:60%;animation:pulse 1.2s ease-in-out infinite"/></div>`}
   ${status==="config"&&html`<h2 style="margin:0">One more step: connect Supabase</h2>${SB_CONFIG_ERR&&html`<p class="notice notice-bad" style="margin:0">${SB_CONFIG_ERR}</p>`}<p class="muted" style="margin:0">The portal will not start until <b>config.js</b> is correct. It is created from the GitHub secrets <b>SUPABASE_URL</b> and <b>SUPABASE_ANON_KEY</b> when the site is published (see README.md), or locally with <b>make-config.ps1</b> from your <b>.env</b> file. Save the file and reload.</p>`}
@@ -7196,7 +7565,7 @@ function TaskModal({isNew,preset,tkey,state,user,A,timer,onClose,open,onCreated,
   const [d,setD]=useState(()=>isNew?blank():orig?JSON.parse(JSON.stringify(orig)):null);
   const [est,setEst]=useState(()=>tMin((isNew?blank():orig||{}).estimate));
   const [sub,setSub]=useState(""); const [tag,setTag]=useState(""); const [cfk,setCfk]=useState(""); const [cfv,setCfv]=useState("");
-  const [logv,setLogv]=useState(""); const [cmt,setCmt]=useState(""); const [ment,setMent]=useState(null); const [busy,setBusy]=useState(false);
+  const [logv,setLogv]=useState(""); const [cmt,setCmt]=useState(""); const [ment,setMent]=useState(null); const [busy,setBusy]=useState(false); useLoader(busy,"Uploading…");
   const titleRef=useRef(); const fileRef=useRef();
   useEffect(()=>{ if(isNew&&titleRef.current) setTimeout(()=>titleRef.current&&titleRef.current.focus(),60); },[]);
   if(!isNew&&(!orig||!TR.canSee(orig,user))) return html`<${Modal} title="Task" onClose=${onClose} narrow><${TEmpty} title=${orig?"You don't have access to this task":"Task not found"}>${orig?"":"It may have been deleted."}<//><//>`;
@@ -7302,7 +7671,7 @@ const VENDOR_KEYS=["amount","inclusive","deliveryDays","validityDays","note","co
 function localVendorRfq(token){ const s=loadState(); for(const r of s.rfqs){ const q=r.quotes.find(x=>x.token===token); if(q){ if(q.status==="Sent"){ q.status="Opened"; q.openedAt=nowISO(); saveState(s); } const req=s.requests.find(x=>x.id===r.requestId)||{}; const v=s.vendors.find(x=>x.id===q.vendorId)||{}; return {rfq:{id:r.id,at:r.at,deadline:r.deadline,status:r.status},quote:{status:q.status,at:q.at,amount:q.amount},items:(req.items||[]).map(i=>({name:i.name,qty:i.qty,uom:i.uom,category:i.category})),purpose:req.purpose,vendor:{name:v.name,gstRegistered:v.gstRegistered,filer:v.filer,type:v.type},org:(s.settings||{}).orgName}; } } return null; }
 function localVendorSubmit(token,quote){ const s=loadState(); for(const r of s.rfqs){ const q=r.quotes.find(x=>x.token===token); if(q){ if(r.status!=="Open") return "closed"; if(new Date(r.deadline)<new Date()) return "expired"; if(["Submitted","Expired"].includes(q.status)) return "used"; const clean={}; VENDOR_KEYS.forEach(k=>{ if(quote[k]!==undefined) clean[k]=quote[k]; }); Object.assign(q,clean,{status:"Submitted",at:nowISO(),byVendor:true}); const v=s.vendors.find(x=>x.id===q.vendorId)||{}; s.audit.unshift({id:uid(),at:nowISO(),doc:r.id,by:v.name||"Vendor",role:"vendor",action:`Quotation submitted online by ${v.name}`,comment:`${pkr(quote.amount)} ${quote.inclusive?"incl. tax":"+ tax"}`,dept:"Admin"}); normalizeVendorQuotes(s); saveState(s); return "ok"; } } return "invalid"; }
 function VendorQuote({token}){
-  const [data,setData]=useState(null); const [err,setErr]=useState(""); const [busy,setBusy]=useState(false); const [done,setDone]=useState(false);
+  const [data,setData]=useState(null); const [err,setErr]=useState(""); const [busy,setBusy]=useState(false); const [done,setDone]=useState(false); useLoader(busy,"Submitting your quotation…");
   const [lines,setLines]=useState([]); const [inclusive,setInclusive]=useState(false); const [days,setDays]=useState(3); const [valid,setValid]=useState(15); const [note,setNote]=useState(""); const [contact,setContact]=useState(""); const [file,setFile]=useState(null);
   useEffect(()=>{ (async()=>{ try{ const d=SB_READY?await DB.vendorRfq(token):localVendorRfq(token); if(!d){ setErr("invalid"); return; } setData(d); if(d.org) SETTINGS={...SETTINGS,orgName:d.org}; setLines(d.items.map(i=>({...i,price:""}))); }catch(e){ setErr(errRef(e,"This link could not be opened")); } })(); },[]);
   const total=lines.reduce((s,l)=>s+(Number(l.qty)||0)*(Number(l.price)||0),0);
