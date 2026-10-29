@@ -6,7 +6,7 @@
 <title>Alkhidmat Islamabad Portals</title>
 <meta name="description" content="One sign-in for every Alkhidmat Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-ZiSTJUcerdbTmMPNhViWs0Y/hE0myyo196jqaAOKrAs='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-QFznF4aWhByvjHb323ckGOConXo4mD+nlaiMQq1XbN8='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -107,6 +107,7 @@ dialog::backdrop{background:rgba(10,16,32,.55)}
 }
 :root[data-theme="dark"]{ --ink:#E8EEF8; --muted:#B8C5D9; --faint:#8797AF; --bg:#0A111F; --card:#101A2C; --soft:#1A2842; --line:#22314C; --brand-2:#5B9BEA; --brand-3:#8DB3E6 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --ink:#E8EEF8; --muted:#B8C5D9; --faint:#8797AF; --bg:#0A111F; --card:#101A2C; --soft:#1A2842; --line:#22314C; --brand-2:#5B9BEA; --brand-3:#8DB3E6 } }
+html,body{overflow-x:clip}   /* a card tilting on hover must never make the page scroll sideways */
 body{font:15px/1.5 "Segoe UI Variable Text","Segoe UI",Inter,system-ui,-apple-system,Roboto,Arial,sans-serif;letter-spacing:-.003em}
 h1,h2,h3{font-family:"Segoe UI Variable Display","Segoe UI",Inter,system-ui,sans-serif}
 ::selection{background:rgba(26,102,204,.18)}
@@ -169,6 +170,44 @@ main.wrap::before{content:"";position:absolute;left:-10%;right:-10%;top:-120px;h
 .tile::before{content:"";position:absolute;top:0;bottom:0;left:0;width:40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);transform:translateX(-120%) skewX(-20deg);pointer-events:none}
 .tile:hover::before{animation:shine .9s var(--ease)}
 .tile .foot .row{color:var(--brand-2)}
+
+/* ---- portal cards: motion ----
+   arrive one after another (rise + settle) · icon breathes with a soft halo · the corner orb drifts ·
+   a light sweep passes every few seconds · on hover: 3D tilt toward the cursor, a spotlight that follows it,
+   a glowing animated border in the portal's colour, the icon lifts and the arrow nudges */
+@keyframes tileIn{0%{opacity:0;transform:translateY(26px) scale(.96)}60%{opacity:1;transform:translateY(-4px) scale(1.01)}100%{opacity:1;transform:none}}
+@keyframes icBreathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes halo{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 45%,transparent)}70%,100%{box-shadow:0 0 0 14px transparent}}
+@keyframes orb{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-14px,12px) scale(1.12)}}
+@keyframes sweep{0%,82%{transform:translateX(-140%) skewX(-20deg)}100%{transform:translateX(320%) skewX(-20deg)}}
+@keyframes spinBorder{to{--ang:360deg}}
+@property --ang{syntax:"<angle>";initial-value:0deg;inherits:false}
+.tiles.enter > .tile{animation:tileIn .8s var(--ease) backwards;animation-delay:calc(var(--i,0) * 110ms + 80ms)}
+.tile{transform-style:preserve-3d;transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(var(--ty,0px));will-change:transform;
+  transition:transform .45s var(--ease),box-shadow .35s var(--ease),border-color .3s}
+.tile:hover{--ty:-6px;transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(var(--ty))}
+.tile .ic{position:relative;animation:icBreathe 4.5s ease-in-out infinite;animation-delay:calc(var(--i,0) * -1.1s)}
+.tile .ic::after{content:"";position:absolute;inset:0;border-radius:inherit;animation:halo 3.2s ease-out infinite;animation-delay:calc(var(--i,0) * .8s)}
+.tile:hover .ic{animation-play-state:paused;transform:translateY(-6px) rotate(-6deg) scale(1.1);box-shadow:0 16px 30px -10px var(--accent)}
+.tile::after{animation:orb 9s ease-in-out infinite;animation-delay:calc(var(--i,0) * -2.3s)}
+.tile::before{animation:sweep 7s var(--ease) infinite;animation-delay:calc(var(--i,0) * 1.4s + 1.5s);opacity:.7}
+.tile:hover::before{animation:shine .9s var(--ease)}
+.tile .spot{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .3s;
+  background:radial-gradient(260px circle at var(--mx,50%) var(--my,50%),color-mix(in srgb,var(--accent) 14%,transparent),transparent 65%)}
+.tile:hover .spot{opacity:1}
+.tile .edge{position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;pointer-events:none;opacity:0;transition:opacity .35s;
+  background:conic-gradient(from var(--ang),transparent 0deg,var(--accent) 70deg,#19C2AE 140deg,transparent 210deg,transparent 360deg);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:spinBorder 3.5s linear infinite}
+.tile:hover .edge,.tile:focus-visible .edge{opacity:1}
+.tile > *:not(.spot):not(.edge){position:relative;z-index:1}
+.tile h3{transition:color .25s} .tile:hover h3{color:var(--accent)}
+.tile .foot .row svg{transition:transform .35s var(--spring)}
+.tile:hover .foot .row svg{transform:translate(3px,-3px)}
+.tile .foot .tag{transition:background .25s,color .25s}
+.tile:hover .foot .tag{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.tile:focus-visible{outline:none;box-shadow:var(--ring),0 22px 44px -22px rgba(11,40,90,.45)}
+@media (hover:none){ .tile{transform:none} .tile .spot,.tile .edge{display:none} }
+@media (prefers-reduced-motion: reduce){ .tile,.tile:hover{transform:none!important} .tile .ic,.tile::after,.tile::before,.tile .edge{animation:none!important} }
 
 /* cards, buttons, fields, tables */
 .card{border-radius:var(--r);box-shadow:var(--shadow)}
@@ -476,10 +515,27 @@ function home() {
 
 function tiles() {
   if (!S.portals.length) return el("div", { class: "card empty" }, el("h3", { text: "No portals yet" }), el("p", { text: "The Super Admin has not given you access to any portal. Ask them to add you." }));
-  return stagger(el("div", { class: "tiles" }, S.portals.map(p => el("a", { class: "card tile", href: safeHref(p.url), target: "_blank", rel: "noopener", style: `--accent:${/^#[0-9a-f]{6}$/i.test(p.color) ? p.color : "#0B51A7"}` },
+  return stagger(el("div", { class: "tiles" }, S.portals.map(p => tileMotion(el("a", { class: "card tile", href: safeHref(p.url), target: "_blank", rel: "noopener", style: `--accent:${/^#[0-9a-f]{6}$/i.test(p.color) ? p.color : "#0B51A7"}` },
+    el("span", { class: "spot", "aria-hidden": "true" }), el("span", { class: "edge", "aria-hidden": "true" }),
     el("div", { class: "ic", style: `background:${/^#[0-9a-f]{6}$/i.test(p.color) ? p.color : "#0B51A7"}` }, icon(p.icon, 22)),
     el("div", {}, el("h3", { text: p.name }), el("p", { text: p.description })),
-    el("div", { class: "foot" }, el("span", { class: "tag brand", text: ROLE_LABEL[p.role] || p.role }), el("span", { class: "row" }, "Open", icon("arrow", 16)))))));
+    el("div", { class: "foot" }, el("span", { class: "tag brand", text: ROLE_LABEL[p.role] || p.role }), el("span", { class: "row" }, "Open", icon("arrow", 16))))))));
+}
+/* card follows the cursor: a gentle 3D tilt and a spotlight (mouse only; off with reduced motion) */
+function tileMotion(a) {
+  if (matchMedia("(hover: none), (prefers-reduced-motion: reduce)").matches) return a;
+  let raf = 0;
+  a.addEventListener("pointermove", e => {
+    if (e.pointerType !== "mouse") return;
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => {
+      const r = a.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+      a.style.setProperty("--mx", (x * 100).toFixed(1) + "%"); a.style.setProperty("--my", (y * 100).toFixed(1) + "%");
+      a.style.setProperty("--ry", ((x - .5) * 8).toFixed(2) + "deg"); a.style.setProperty("--rx", ((.5 - y) * 8).toFixed(2) + "deg");
+    });
+  });
+  a.addEventListener("pointerleave", () => { cancelAnimationFrame(raf); a.style.setProperty("--rx", "0deg"); a.style.setProperty("--ry", "0deg"); });
+  return a;
 }
 
 /* ---------- Super Admin: people & access ---------- */

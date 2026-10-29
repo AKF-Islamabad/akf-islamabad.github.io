@@ -1041,6 +1041,9 @@ table.tk-eg tr.sum td{border-top:2px solid var(--line);padding-top:6px}
 .tk-page .card-h{flex-wrap:wrap;row-gap:6px}
 .tk-page .card-h>.grow{min-width:140px}
 @media (max-width:560px){.tk-page .card-h input[type=date]{width:128px!important}}
+/* Tasks & Events portal: the sections are in the sidebar, so the page actions sit at the start of the row */
+.tk-views:not(:has(.seg)) > .grow{display:none}
+.tk-views:not(:has(.seg)){justify-content:flex-start;margin-bottom:6px}
 /* =====================================================================
    AURORA — same design as Donor Management (erp/src/donor-app.html, "v8 AURORA DESIGN SYSTEM").
    Glass navy sidebar with sliding white indicator, icon rail, glass top bar, aurora glow,
@@ -5055,7 +5058,7 @@ function Login({users,onLogin,sbLogin}){
     <div class="auth-bg"><i/><i/><i/><i/></div>
     <div class="auth-stage"><div class=${"auth-card "+(flip?"active":"")} ref=${cardRef} style=${`transform:perspective(1600px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`}>
       <div class="form-box fb-login"><form onSubmit=${e=>{e.preventDefault();go(u.trim(),p);}}>
-        <div class="auth-logo-sm"><img src=${LOGO} alt=""/><div><b>Alkhidmat Islamabad</b><span>Procurement & Store Portal</span></div></div>
+        <div class="auth-logo-sm"><img src=${LOGO} alt=""/><div><b>Alkhidmat Foundation Islamabad</b><span>${portalName()}</span></div></div>
         <h1>Sign in</h1><p class="lead">Your role decides what you see.</p>
         <div class="input-box"><input placeholder="Username" autocomplete="username" value=${u} onInput=${e=>{setU(e.target.value);setErr("");}}/><${Icon} name="users" cls="icon in-ico"/></div>
         <div class="input-box"><input type=${showPw?"text":"password"} placeholder="Password" autocomplete="current-password" value=${p} onInput=${e=>{setP(e.target.value);setErr("");}}/><button type="button" class="in-ico eye" aria-label="Show password" onClick=${()=>setShowPw(v=>!v)}><${Icon} name=${showPw?"lock":"eye"}/></button></div>
@@ -5071,7 +5074,7 @@ function Login({users,onLogin,sbLogin}){
       </div></div>
       <div class="toggle-box">
         <div class="toggle-panel toggle-left"><img class="auth-logo" src=${LOGO} alt="Alkhidmat Islamabad"/><h2>Have your own account?</h2><p>Sign in with the username issued to you — every action is signed and timed under your name.</p><button class="toggle-btn" onClick=${()=>setFlip(false)}>Sign in</button></div>
-        <div class="toggle-panel toggle-right"><img class="auth-logo" src=${LOGO} alt="Alkhidmat Islamabad"/><h2>Procurement & Store Portal</h2><p>Request · verify · approve · buy · receive · issue — every step traceable, no bypass.</p><div class="mini-flow">${FLOW.procurement.map((s,i)=>html`<span>${i+1}. ${s.label}</span>`)}</div><button class="toggle-btn" onClick=${()=>setFlip(true)}>${sbLogin?"About accounts":"Demo accounts"}</button></div>
+        <div class="toggle-panel toggle-right"><img class="auth-logo" src=${LOGO} alt="Alkhidmat Foundation Islamabad"/><h2>${portalName()}</h2><p>Request · verify · approve · buy · receive · issue — every step traceable, no bypass.</p><div class="mini-flow">${FLOW.procurement.map((s,i)=>html`<span>${i+1}. ${s.label}</span>`)}</div><button class="toggle-btn" onClick=${()=>setFlip(true)}>${sbLogin?"About accounts":"Demo accounts"}</button></div>
       </div>
     </div></div>
     <div class="auth-foot">Alkhidmat Foundation Islamabad Region · internal use</div>
@@ -6204,6 +6207,7 @@ function App(){
   const [tab,setTabRaw]=useState(null);
   const [modal,setModal]=useState(null); // {kind:'req'|'doc'|'stock', id}
   const [taskOpen,setTaskOpen]=useState(null); // key of the task open on the Tasks page
+  const [taskView,setTaskView]=useState("home"); // section open on the Tasks page (shown in the sidebar of the Tasks & Events portal)
   const [toasts,setToasts]=useState([]);
   const [bell,setBell]=useState(false); const [pw,setPw]=useState(false); const [myData,setMyData]=useState(false); const [signOpen,setSignOpen]=useState(false);
   /* read notifications are remembered per user on this device; the red badge counts only unread ones */
@@ -6279,13 +6283,20 @@ function App(){
   const titles={dashboard:["Dashboard",`Good ${new Date().getHours()<12?"morning":new Date().getHours()<17?"afternoon":"evening"}, ${user.name.split(" ")[0]} · ${user.designation}`],approvals:["Approvals",user.role==="super"?"All approval queues (view only — no bypass)":`Requests waiting for your ${[...new Set(FLOW.procurement.concat(FLOW.store).filter(s=>s.owner===user.role).map(s=>s.label.toLowerCase()))].join(" / ")||"decision"}`],forms:["Request Forms","Purchase & store requisitions online, plus printable blank forms"],imports:["Excel Import","Download a template, fill it, upload it"],procurement:["Procurement",user.role==="hod"?"Request items not in store and track them to delivery":"Verify requests, run RFQs, issue purchase orders"],vendors:["Vendors & RFQ","Vendor database, magic links, competitive statements"],store:["Store",user.role==="hod"?"Request items from store and track issue":"Stock ledger, receipts, issues and movements"],reports:["Reports","Spend, cycle time, budgets and stock, filterable by month and department"],finance:["Budget & Payments","Budget lines, utilisation and 3-way matched vendor payments"],settings:["Settings","Policy, approval rules and tax rates"],log:["Tracking log","Every request and every action, with a search for any document ID"],users:["Users & roles","Accounts, access matrix and demo reset"],tasks:["Tasks","Plan, assign, approve and track work across departments"],tasksettings:["Task settings","Task departments and stages"]};
   const page=({tasks:Tasks,dashboard:Dashboard,approvals:Approvals,forms:Forms,procurement:Procurement,vendors:Vendors,store:Store,reports:Reports,imports:Imports,log:LogPage,users:Users,finance:Finance,settings:Settings,tasksettings:({state,user,A})=>html`<div class="stack page-body">${h(TSettings,{state,user,A})}</div>`})[activeTab];
   const meRec=state.users.find(u=>u.id===user.id)||user;
+  /* sidebar items: the portal's tabs; in Tasks & Events the task sections themselves, as in every other portal */
+  const tp=isTasksPortal()&&tabs.some(t=>t.id==="tasks");
+  const goTaskView=k=>{ setTab("tasks"); setTaskView(k); setTaskOpen("view:"+k); };
+  const navItems=tp?TASK_VIEWS().map(([k,l,i])=>({id:"tv:"+k,label:l,icon:i,on:activeTab==="tasks"&&taskView===k,go:()=>goTaskView(k)})).concat(tabs.filter(t=>t.id!=="tasks").map(t=>({id:t.id,label:t.label,icon:t.icon,on:t.id===activeTab,go:()=>setTab(t.id),count:counts[t.id]})))
+    :tabs.map(t=>({id:t.id,label:t.label,icon:t.icon,on:t.id===activeTab,go:()=>setTab(t.id),count:counts[t.id]}));
+  const tvLabel=tp&&activeTab==="tasks"&&(TASK_VIEWS().find(v=>v[0]===taskView)||[])[1];
+  const pageTitle=tvLabel||titles[activeTab][0];
 
   return html`<div class=${"shell"+(sideOpen?"":" collapsed")}>
     <aside class="side" aria-label="Main menu"><div class="side-brand"><img src=${LOGO} alt=""/><div class="lbl"><b>Alkhidmat Foundation Islamabad</b><span>${PORTAL_NAME}</span><a class="side-home" href=${PORTAL_HOME}>← All portals</a></div><button class="side-pin lbl" title=${sideOpen?"Collapse sidebar (opens on hover)":"Keep sidebar open"} aria-label="Toggle sidebar" onClick=${()=>setSideOpen(o=>!o)}><${Icon} name=${sideOpen?"back":"pin"}/></button></div>
-      <nav class="nav" ref=${navRef}><i class="nav-ind" aria-hidden="true"/>${tabs.map(t=>html`<button class=${t.id===activeTab?"active":""} title=${t.label} onClick=${()=>setTab(t.id)}><${Icon} name=${t.icon}/><span class="lbl">${t.label}</span>${counts[t.id]?html`<span class="count">${counts[t.id]}</span>`:""}</button>`)}</nav>
+      <nav class="nav" ref=${navRef}><i class="nav-ind" aria-hidden="true"/>${navItems.map(t=>html`<button class=${t.on?"active":""} title=${t.label} onClick=${t.go}><${Icon} name=${t.icon}/><span class="lbl">${t.label}</span>${t.count?html`<span class="count">${t.count}</span>`:""}</button>`)}</nav>
       <div class="side-user"><div class="lbl"><b>${user.name}</b><span>${user.designation||ROLES[user.role].label}${user.role==="hod"?" · "+user.dept:""}</span></div><div class="row"><button title="My signature" onClick=${()=>setSignOpen(true)}><${Icon} name="pen"/><span class="lbl">${meRec.signature?"Signature":"Add signature"}</span></button><button title="Password" onClick=${()=>setPw(true)}><${Icon} name="lock"/><span class="lbl">Password</span></button><button title="My data" onClick=${()=>setMyData(true)}><${Icon} name="shield"/><span class="lbl">My data</span></button><button title="Sign out" onClick=${logout}><${Icon} name="logout"/><span class="lbl">Sign out</span></button></div></div></aside>
     <div class="main">
-      <header class="topbar"><button class="iconbtn side-toggle" aria-label="Toggle sidebar" title="Show / hide sidebar" onClick=${()=>setSideOpen(o=>!o)}><${Icon} name="menu"/></button><div class="grow"><div class="row"><h1 class="pg-title">${titles[activeTab][0]}</h1>${readOnly&&html`<span class="viewonly"><${Icon} name="eye" cls="icon" style="width:13px"/>View only</span>`}</div><div class="sub">${titles[activeTab][1]}</div></div>
+      <header class="topbar"><button class="iconbtn side-toggle" aria-label="Toggle sidebar" title="Show / hide sidebar" onClick=${()=>setSideOpen(o=>!o)}><${Icon} name="menu"/></button><div class="grow"><div class="row"><h1 class="pg-title">${pageTitle}</h1>${readOnly&&html`<span class="viewonly"><${Icon} name="eye" cls="icon" style="width:13px"/>View only</span>`}</div><div class="sub">${titles[activeTab][1]}</div></div>
         <${TrackBox} state=${state} user=${user} openReq=${openReq} openDoc=${openDoc} inline/>
         <div style="position:relative"><button class="iconbtn" aria-label=${`Notifications, ${unread.length} unread`} onClick=${()=>setBell(b=>!b)}><${Icon} name="bell"/>${unread.length>0&&html`<span class="pip">${unread.length>99?"99+":unread.length}</span>`}</button>
           ${bell&&html`<div class="card pop notif" onClick=${e=>e.stopPropagation()}><div class="card-h"><div class="grow"><h3>Notifications</h3><div class="desc">${unread.length?`${unread.length} unread`:"All caught up"}</div></div>${unread.length>0&&html`<button class="btn btn-ghost btn-sm" onClick=${()=>markRead(user.id,unread.map(n=>n.key))}><${Icon} name="check"/>Mark all read</button>`}<button class="iconbtn" style="width:28px;height:28px" aria-label="Close" onClick=${()=>setBell(false)}><${Icon} name="x"/></button></div><div class="card-b list" style="max-height:60vh;overflow:auto">${notes.length?notes.map(n=>{ const isRead=!!readKeys[n.key]; return html`<button class=${"item note"+(isRead?" read":"")} onClick=${()=>openNote(n)}><div class="t">${!isRead&&html`<i class="unread-dot"/>`}<${Icon} name=${n.icon} cls="icon" style=${`color:var(--${n.tone==="bad"?"bad":n.tone==="warn"?"warn":"info"})`}/><b>${n.t}</b><span class="grow"/><span class="xs faint nowrap">${ago(n.at)}</span></div><div class="m">${n.d}</div>${!n.id&&!isRead&&html`<span class="xs link-like" onClick=${e=>{ e.stopPropagation(); markRead(user.id,[n.key]); }}>Mark as read</span>`}</button>`; }):html`<${Empty} title="All clear">Nothing needs your attention.<//>`}</div></div>`}</div>
@@ -6295,10 +6306,10 @@ function App(){
         <button class="me" title="My signature & profile" onClick=${()=>setSignOpen(true)}><span class="avatar">${initials(user.name)}</span><span class="me-t"><b>${user.name}</b><span>${user.designation||ROLES[user.role].label}</span></span></button>
         <button class="iconbtn" aria-label="Sign out" title="Sign out" onClick=${logout} style="display:none" id="mobile-logout"><${Icon} name="logout"/></button>
       </header>
-      <main class="content"><div class="page-body"><div class="print-only"><${DocHeader} title=${titles[activeTab][0]} sub=${`${titles[activeTab][1]} · printed ${fmtDT(nowISO())} by ${user.name}`}/></div>${h(page,{key:activeTab,state,user,A,openReq,openDoc,setTab,readOnly,me:user,focusItem:modal&&modal.kind==="stock"?null:null,taskOpen,setTaskOpen})}</div>
+      <main class="content"><div class="page-body"><div class="print-only"><${DocHeader} title=${titles[activeTab][0]} sub=${`${titles[activeTab][1]} · printed ${fmtDT(nowISO())} by ${user.name}`}/></div>${h(page,{key:activeTab,state,user,A,openReq,openDoc,setTab,readOnly,me:user,focusItem:modal&&modal.kind==="stock"?null:null,taskOpen,setTaskOpen,onView:setTaskView})}</div>
         <footer class="xs faint" style="text-align:center;padding-top:20px">Alkhidmat Foundation Islamabad Region · Procurement to Store · every step logged · signed in as ${user.username} · build ${BUILD} · <button class="xs" style="color:var(--brand-2);font-weight:700" onClick=${logout}>sign out</button></footer></main>
     </div>
-    <nav class="mobilenav">${tabs.map(t=>html`<button class=${t.id===activeTab?"active":""} onClick=${()=>setTab(t.id)}><${Icon} name=${t.icon} cls="icon-lg icon"/>${t.label.split(" ")[0]}${counts[t.id]?html`<span class="count">${counts[t.id]}</span>`:""}</button>`)}</nav>
+    <nav class="mobilenav">${(tp?navItems.filter(t=>/^tv:(home|board|events|planner)$/.test(t.id)).concat(navItems.filter(t=>!/^tv:/.test(t.id))):navItems).map(t=>html`<button class=${t.on?"active":""} onClick=${t.go}><${Icon} name=${t.icon} cls="icon-lg icon"/>${t.id==="tasksettings"?"Settings":t.label.split(" ")[0]}${t.count?html`<span class="count">${t.count}</span>`:""}</button>`)}</nav>
     ${modal&&modal.kind==="req"&&(()=>{ const r=state.requests.find(x=>x.id===modal.id); const allowed=r&&visibleRequests(user,[r]).length>0; return allowed?html`<${RequestModal} key=${r.id} req=${r} state=${state} user=${user} A=${A} readOnly=${readOnly} onClose=${()=>setModal(null)} openDoc=${openDoc}/>`:html`<${Modal} title="Request" sub=${modal.id} onClose=${()=>setModal(null)} narrow><${Empty} title=${r?"Not available to you":"Request not found"}>${r?"This request has not reached your step yet, or belongs to another department.":"Check the ID and try again."}<//><//>`; })()}
     ${modal&&modal.kind==="doc"&&html`<${DocModal} key=${modal.id} id=${modal.id} state=${state} onClose=${()=>setModal(null)} openReq=${openReq}/>`}
     ${modal&&modal.kind==="stock"&&html`<${StockDocModal} key=${modal.id} id=${modal.id} state=${state} onClose=${()=>setModal(null)}/>`}
@@ -6923,7 +6934,11 @@ function TRow({t,state,user,A,open,who=true}){
 }
 
 /* ===================== the Tasks page ===================== */
-function Tasks({state,user,A,taskOpen,setTaskOpen}){
+/* Task sections. In the Tasks & Events portal they are the sidebar items (like every other portal); in the all-in-one demo they are a strip on the Tasks page. */
+const TASK_VIEWS=()=>[["home","Home","home"],["eagle","Eagle view","grid"],["board","Board","board"],["events","Events","flag"],["tracking","Tracking","log"],["planner","Planner","cal"],["workload","Workload","users"],["performance","Performance","chart"],["myspace","To-Do & Notes","note"]].filter(v=>portalTab(v[0]));
+const isTasksPortal=()=>typeof PORTAL!=="undefined"&&PORTAL==="tasks";
+const portalName=()=>typeof PORTAL_NAME!=="undefined"?PORTAL_NAME:"Procurement & Store Portal";
+function Tasks({state,user,A,taskOpen,setTaskOpen,onView}){
   TS=state;
   const lsk="akf-tasks-"+user.id; const saved=(()=>{ try{ return JSON.parse(tLS.get(lsk)||"{}"); }catch(e){ return {}; } })();
   const [view,setView]=useState(saved.view||"home"); const [mode,setMode]=useState(saved.mode||"board");
@@ -6949,7 +6964,8 @@ function Tasks({state,user,A,taskOpen,setTaskOpen}){
   /* notifications can ask to open an event ("ev:KEY") or a view ("view:tracking") */
   useEffect(()=>{ if(!taskOpen) return; if(taskOpen.startsWith("ev:")){ const k=taskOpen.slice(3); setTaskOpen(null); openEvent(k); } else if(taskOpen.startsWith("view:")){ setView(taskOpen.slice(5)); setTaskOpen(null); } },[taskOpen]);
   const running=timer.tm&&vis.find(t=>t.key===timer.tm.key);
-  const VIEWS=[["home","Home","home"],["eagle","Eagle view","grid"],["board","Board","board"],["events","Events","flag"],["tracking","Tracking","log"],["planner","Planner","cal"],["workload","Workload","users"],["performance","Performance","chart"],["myspace","To-Do & Notes","note"]].filter(v=>portalTab(v[0]));
+  const VIEWS=TASK_VIEWS();
+  useEffect(()=>{ if(onView) onView(view); },[view]);   // the sidebar shows which section is open
   /* "/" jumps to the search box, as in most task tools */
   useEffect(()=>{ const k=e=>{ if(e.key==="/"&&!/input|textarea|select/i.test((e.target.tagName||""))&&!e.target.isContentEditable){ const i=document.querySelector(".tk-search input"); if(i){ e.preventDefault(); i.focus(); } } }; window.addEventListener("keydown",k); return ()=>window.removeEventListener("keydown",k); },[]);
   if(VIEWS.length&&!VIEWS.some(v=>v[0]===view)) setTimeout(()=>setView(VIEWS[0][0]),0);   // older saved views (assistant / settings) are gone
@@ -6957,7 +6973,7 @@ function Tasks({state,user,A,taskOpen,setTaskOpen}){
   const migrating=(state.tasks||[]).some(t=>t.v!==2);
   return html`<${Fragment}><div class="tk-page">
     <div class="tk-views">
-      <div class="seg" role="tablist">${VIEWS.map(([k,l,i])=>html`<button role="tab" class=${view===k?"active":""} onClick=${()=>setView(k)}><${Icon} name=${i}/>${l}</button>`)}</div>
+      ${!isTasksPortal()&&html`<div class="seg" role="tablist">${VIEWS.map(([k,l,i])=>html`<button role="tab" class=${view===k?"active":""} onClick=${()=>setView(k)}><${Icon} name=${i}/>${l}</button>`)}</div>`}
       <span class="grow"/>
       ${running&&html`<span class="tk-timer"><${Icon} name="clock"/>${running.id} · ${timer.label}<button onClick=${()=>open(running.key)}>Open</button><button onClick=${()=>stopTimer(timer,A)}>Stop & log</button></span>`}
       ${TR.canCreateEvent(user)&&html`<button class="btn btn-soft" onClick=${newEvent}><${Icon} name="flag"/>New event request</button>`}
