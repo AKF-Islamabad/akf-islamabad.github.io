@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-EKUNIEolfpVnrFeGCxi3YT/BPBWXFG8F8OTuonG2pnk='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-njl4gx9/EO5bWBp/Xa2yDAwzmKhhjghLF6makHDbYZ8='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <!-- clickjacking guard: GitHub Pages cannot send X-Frame-Options, so the page stays hidden if another site frames it -->
 <style id="no-frame">html{display:none!important}</style>
@@ -4242,15 +4242,16 @@ function makeActions(commit, user, toast){
     },
     /* Stock received outside a procurement request: purchased (GRN-P) or donation in kind (GDN-D) */
     /* Stock received outside a procurement request: purchased (GRN-P) or donation in kind (GDN-D) */
-    receiveStock({kind,date,store,from,ref,purpose,lines,note}){
-      let id; commit(d=>{ id=autoDocId(d,kind,date||nowISO().slice(0,10)); const at=atOfDate(date); let amount=0;
+    /* docId: a number worked out beforehand (in-kind donations from Donor Management) — kept when still free */
+    receiveStock({kind,date,store,from,ref,purpose,lines,note,docId}){
+      let id; commit(d=>{ id=autoDocId(d,kind,date||nowISO().slice(0,10),docId); const at=atOfDate(date); let amount=0;
         const out=lines.map(l=>{ amount+=l.qty*l.price; const s=findOrCreateItem(d,{name:l.item,category:l.category,uom:l.uom,price:l.price,store,rack:l.rack,bin:l.bin,expiry:l.expiry,min:l.min,condition:l.condition||"New"});
           s.qty+=l.qty; if(l.price) s.price=l.price; if(l.expiry) s.expiry=l.expiry; if(l.rack) s.rack=l.rack; if(l.bin) s.bin=l.bin;
           d.ledger.unshift({id:uid(),at,itemId:s.id,type:"in",qty:l.qty,ref:id,note:(kind==="GRN-P"?"Purchase · ":"Donation in kind · ")+from});
           return {item:s.name,qty:l.qty,uom:s.uom,price:l.price,condition:condOf(s),expiry:l.expiry||""}; });
         d.docs.unshift({id,type:kind,title:kind==="GRN-P"?"Goods Received Note (purchase)":"Goods Donation Note (donation in kind)",at,by:user.name,byId:user.id,amount,ref:ref||"",from,purpose,store,lines:out,note});
         log(d,id,kind==="GRN-P"?"Stock received (purchase)":"Stock received (donation in kind)",`${from} · ${lines.length} item${lines.length>1?"s":""} · ${pkr(amount)}`);
-      }); toast(`${id} created · stock updated`,"ok");
+      }); toast(`${id} created · stock updated`,"ok"); return id;
     },
     /* Direct issue (GIN) — distributions and dispatches approved outside a store request; the approval reference is mandatory */
     issueStock({date,store,to,purpose,receiver,approval,lines,note}){
@@ -4878,6 +4879,102 @@ function Vendors({state,user,A,openReq,openDoc,readOnly}){
   </div>`;
 }
 
+/* ---------- In-kind donations from Donor Management (Store portal, live database only) ----------
+   One shared queue for the page: fetched at most once a minute (and when the tab becomes visible again), refreshed after each receive.
+   Nothing is written to logs, storage or URLs; the server (donor_goods_queue / donor_receive_goods) is the real permission check. */
+const donorGoodsOn=()=>SB_MODE&&!!sb&&typeof PORTAL!=="undefined"&&PORTAL==="store";
+const DQ={items:null,err:null,at:0,busy:null,subs:new Set(),pend:[]};
+const dqEmit=()=>DQ.subs.forEach(f=>{ try{ f(); }catch(e){} });
+function dqLoad(maxAge=60000){
+  if(!donorGoodsOn()) return Promise.resolve(null);
+  if(DQ.busy) return DQ.busy;
+  if(DQ.at&&Date.now()-DQ.at<maxAge) return Promise.resolve(DQ.items);
+  DQ.at=Date.now();
+  DQ.busy=Promise.resolve(sb.rpc("donor_goods_queue",{p_done:false})).then(({data,error})=>{ if(error) throw error; DQ.items=Array.isArray(data)?data:[]; DQ.err=null; },e=>{ DQ.err=e; })
+    .then(()=>{ DQ.busy=null; dqEmit(); return DQ.items; });
+  return DQ.busy;
+}
+function useDonorQueue(enabled){
+  const [,tick]=useState(0);
+  useEffect(()=>{ if(!enabled||!donorGoodsOn()) return;
+    const f=()=>tick(x=>x+1); DQ.subs.add(f); dqLoad();
+    const iv=setInterval(()=>{ if(!document.hidden) dqLoad(); },60000);
+    const vis=()=>{ if(!document.hidden) dqLoad(); };
+    document.addEventListener("visibilitychange",vis);
+    return ()=>{ DQ.subs.delete(f); clearInterval(iv); document.removeEventListener("visibilitychange",vis); }; },[!!enabled]);
+  return enabled&&donorGoodsOn()?DQ:null;
+}
+/* a server message is shown only when it is a plain sentence (e.g. "quantity must equal the receipt"), never SQL or details */
+const plainServerMsg=e=>{ const m=String(e&&e.message||"").trim(); return m&&m.length<220&&!/[{}<>;]|\b(select|insert|update|delete|relation|column|syntax|function|violates|constraint|null value|pgrst|jwt)\b/i.test(m)?m.replace(/[.\s]+$/,""):""; };
+/* donor receipt line → Stock received form line (est. unit value = value / qty) */
+function donorPreset(state,q){
+  return { ref:q.receipt, from:q.donor||"", minDate:String(q.date||"").slice(0,10), store:q.store, purpose:"Donation in kind · "+q.receipt,
+    lines:(q.lines||[]).map(l=>{ const s=state.stock.find(s=>itemKey(s.name)===itemKey(l.item||""));
+      const qty=Number(l.qty)||0;
+      const unit=String(l.unit||(s&&s.uom)||"Pcs"), known=[...UOMS,...state.stock.map(x=>x.uom)].find(u=>String(u).toLowerCase()===unit.toLowerCase());
+      return { srcLine:l.line, item:String(l.item||""), wantQty:qty, qty, uom:known||unit, category:s?s.category:"OTHER",
+        price:qty?Math.round((Number(l.value)||0)/qty*100)/100:0, condition:q.condition||"New", rack:"", bin:"", expiry:"" }; }) };
+}
+function DonorGoodsCard({state,A,canAct,onReceived}){
+  const dq=useDonorQueue(true);
+  const [recv,setRecv]=useState(null);      // queue item being received
+  const [busy,setBusy]=useState(false);
+  const [showDone,setShowDone]=useState(false); const [done,setDone]=useState(null); const [doneErr,setDoneErr]=useState("");
+  const [,tick]=useState(0);
+  useEffect(()=>{ dqLoad(15000); },[]);   // load on open (unless just loaded)
+  if(!dq) return "";
+  const toast=(m,t)=>window.__toast&&window.__toast(m,t);
+  const items=(dq.items||[]).filter(q=>!dq.pend.some(p=>p.q.id===q.id));
+  const loadDone=()=>{ setDoneErr(""); Promise.resolve(sb.rpc("donor_goods_queue",{p_done:true})).then(({data,error})=>{ if(error) throw error; setDone(Array.isArray(data)?data:[]); }).catch(e=>setDoneErr(errRef(e,"Could not load the received donations"))); };
+  const saveStock=p=>{ /* (c) the normal GDN-D: stock, ledger, document and audit — with the number already given to Donor Management */
+    try{ const id=A.receiveStock({...p.payload,kind:"GDN-D",docId:p.docId});
+      DQ.pend=DQ.pend.filter(x=>x!==p); tick(x=>x+1);
+      if(id&&id!==p.docId) toast(`Stock saved as ${id} — ${p.docId} was taken meanwhile. Tell Donor Management the GDN-D number changed.`,"bad");
+      return true;
+    }catch(e){ p.err=errRef(e,`Donor receipt ${p.q.receipt} was marked received, but the stock was not saved. Use “Retry saving stock”`); toast(p.err,"bad"); tick(x=>x+1); return false; } };
+  const receive=async p=>{
+    if(busy) return; setBusy(true);
+    const q=recv;
+    try{
+      if(p.lines.some(l=>Number(l.qty)!==Number(l.wantQty))) throw Object.assign(new Error("qty"),{plain:"Quantities must equal the donor receipt. Ask Donor Management (RMD) to correct the receipt first, or reject it there"});
+      /* (a) the GDN-D number this save will use — same numbering as every other receipt */
+      const docId=autoDocId(state,"GDN-D",p.date);
+      const bin=l=>[l.rack,l.bin].map(x=>String(x||"").trim()).filter(Boolean).join("-");
+      const rec={grn:docId,date:p.date,store:p.store,condition:(p.lines[0]&&p.lines[0].condition)||q.condition||"New",remarks:String(p.note||""),
+        lines:p.lines.map(l=>({line:l.srcLine,qty:Number(l.qty),bin:bin(l),expiry:l.expiry||"",batch:l.batch||""}))};
+      /* (b) mark the donor receipt's goods received — the server checks rights, the recorder rule and the quantities */
+      let res;
+      try{ const r=await sb.rpc("donor_receive_goods",{p_id:q.id,p_rec:rec}); if(r.error) throw r.error; res=r.data||{}; }
+      catch(e){ const m=plainServerMsg(e); toast(errRef(e,m||"Could not mark the donation as received"),"bad"); setBusy(false); return; }
+      /* (c) only now write the stock */
+      const pend={q,docId,payload:{...p,ref:q.receipt},err:""}; DQ.pend=[...DQ.pend,pend];
+      setRecv(null);
+      if(saveStock(pend)){ toast(`${q.receipt} received as ${docId}${res.status==="Pending"?" · Finance still has to verify the money part":""}`,"ok"); if(onReceived) onReceived(); }
+      dqLoad(0); if(showDone) loadDone();
+    }catch(e){ toast(e.plain?e.plain:errRef(e,"Could not receive the donation"),"bad"); }
+    setBusy(false);
+  };
+  return html`<${Card} title=${`In-kind from Donor Management${items.length?` (${items.length})`:""}`} desc="Donated goods recorded by Donor Management, waiting to be counted into the store (GDN-D)"
+    right=${html`<span class="row" style="gap:6px"><button class="btn btn-ghost btn-sm" onClick=${()=>{ const nx=!showDone; setShowDone(nx); if(nx) loadDone(); }}>${showDone?"Hide received":"Received"}</button><button class="btn btn-ghost btn-sm" disabled=${!!dq.busy} onClick=${()=>dqLoad(5000)}>Refresh</button></span>`}>
+    <div class="stack">
+    ${dq.pend.map(p=>html`<div class="notice notice-bad" style="align-items:center"><${Icon} name="alert"/><span class="grow"><b>${p.q.receipt}</b> was marked received in Donor Management as <b class="id">${p.docId}</b>, but the stock is not saved yet.${p.err?html`<div class="xs">${p.err}</div>`:""}</span>${canAct&&html`<button class="btn btn-primary btn-sm" onClick=${()=>{ if(saveStock(p)){ toast(`${p.q.receipt} stock saved`,"ok"); if(onReceived) onReceived(); } }}>Retry saving stock</button>`}</div>`)}
+    ${recv&&html`<${StockReceiveForm} key=${recv.id} state=${state} preset=${donorPreset(state,recv)} busy=${busy} onCancel=${()=>{ if(!busy) setRecv(null); }} onSave=${receive}/>`}
+    ${dq.err&&!dq.items?html`<div class="notice notice-warn"><${Icon} name="alert"/><span>The donor queue could not be loaded. Check the connection and press Refresh.</span></div>`
+      :!dq.items?html`<div class="sm muted">Loading…</div>`
+      :!items.length?html`<${Empty} title="No in-kind donations waiting">Goods recorded by Donor Management appear here to be received.<//>`
+      :html`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Receipt</th><th>Donor</th><th>Items</th><th class="r">Est. value</th><th>Condition</th><th>Store</th>${canAct&&html`<th/>`}</tr></thead><tbody>${items.map(q=>html`<tr>
+        <td><b class="id">${q.receipt}</b><div class="xs faint">${fmtD(q.date)}${q.mixed?" · with money":""}</div></td>
+        <td class="sm">${q.donor}</td>
+        <td class="sm">${(q.lines||[]).map(l=>html`<div>${l.item} · <b class="num">${l.qty}</b> ${l.unit}</div>`)}</td>
+        <td class="r num">${fmt((q.lines||[]).reduce((s,l)=>s+(Number(l.value)||0),0))}</td>
+        <td class="sm">${q.condition||"—"}</td>
+        <td class="sm">${q.store||"—"}</td>
+        ${canAct&&html`<td><button class="btn btn-primary btn-sm" disabled=${busy||!!recv} onClick=${()=>setRecv(q)}><${Icon} name="download"/>Receive</button></td>`}</tr>`)}</tbody></table></div>`}
+    ${showDone&&html`<div><b class="sm">Last received</b>${doneErr?html`<div class="notice notice-warn"><${Icon} name="alert"/><span>${doneErr}</span></div>`:!done?html`<div class="sm muted">Loading…</div>`:!done.length?html`<div class="sm muted">Nothing received yet.</div>`
+      :html`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Receipt</th><th>GDN-D</th><th>Donor</th><th class="r">Received</th><th>By</th></tr></thead><tbody>${done.map(q=>html`<tr><td class="id">${q.receipt}</td><td><b class="id">${q.grn||"—"}</b></td><td class="sm">${q.donor}</td><td class="r sm nowrap">${q.received_at?fmtD(q.received_at):"—"}</td><td class="sm">${q.received_by||"—"}</td></tr>`)}</tbody></table></div>`}</div>`}
+    </div><//>`;
+}
+
 /* ---------- Store ---------- */
 function Store({state,user,A,openReq,openDoc,readOnly,focusItem}){
   const isHod=user.role==="hod";
@@ -4888,6 +4985,8 @@ function Store({state,user,A,openReq,openDoc,readOnly,focusItem}){
   const [itemModal,setItemModal]=useState(null);   // {item} to edit, {} to add
   const manage=canManageItems(user)&&!readOnly;
   const mine=visibleRequests(user,state.requests).filter(r=>canAct(user,r)&&(r.type==="store"||["po","grn"].includes(r.stage)));
+  const storeAct=!isHod&&!readOnly;   // same rule as the "Stock received" button
+  const dq=useDonorQueue(true); const dqN=storeAct&&dq&&dq.items?dq.items.length:0;
   const stock=state.stock.filter(s=>!q||(s.name+s.id+s.category+s.store).toLowerCase().includes(q.toLowerCase()));
   const selItem=state.stock.find(s=>s.id===sel);
   const soon=s=>s.expiry&&(new Date(s.expiry)-Date.now())/864e5<30;
@@ -4900,6 +4999,7 @@ function Store({state,user,A,openReq,openDoc,readOnly,focusItem}){
       <button class="sa" disabled=${!state.stock.some(s=>s.qty>0)} onClick=${()=>setForm("beneficiary")}><span class="sa-ic"><${Icon} name="user"/></span><span><b>Beneficiary receipt</b><small>Distribution to a family / person</small></span></button>
       <div class="row wrap sa-more"><button class="btn btn-ghost btn-sm" disabled=${!state.stock.length} onClick=${()=>setForm("transfer")}>Transfer</button><button class="btn btn-ghost btn-sm" disabled=${!state.stock.length} onClick=${()=>setForm("return")}>Return</button><button class="btn btn-ghost btn-sm" disabled=${!state.stock.length} onClick=${()=>setForm("disposal")}>Disposal</button><button class="btn btn-ghost btn-sm" disabled=${!state.stock.length} onClick=${()=>setForm("psv")}>Stock count</button>${manage&&html`<button class="btn btn-primary btn-sm" onClick=${()=>setItemModal({})}><${Icon} name="plus"/>Add item</button>`}</div>
     </div>`}
+    ${dq&&html`<div id="donor-goods"><${DonorGoodsCard} state=${state} A=${A} canAct=${storeAct} onReceived=${()=>setTab("received")}/></div>`}
     ${!isHod&&html`<div class="seg">${[["register","Stock register"],["received","Received"],["issued","Issued"],["stock","Bin cards"],["requests","Issue requests"],["assets","Assets"],["docs","Documents"]].map(([k,l])=>html`<button class=${tab===k?"active":""} onClick=${()=>setTab(k)}>${l}</button>`)}</div>`}
     ${form==="receive"&&html`<${StockReceiveForm} state=${state} onCancel=${()=>setForm(null)} onSave=${p=>{A.receiveStock(p);setForm(null);setTab("received");}}/>`}
     ${form==="issue"&&html`<${StockIssueForm} state=${state} onCancel=${()=>setForm(null)} onSave=${p=>{A.issueStock(p);setForm(null);setTab("issued");}}/>`}
@@ -4908,7 +5008,7 @@ function Store({state,user,A,openReq,openDoc,readOnly,focusItem}){
     ${tab==="register"&&!isHod&&html`<${StockRegister} state=${state} openItem=${id=>{ setSel(id); setTab("stock"); }}/>`}
     ${(tab==="received"||tab==="issued")&&!isHod&&html`<${StockMovements} kind=${tab} state=${state} openDoc=${openDoc}/>`}
     ${tab==="register"&&!isHod&&!state.stock.length&&html`<div class="notice notice-info"><${Icon} name="upload"/><span>The stock register is empty. Load your register from <b>Excel Import → Stock register (AKF format)</b>, using the same workbook you keep today (Home, Received and Dispatched sheets).</span></div>`}
-    ${!isHod&&mine.length>0&&html`<${Card} title=${`Action needed (${mine.length})`} desc="Stock checks, goods receipts and issues waiting on you"><div class="list">${mine.map(r=>html`<button class="item" onClick=${()=>openReq(r.id)}><div class="t"><b class="id">${r.id}</b><${Tag} tone=${statusTone(r)} dot>${nextStage(r).label}</${Tag}>${isEscalated(r)&&html`<${Tag} tone="bad">48h</${Tag}>`}<span class="grow"/><b class="num">${pkr(reqTotal(r))}</b></div><div class="m">${r.purpose} · ${r.dept}</div></button>`)}</div><//>`}
+    ${!isHod&&mine.length+dqN>0&&html`<${Card} title=${`Action needed (${mine.length+dqN})`} desc="Stock checks, goods receipts and issues waiting on you"><div class="list">${dqN>0&&html`<button class="item" onClick=${()=>{ const el=document.getElementById("donor-goods"); if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); }}><div class="t"><${Icon} name="box"/><b>${dqN} in-kind donation${dqN===1?"":"s"} to receive</b><span class="grow"/><${Tag} tone="info" dot>Donor Management</${Tag}></div><div class="m">Count the goods and create the GDN-D</div></button>`}${mine.map(r=>html`<button class="item" onClick=${()=>openReq(r.id)}><div class="t"><b class="id">${r.id}</b><${Tag} tone=${statusTone(r)} dot>${nextStage(r).label}</${Tag}>${isEscalated(r)&&html`<${Tag} tone="bad">48h</${Tag}>`}<span class="grow"/><b class="num">${pkr(reqTotal(r))}</b></div><div class="m">${r.purpose} · ${r.dept}</div></button>`)}</div><//>`}
     ${tab==="stock"&&!isHod&&(()=>{ const low=state.stock.filter(s=>s.qty<=s.min); if(!low.length) return ""; const already=state.requests.some(r=>r.status==="active"&&r.stage!=="closed"&&r.purpose.startsWith("Reorder")); return html`<div class="notice notice-warn" style="align-items:center"><${Icon} name="alert"/><span class="grow"><b>${low.length} item${low.length>1?"s":""} at or below minimum:</b> ${low.map(s=>`${s.name} (${s.qty}/${s.min})`).join(", ")}</span>${!readOnly&&!already&&html`<button class="btn btn-primary btn-sm" onClick=${()=>openReq(A.reorder(low.map(s=>({name:s.name,category:s.category,uom:s.uom,qty:Math.max(1,s.min*2-s.qty),price:s.price}))))}><${Icon} name="cart"/>Raise reorder request</button>`}${already&&html`<${Tag} tone="info">Reorder request open</${Tag}>`}</div>`; })()}
     ${(tab==="stock"&&!isHod)&&html`<div class="split" style="grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr)">
       <${Card} title="Stock on hand" desc=${`${state.stock.length} items · ${pkr(state.stock.reduce((s,i)=>s+i.qty*i.price,0))} · live FIFO balances`} right=${html`<input class="input" placeholder="Search items…" value=${q} onInput=${e=>setQ(e.target.value)} style="max-width:200px"/>`}>
@@ -4999,28 +5099,32 @@ function Ledger({itemId,state,openDoc}){
 /* ---------- Stock received (GRN-P / GDN-D), stock issued (GIN), stock register ---------- */
 const dedupeCI=a=>{ const seen=new Set(); return a.filter(x=>{ const k=String(x).toLowerCase(); if(!x||seen.has(k)) return false; seen.add(k); return true; }); };
 const CondTag=({c})=>html`<${Tag} tone=${c==="New"?"info":/damag|not work/i.test(c)?"bad":/repair/i.test(c)?"warn":"violet"}>${c}</${Tag}>`;
-function StockReceiveForm({state,onCancel,onSave}){
+/* preset (in-kind donation from Donor Management): kind, donor, reference and lines come from the donor receipt and are locked;
+   quantities must equal the receipt (lines carry wantQty) */
+function StockReceiveForm({state,onCancel,onSave,preset,busy}){
   const today=nowISO().slice(0,10);
   const vendors=state.vendors.map(v=>v.name);
   const donors=dedupeCI([...state.docs.filter(d=>d.type==="GDN-D"&&d.from).map(d=>d.from),...DONORS.filter(x=>x!=="OTHER")]);
   const optsFor=k=>k==="GRN-P"?vendors:donors;
-  const [kind,setKind]=useState("GDN-D"); const [date,setDate]=useState(today); const [store,setStore]=useState(STORES[0]);
-  const [from,setFrom]=useState(donors[0]||""); const [ref,setRef]=useState(""); const [purpose,setPurpose]=useState(""); const [note,setNote]=useState("");
+  const P=preset||null; const minDate=P&&P.minDate||"";
+  const [kind,setKind]=useState("GDN-D"); const [date,setDate]=useState(P&&P.minDate>today?P.minDate:today); const [store,setStore]=useState(P&&STORES.includes(P.store)?P.store:STORES[0]);
+  const [from,setFrom]=useState(P?P.from:(donors[0]||"")); const [ref,setRef]=useState(P?P.ref:""); const [purpose,setPurpose]=useState(P?P.purpose:""); const [note,setNote]=useState("");
   const blank={item:"",condition:"New",category:"OTHER",uom:"Unit",qty:1,price:0,rack:"",bin:"",expiry:""};
-  const [lines,setLines]=useState([{...blank}]);
+  const [lines,setLines]=useState(()=>P?P.lines.map(l=>({...blank,...l})):[{...blank}]);
+  const qtyBad=!!P&&lines.some(l=>Number(l.qty)!==Number(l.wantQty));
   const names=dedupeCI(state.stock.map(s=>s.name)).sort();
   const uoms=dedupeCI(["Unit",...UOMS,...state.stock.map(s=>s.uom)]);
   const cats=dedupeCI([...CATS,...state.stock.map(s=>s.category)]);
   const set=(i,k,v)=>setLines(l=>l.map((x,j)=>{ if(j!==i) return x; const n={...x,[k]:v}; if(k==="item"){ const s=state.stock.find(s=>itemKey(s.name)===itemKey(v)); if(s){ n.uom=uoms.find(u=>u.toLowerCase()===String(s.uom).toLowerCase())||s.uom; n.category=s.category; if(!x.price) n.price=s.price||0; } } return n; }));
   const total=lines.reduce((s,l)=>s+(l.qty||0)*(l.price||0),0);
-  const ok=String(from).trim()&&date&&date<=today&&lines.every(l=>l.item.trim()&&l.qty>0);
-  return html`<${Card} title="Stock received" desc=${kind==="GRN-P"?"Purchased goods. Purchases made through a procurement request are received from that request; use this for purchases recorded outside the portal.":"Donated goods (donation in kind). They enter stock at the estimated value so reports show their worth."}><div class="stack">
-    <div class="kind-toggle">${Object.keys(RECEIPT_TYPES).map(k=>html`<button class=${"kt"+(kind===k?" on":"")+(k==="GRN-P"?" kt-p":" kt-d")} onClick=${()=>{ setKind(k); setFrom(optsFor(k)[0]||""); }}><b>${k}</b><span>${k==="GRN-P"?"Purchased":"Donation in kind"}</span></button>`)}</div>
+  const ok=String(from).trim()&&date&&date<=today&&(!minDate||date>=minDate)&&lines.every(l=>l.item.trim()&&l.qty>0)&&!qtyBad&&!busy;
+  return html`<${Card} title=${P?`Receive in-kind donation · ${P.ref}`:"Stock received"} desc=${P?"From Donor Management. Count the goods: quantities must match the donor receipt. Choose the store, rack / bin and expiry, then save.":kind==="GRN-P"?"Purchased goods. Purchases made through a procurement request are received from that request; use this for purchases recorded outside the portal.":"Donated goods (donation in kind). They enter stock at the estimated value so reports show their worth."}><div class="stack">
+    <div class="kind-toggle">${Object.keys(RECEIPT_TYPES).map(k=>html`<button class=${"kt"+(kind===k?" on":"")+(k==="GRN-P"?" kt-p":" kt-d")} disabled=${!!P&&k!==kind} onClick=${()=>{ if(P) return; setKind(k); setFrom(optsFor(k)[0]||""); }}><b>${k}</b><span>${k==="GRN-P"?"Purchased":"Donation in kind"}</span></button>`)}</div>
     <div class="grid3">
-      <${Field} label="Date received"><input class="input" type="date" max=${today} value=${date} onInput=${e=>setDate(e.target.value)}/><//>
+      <${Field} label="Date received"><input class="input" type="date" min=${minDate||undefined} max=${today} value=${date} onInput=${e=>setDate(e.target.value)}/><//>
       <${Field} label="Store"><${Pick} value=${store} options=${STORES} onChange=${setStore}/><//>
-      <${Field} label=${kind==="GRN-P"?"Supplier":"Donor"}><${Pick} value=${from} options=${optsFor(kind)} onChange=${setFrom} placeholder=${kind==="GRN-P"?"Supplier name":"Donor name"}/><//>
-      <${Field} label=${kind==="GRN-P"?"Bill / challan / PO no.":"Donation letter / reference"}><input class="input" value=${ref} onInput=${e=>setRef(e.target.value)} placeholder="Optional"/><//>
+      <${Field} label=${kind==="GRN-P"?"Supplier":"Donor"}>${P?html`<input class="input" value=${from} readOnly/>`:html`<${Pick} value=${from} options=${optsFor(kind)} onChange=${setFrom} placeholder=${kind==="GRN-P"?"Supplier name":"Donor name"}/>`}<//>
+      <${Field} label=${kind==="GRN-P"?"Bill / challan / PO no.":P?"Donor receipt no.":"Donation letter / reference"}><input class="input" value=${ref} readOnly=${!!P} onInput=${e=>setRef(e.target.value)} placeholder="Optional"/><//>
       <${Field} label="Purpose"><input class="input" value=${purpose} onInput=${e=>setPurpose(e.target.value)} placeholder="Flood, Ramadan, Winter package…"/><//>
       <${Field} label="Note"><input class="input" value=${note} onInput=${e=>setNote(e.target.value)} placeholder="Vehicle, photos ref…"/><//>
     </div>
@@ -5031,14 +5135,16 @@ function StockReceiveForm({state,onCancel,onSave}){
       <td><${Pick} value=${l.condition} options=${CONDITIONS} onChange=${v=>set(i,"condition",v)} style="min-width:170px" placeholder="Describe the condition"/></td>
       <td><select class="select" style="min-width:110px" value=${l.category} onChange=${e=>set(i,"category",e.target.value)}>${cats.map(c=>html`<option>${c}</option>`)}</select></td>
       <td><${Pick} value=${l.uom} options=${uoms} onChange=${v=>set(i,"uom",v)} style="min-width:110px"/></td>
-      <td><input class="input" type="number" min="1" style="width:84px" value=${l.qty} onInput=${e=>set(i,"qty",Number(e.target.value))}/></td>
+      <td><input class="input" type="number" min="1" style="width:84px" value=${l.qty} onInput=${e=>set(i,"qty",Number(e.target.value))}/>${P&&html`<div class=${"xs"+(Number(l.qty)!==Number(l.wantQty)?" bold":" faint")}>Receipt: ${l.wantQty}</div>`}</td>
       <td><input class="input" type="number" min="0" style="width:110px" value=${l.price} onInput=${e=>set(i,"price",Number(e.target.value))}/></td>
       <td class="r num">${fmt((l.qty||0)*(l.price||0))}</td>
       <td><input class="input" style="width:70px" value=${l.rack} onInput=${e=>set(i,"rack",e.target.value)}/></td>
       <td><input class="input" style="width:60px" value=${l.bin} onInput=${e=>set(i,"bin",e.target.value)}/></td>
       <td><input class="input" type="date" value=${l.expiry} onInput=${e=>set(i,"expiry",e.target.value)}/></td>
-      <td><button class="iconbtn" style="width:32px;height:32px" disabled=${lines.length===1} onClick=${()=>setLines(lines.filter((_,j)=>j!==i))}><${Icon} name="trash"/></button></td></tr>`)}</tbody></table></div>
-    <div class="row wrap"><button class="btn btn-ghost btn-sm" onClick=${()=>setLines([...lines,{...blank}])}><${Icon} name="plus"/>Add line</button><span class="grow"/><span class="sm muted">Total <b class="num">${pkr(total)}</b></span><button class="btn btn-ghost" onClick=${onCancel}>Cancel</button><button class="btn btn-primary" disabled=${!ok} onClick=${()=>onSave({kind,date,store,from:String(from).trim(),ref,purpose,lines:lines.map(l=>({...l,item:l.item.trim()})),note})}><${Icon} name="check"/>Create ${kind}</button></div></div><//>`;
+      <td><button class="iconbtn" style="width:32px;height:32px" disabled=${lines.length===1||!!P} onClick=${()=>setLines(lines.filter((_,j)=>j!==i))}><${Icon} name="trash"/></button></td></tr>`)}</tbody></table></div>
+    ${qtyBad&&html`<div class="notice notice-bad"><${Icon} name="alert"/><span>The counted quantity differs from the donor receipt. Do not save: ask Donor Management (RMD) to correct the receipt first, or reject it there.</span></div>`}
+    ${P&&minDate&&date&&date<minDate&&html`<div class="notice notice-warn"><${Icon} name="alert"/><span>The date received cannot be before the donation date (${fmtD(minDate)}).</span></div>`}
+    <div class="row wrap">${!P&&html`<button class="btn btn-ghost btn-sm" onClick=${()=>setLines([...lines,{...blank}])}><${Icon} name="plus"/>Add line</button>`}<span class="grow"/><span class="sm muted">Total <b class="num">${pkr(total)}</b></span><button class="btn btn-ghost" disabled=${!!busy} onClick=${onCancel}>Cancel</button><button class="btn btn-primary" disabled=${!ok} onClick=${()=>onSave({kind,date,store,from:String(from).trim(),ref,purpose,lines:lines.map(l=>({...l,item:l.item.trim()})),note})}><${Icon} name="check"/>${busy?"Saving…":P?`Receive & create ${kind}`:`Create ${kind}`}</button></div></div><//>`;
 }
 function StockIssueForm({state,onCancel,onSave}){
   const today=nowISO().slice(0,10);
@@ -5785,6 +5891,9 @@ function App(){
   const commit=fn=>{ const prev=stateRef.current; const d=JSON.parse(JSON.stringify(prev)); fn(d); stateRef.current=d; setState(d);
     if(SB_MODE){ saving.current=saving.current.then(()=>DB.save(prev,d)).catch(e=>{ toast(errRef(e,"Could not save to the server"),"bad"); }); } else saveState(d); };
 
+  /* in-kind donations waiting in Donor Management (Store portal, live only): polled for people who may act in the Store */
+  const dqUser=donorGoodsOn()&&authUser&&state?profileFor(state,authUser):null;
+  const dqApp=useDonorQueue(!!(dqUser&&dqUser.active&&dqUser.role!=="hod"&&!READ_ONLY_ROLES.includes(dqUser.role)));
   const [grid,setGrid]=useState(null);
   useEffect(()=>{ if(!SB_MODE||!authUser){ PORTAL_GRID=null; setGrid(null); return; }
     sb.rpc("core_my_tabs",{p_module:PORTAL}).then(({data,error})=>{ const g=error?[]:(data||[]).map(t=>t.tab_key); PORTAL_GRID=g; setGrid(g); },()=>{ PORTAL_GRID=[]; setGrid([]); }); },[authUser&&authUser.id]);
@@ -5815,13 +5924,16 @@ function App(){
   if(pendingTrack){ const id=pendingTrack; setTimeout(()=>{ setPendingTrack(null); try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} openDoc(id); },0); }
 
   const notes=buildNotifications(state,user).filter(n=>PORTAL==="tasks"?!!(n.task||n.event||n.taskView):!(n.task||n.event||n.taskView));
+  const dqN=dqApp&&dqApp.items&&tabs.some(t=>t.id==="store")?dqApp.items.length:0;
+  if(dqN>0) notes.unshift({tone:"info",icon:"box",t:`${dqN} in-kind donation${dqN===1?"":"s"} to receive`,d:"From Donor Management · Store → In-kind from Donor Management",at:nowISO(),goTab:"store",key:"box|DONQ|"+dqN+"|"+dqApp.items.map(x=>x.id).sort().slice(-1)[0]});
   if(readKeys.__uid!==user.id){ setTimeout(()=>{ loadRead(user.id); setReadKeys(r=>({...r,__uid:user.id})); },0); }
   const unread=notes.filter(n=>!readKeys[n.key]);
-  const openNote=n=>{ markRead(user.id,[n.key]); setBell(false); if(n.task||n.event||n.taskView){ setTab("tasks"); setTaskOpen(n.task||(n.event?"ev:"+n.event:"view:"+n.taskView)); } else if(n.id) openReq(n.id); };
+  const openNote=n=>{ markRead(user.id,[n.key]); setBell(false); if(n.task||n.event||n.taskView){ setTab("tasks"); setTaskOpen(n.task||(n.event?"ev:"+n.event:"view:"+n.taskView)); } else if(n.goTab) setTab(n.goTab); else if(n.id) openReq(n.id); };
   /* opening a request any other way also clears its notifications */
   if(modal&&modal.kind==="req"){ const ks=unread.filter(n=>n.id===modal.id).map(n=>n.key); if(ks.length) setTimeout(()=>markRead(user.id,ks),0); }
   const counts={}; visibleRequests(user,state.requests).forEach(r=>{ if(!canAct(user,r)) return; const t=APPROVER_ROLES.includes(ownerOf(r))?(tabs.some(t=>t.id==="approvals")?"approvals":"dashboard"):r.type==="store"?"store":(ownerOf(r)==="store_officer"?"store":"procurement"); counts[t]=(counts[t]||0)+1; });
   counts.tasks=tWaitingCount(state,user);
+  if(dqN>0) counts.store=(counts.store||0)+dqN;
   if(user.role==="hod"){ counts.procurement=visibleRequests(user,state.requests).filter(r=>r.type==="procurement"&&canAct(user,r)).length||0; counts.store=visibleRequests(user,state.requests).filter(r=>r.type==="store"&&canAct(user,r)).length||0; }
   const T=tabs.find(t=>t.id===activeTab)||tabs[0];
   const titles={dashboard:["Dashboard",`Good ${new Date().getHours()<12?"morning":new Date().getHours()<17?"afternoon":"evening"}, ${user.name.split(" ")[0]} · ${user.designation}`],approvals:["Approvals",user.role==="super"?"All approval queues (view only — no bypass)":`Requests waiting for your ${[...new Set(FLOW.procurement.concat(FLOW.store).filter(s=>s.owner===user.role).map(s=>s.label.toLowerCase()))].join(" / ")||"decision"}`],forms:["Request Forms","Purchase & store requisitions online, plus printable blank forms"],imports:["Excel Import","Download a template, fill it, upload it"],procurement:["Procurement",user.role==="hod"?"Request items not in store and track them to delivery":"Verify requests, run RFQs, issue purchase orders"],vendors:["Vendors & RFQ","Vendor database, magic links, competitive statements"],store:["Store",user.role==="hod"?"Request items from store and track issue":"Stock ledger, receipts, issues and movements"],reports:["Reports","Spend, cycle time, budgets and stock, filterable by month and department"],finance:["Budget & Payments","Budget lines, utilisation and 3-way matched vendor payments"],settings:["Settings","Policy, approval rules and tax rates"],log:["Tracking log","Every request and every action, with a search for any document ID"],users:["Users & roles","Accounts, access matrix and demo reset"],tasks:["Tasks","Plan, assign, approve and track work across departments"],tasksettings:["Task settings","Task departments and stages"]};
