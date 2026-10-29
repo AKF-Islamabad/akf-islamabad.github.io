@@ -6,7 +6,7 @@
 <title>Alkhidmat Islamabad Portals</title>
 <meta name="description" content="One sign-in for every Alkhidmat Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-QFznF4aWhByvjHb323ckGOConXo4mD+nlaiMQq1XbN8='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-t8IUycSWACTZE6rqLAKvfnzDexlTGXndYKGxY5qOlZ8='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -247,6 +247,17 @@ dialog::backdrop{background:rgba(6,20,45,.45);backdrop-filter:blur(6px)}
 .auth .card .brand .logo{width:52px;height:52px}
 @media (max-width:900px){ .auth{grid-template-columns:1fr} .auth-brand{display:none} }
 
+/* Settings: one place for every portal */
+.set-nav{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.set-pill{display:flex;gap:12px;align-items:center;text-align:left;padding:14px 16px;border-radius:16px;border:1px solid var(--line);background:var(--card);cursor:pointer;box-shadow:var(--shadow);transition:transform .3s var(--ease),border-color .25s,box-shadow .3s}
+.set-pill:hover{transform:translateY(-2px);border-color:var(--brand-3)}
+.set-pill .si{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none;background:var(--soft);color:var(--brand-2);transition:background .25s,color .25s}
+.set-pill b{display:block;font-size:15px} .set-pill small{display:block;color:var(--faint);font-size:12.5px;line-height:1.35}
+.set-pill.on{border-color:var(--brand-2);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand-3) 18%,transparent),var(--shadow)}
+.set-pill.on .si{background:var(--grad-brand);color:#fff;box-shadow:0 8px 18px -8px rgba(11,81,167,.7)}
+input.swatch{width:38px;height:32px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--card);cursor:pointer}
+textarea.input{line-height:1.45}
+
 /* branded loading overlay (same as Donor Management) */
 #ak-loader{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;background:radial-gradient(60% 50% at 50% 40%,rgba(11,81,167,.28),rgba(5,20,52,.55));backdrop-filter:blur(6px) saturate(1.2);-webkit-backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .25s var(--ease)}
 #ak-loader.on{opacity:1;pointer-events:auto}
@@ -273,6 +284,8 @@ dialog::backdrop{background:rgba(6,20,45,.45);backdrop-filter:blur(6px)}
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
+<script src="akf-assistant.js"></script>
+<script src="akf-matrix.js"></script>
 <script>
 "use strict";
 /* ========== Alkhidmat Islamabad — main page (portal launcher + people & access) ==========
@@ -368,6 +381,12 @@ async function loadMe() {
     if (S.recovery || S.me.must_change_password) { S.view = "setpw"; return render(); }
     S.portals = await q(sb.rpc("core_my_portals"));
     S.view = "home"; render();
+    /* Alkhidmat AI on the main page too (every page has it); it knows which portals this person has, nothing personal */
+    if (window.AKF_ASSISTANT) AKF_ASSISTANT({ sb, portal: "Khidmat Hub (main page)", user: S.me.full_name.split(" ")[0],
+      context: () => JSON.stringify({ today: new Date().toISOString().slice(0, 10), page: "Main page: sign-in and the list of portals", isSuperAdmin: !!S.me.is_super,
+        myPortals: S.portals.map(p => ({ name: p.name, what: p.description, myAccess: ROLE_LABEL[p.role] || p.role })),
+        superAdminTabs: S.me.is_super ? ["People & access (add people, tick tabs and actions per portal)", "Portals & departments", "Settings (one place for every portal)", "Activity & usage"] : [] }),
+      hints: ["Which portal should I use for a purchase?", "How do I give someone access?", "Write a short e-mail to staff about the new portal", "Explain Zakat in simple words"] });
     if (S.me.is_super && S.tab !== "portals") loadAdmin();
   } catch (e) { S.view = "error"; render(); fail(e, "Could not load your account"); }
 }
@@ -723,15 +742,38 @@ const SETTING_FIELDS = [
     ["directPurchaseLimit", "Direct-purchase limit (PKR) — above this, quotations + purchase committee are required", "number"], ["assetThreshold", "Record as an asset from (PKR per item)", "number"],
     ["actingApprover", "Acting approver when the President is away", "acting"]]],
   ["Taxes (%)", [["gst", "GST", "pct"], ["whtGoodsFiler", "WHT goods — filer", "pct"], ["whtGoodsNonFiler", "WHT goods — non-filer", "pct"], ["whtServicesFiler", "WHT services — filer", "pct"], ["whtServicesNonFiler", "WHT services — non-filer", "pct"]]],
-  ["AI assistant (in the portals)", [["aiProvider", "Assistant", "ai"], ["aiModel", "Gemini model", "text"], ["aiKey", "Gemini key (leave empty to keep the saved one)", "secret"]]],
+  ["Alkhidmat AI — the assistant in every portal (unlimited messages)", [["aiModel", "Gemini model", "text"], ["aiKey", "Google Gemini key (aistudio.google.com/apikey) — kept on the server, never shown to staff. Leave empty to keep the saved one.", "secret"]]],
 ];
+/* the shared settings record: read fresh and change only the given keys, so two sections never overwrite each other */
+async function saveGlobal(patch, logText) {
+  const r = await q(sb.from("portal_rows").select("data").eq("collection", "settings").eq("id", "global").maybeSingle());
+  const next = { ...((r && r.data) || {}), ...patch };
+  await q(sb.from("portal_rows").upsert({ collection: "settings", id: "global", data: next }, { onConflict: "collection,id" }));
+  try {   // record it in the portals' tracking log, in my own name
+    const me = await q(sb.from("portal_rows").select("id").eq("collection", "users").eq("data->>email", S.me.email).maybeSingle());
+    const id = "set-" + Date.now().toString(36);
+    if (me) await q(sb.from("portal_rows").insert({ collection: "audit", id, data: { id, at: new Date().toISOString(), doc: "SETTINGS", action: "Settings changed", comment: logText, dept: "IT", by: S.me.full_name, role: "super", uid: me.id } }));
+  } catch (e) { }
+  return next;
+}
+
+/* ONE Settings place for every portal: no portal has its own settings page */
+const SETTING_AREAS = [["general", "All portals", "settings", "Organisation, approvals, taxes, AI assistant"], ["matrix", "Approval matrix", "shield", "Who approves what, step by step, in each portal"], ["tasks", "Tasks & Events", "check", "Task departments and workflow stages"], ["donor", "Donor Management", "heart", "Receipts, lists, numbering, donor messages, old data"]];
 function settings() {
+  const cur = S.setArea || "general";
+  const nav = el("div", { class: "set-nav", role: "tablist", "aria-label": "Settings for" }, SETTING_AREAS.map(([k, t, ic, d]) =>
+    el("button", { class: "set-pill" + (cur === k ? " on" : ""), role: "tab", "aria-selected": String(cur === k), onclick: () => { S.setArea = k; render(); } },
+      el("span", { class: "si" }, icon(ic, 18)), el("span", {}, el("b", { text: t }), el("small", { text: d })))));
+  return el("section", { style: "display:grid;gap:18px" }, nav, cur === "matrix" ? settingsMatrix() : cur === "tasks" ? settingsTasks() : cur === "donor" ? settingsDonor() : settingsGeneral());
+}
+function settingsGeneral() {
   const box = el("section", { style: "padding-bottom:40px;display:grid;gap:16px" }, el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })));
   (async () => {
     let cur = {};
     try { const r = await q(sb.from("portal_rows").select("data").eq("collection", "settings").eq("id", "global").maybeSingle()); cur = (r && r.data) || {}; }
     catch (e) { box.replaceChildren(el("div", { class: "notice bad", text: "Settings could not be loaded." })); return fail(e, "Settings could not be loaded"); }
-    const v = { ...SETTING_DEFAULTS, ...cur }, inputs = {};
+    let aiStatus = null; try { aiStatus = await q(sb.rpc("core_ai_status")); } catch (e) { }
+    const v = { ...SETTING_DEFAULTS, ...cur, aiKey: aiStatus && aiStatus.key_set ? "set" : "" }, inputs = {};
     const field = ([k, label, type]) => {
       let i;
       if (type === "acting") { i = el("select", { class: "input" }, el("option", { value: "", text: "Nobody (President only)" }), ORG_ROLES.filter(r => !["staff", "hod"].includes(r[0])).map(([r, t]) => el("option", { value: r, text: t }))); i.value = v[k] || ""; }
@@ -752,22 +794,319 @@ function settings() {
         if (k === "orgName" && val.length < 3) return toast("Enter the organisation name", true);
         if (JSON.stringify(next[k]) !== JSON.stringify(val)) { changed.push(k); next[k] = val; }
       }
-      if (!changed.length) return toast("Nothing changed");
+      /* the Gemini key never goes into the shared settings record: it is kept where no browser can read it */
+      const keyI = inputs.aiKey && inputs.aiKey[0], newKey = keyI ? keyI.value.trim() : "";
+      const ci = changed.indexOf("aiKey"); if (ci >= 0) changed.splice(ci, 1);
+      if (newKey) { try { await q(sb.rpc("core_set_ai_key", { p_key: newKey })); keyI.value = ""; keyI.placeholder = "•••••• saved"; toast("AI key saved on the server"); } catch (e) { return fail(e, "The AI key was not saved"); } }
+      if (!changed.length) return newKey ? null : toast("Nothing changed");
       save.disabled = true;
       try {
-        await q(sb.from("portal_rows").upsert({ collection: "settings", id: "global", data: next }, { onConflict: "collection,id" }));
-        cur = next; toast("Settings saved — every portal uses them now");
-        try {   // record it in the portals' tracking log, in my own name
-          const me = await q(sb.from("portal_rows").select("id").eq("collection", "users").eq("data->>email", S.me.email).maybeSingle());
-          const id = "set-" + Date.now().toString(36);
-          if (me) await q(sb.from("portal_rows").insert({ collection: "audit", id, data: { id, at: new Date().toISOString(), doc: "SETTINGS", action: "Settings changed", comment: changed.map(k => k === "aiKey" ? "aiKey: (new key)" : `${k}: ${next[k]}`).join(" · "), dept: "IT", by: S.me.full_name, role: "super", uid: me.id } }));
-        } catch (e) { }
+        cur = await saveGlobal(Object.fromEntries(changed.map(k => [k, next[k]])), changed.map(k => k === "aiKey" ? "aiKey: (new key)" : `${k}: ${next[k]}`).join(" · "));
+        toast("Settings saved — every portal uses them now");
       } catch (e) { fail(e, "Settings were not saved"); }
       save.disabled = false;
     } });
-    box.replaceChildren(el("p", { class: "small muted", text: "One place for the rules every portal follows. Task departments and stages are set inside Tasks & Events (Task settings). Donor Management has its own Settings tab: receipt header & footer, donation types, programmes, banks, in-kind stores & units, receipt numbering, donor message templates and bringing in old data (tick Donor Management → Settings → Edit for whoever manages it)." }),
+    box.replaceChildren(el("p", { class: "small muted", text: "The rules Procurement, Store and every other portal follow." }),
       ...SETTING_FIELDS.map(([title, fields]) => el("div", { class: "card", style: "padding:16px;display:grid;gap:12px" }, el("h3", { style: "margin:0;font-size:16px", text: title }), el("div", { class: "grid2" }, fields.map(field)))),
       el("div", { class: "row" }, save));
+  })();
+  return box;
+}
+
+/* ---------- Settings → Approval matrix: every portal's approval steps (akf-matrix.js; checked by the database too) ---------- */
+const MATRIX_PORTALS = [["procurement", "Procurement", "cart"], ["store", "Store", "box"], ["tasks", "Tasks & Events", "check"], ["donor", "Donor Management", "heart"]];
+function settingsMatrix() {
+  const box = el("section", { style: "padding-bottom:40px;display:grid;gap:16px" }, el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })));
+  if (!window.AKF_MATRIX) { box.replaceChildren(el("div", { class: "notice bad", text: "akf-matrix.js did not load. Reload the page." })); return box; }
+  const M = window.AKF_MATRIX, which = S.mxPortal || "procurement";
+  (async () => {
+    let raw;
+    try { const r = await q(sb.from("portal_rows").select("data").eq("collection", "settings").eq("id", "global").maybeSingle()); raw = (r && r.data) || {}; }
+    catch (e) { box.replaceChildren(el("div", { class: "notice bad", text: "The approval matrix could not be loaded." })); return fail(e, "The approval matrix could not be loaded"); }
+    const mx = M.get(raw), part = JSON.parse(JSON.stringify(mx[which]));
+    const sel = (opts, value, label) => { const s = el("select", { class: "input", "aria-label": label }, opts.map(([v, t]) => el("option", { value: v, text: t }))); s.value = value; return s; };
+    const chk = (on, label, disabled) => { const c = el("input", { type: "checkbox", "aria-label": label, disabled: disabled ? "" : null }); c.checked = !!on; return c; };
+    const numIn = (v, label, ph) => el("input", { class: "input", type: "number", min: 0, step: 1000, value: v ? String(v) : "", placeholder: ph || "0", "aria-label": label, style: "max-width:140px" });
+    const tabs = el("div", { class: "row", style: "gap:8px" }, MATRIX_PORTALS.map(([k, t, ic]) => el("button", { class: "btn sm" + (k === which ? "" : " ghost"), onclick: () => { S.mxPortal = k; render(); } }, icon(ic, 16), t)));
+    const saveBtn = el("button", { class: "btn", text: "Save approval matrix" });
+    const preview = el("div", { class: "notice info" });
+
+    /* ----- steps editor (Procurement, Store, Donor Management) ----- */
+    const stepsEditor = () => {
+      const isDonor = which === "donor", rows = el("tbody");
+      const draw = () => {
+        rows.replaceChildren(...part.steps.map((s, i) => {
+          const fixed = s.kind === "fixed", apIdx = part.steps.filter(x => x.kind === "approval").indexOf(s);
+          const label = el("input", { class: "input", value: s.label, maxlength: 60, "aria-label": "Step name" }); label.addEventListener("input", () => { s.label = label.value; });
+          const who = el("input", { class: "input", value: s.who, maxlength: 60, "aria-label": "Shown as" }); who.addEventListener("input", () => { s.who = who.value; });
+          let owner;
+          if (fixed) owner = el("span", { class: "small muted", text: isDonor ? (s.tick === "store:store:add" ? "Store → Store → Add" : s.tick === "new:add" ? "New Receipt → Add" : "Donations → Approve") : (M.ROLES.find(r => r[0] === s.owner) || [s.owner, s.owner])[1] });
+          else if (isDonor) { owner = sel(M.DONOR_TICKS, s.tick || "team:edit", "Who approves (tick in People & access)"); owner.addEventListener("change", () => { s.tick = owner.value; }); }
+          else { owner = sel(M.ROLES, s.owner, "Who approves"); owner.addEventListener("change", () => { s.owner = owner.value; }); }
+          const on = chk(s.on, "Step on", fixed || s.final); on.addEventListener("change", () => { s.on = on.checked; showPreview(); });
+          const min = fixed ? el("span", { class: "small muted", text: "every request" }) : numIn(s.minAmount, "Only from this amount (PKR)", s.final ? "always" : "every request");
+          if (!fixed) { if (s.final) min.disabled = true; min.addEventListener("input", () => { s.minAmount = Math.max(0, Math.round(+min.value || 0)); showPreview(); }); }
+          const hrs = numIn(s.hours, "Time limit in hours", "general"); hrs.step = 1; hrs.style.maxWidth = "100px"; hrs.addEventListener("input", () => { s.hours = Math.max(0, Math.round(+hrs.value || 0)); });
+          const move = d => { const ap = part.steps.filter(x => x.kind === "approval"), j = apIdx + d; if (j < 0 || j >= ap.length) return; const a = part.steps.indexOf(ap[apIdx]), b = part.steps.indexOf(ap[j]); [part.steps[a], part.steps[b]] = [part.steps[b], part.steps[a]]; draw(); showPreview(); };
+          const acts = fixed ? el("span", { class: "tag", text: "fixed step" }) : el("div", { class: "row", style: "gap:4px;flex-wrap:nowrap" },
+            el("button", { class: "btn ghost sm", title: "Move up", "aria-label": "Move up", text: "↑", onclick: () => move(-1) }), el("button", { class: "btn ghost sm", title: "Move down", "aria-label": "Move down", text: "↓", onclick: () => move(1) }),
+            /^x_/.test(s.key) ? el("button", { class: "btn ghost sm", text: "Remove", onclick: () => { part.steps.splice(i, 1); draw(); showPreview(); } }) : null);
+          return el("tr", { style: fixed ? "opacity:.75" : "" }, el("td", { class: "small muted", text: String(i + 1) }), el("td", {}, label), el("td", {}, who), el("td", {}, owner), el("td", {}, on), el("td", {}, min), el("td", {}, hrs), el("td", {}, acts));
+        }));
+      };
+      const add = el("button", { class: "btn ghost sm", onclick: () => {
+        const n = part.steps.filter(s => /^x_/.test(s.key)).length + 1, key = "x_step" + Date.now().toString(36).slice(-5);
+        const st = isDonor ? { key, label: "Extra approval", who: "Manager RMD", tick: "team:edit", kind: "approval", on: true, minAmount: 500000, hours: 0 }
+          : { key, label: "Approval " + n, who: "General Secretary", owner: "gen_sec", kind: "approval", on: true, minAmount: 0, hours: 0 };
+        const at = isDonor ? part.steps.findIndex(s => s.key === "money") + 1 : part.steps.findIndex(s => s.final);   // before the final approval
+        part.steps.splice(at < 0 ? part.steps.length : at, 0, st); draw(); showPreview(); } }, icon("plus", 16), isDonor ? "Add an approval step (e.g. large donations)" : "Add an approval step");
+      draw();
+      const amount = el("input", { class: "input", type: "number", min: 0, step: 10000, value: "100000", style: "max-width:160px", "aria-label": "Amount for the preview" });
+      const showPreviewFn = () => { const list = M.steps({ approvalMatrix: { [which]: part } }, which, +amount.value || 0).filter(s => s.kind === "approval" || !isDonor || s.key !== "goods");
+        preview.replaceChildren(el("b", { text: `A ${isDonor ? "receipt" : "request"} of Rs ${(+amount.value || 0).toLocaleString("en-PK")} goes through: ` }), list.map(s => s.who + " (" + s.label + ")").join(" → ")); };
+      showPreview = showPreviewFn; amount.addEventListener("input", showPreviewFn); showPreviewFn();
+      return [el("div", { class: "card tblwrap" }, el("table", {}, el("thead", {}, el("tr", {}, ["#", "Step", "Shown as", isDonor ? "Who approves (tick)" : "Who approves", "On", "Only from amount (PKR)", "Time limit (h)", ""].map(t => el("th", { text: t })))), rows)),
+        el("div", { class: "row" }, add, el("span", { class: "grow" }), el("label", { class: "row small" }, "Preview for an amount of Rs", amount)), preview,
+        isDonor ? corrEditor() : null];
+    };
+    let showPreview = () => {};
+    const corrEditor = () => { const s = sel(M.DONOR_TICKS, part.corrections.tick, "Who approves corrections"); s.addEventListener("change", () => { part.corrections.tick = s.value; });
+      return el("div", { class: "card", style: "padding:16px;display:grid;gap:10px" }, el("h3", { style: "margin:0;font-size:16px", text: "Corrections (wrong name or amount)" }),
+        el("label", { class: "f" }, "Approved by whoever has this tick", s), el("p", { class: "small muted", text: "Nobody verifies or approves an entry they recorded or corrected themselves (maker-checker), at every step." })); };
+
+    /* ----- Tasks & Events editor ----- */
+    const tasksEditor = () => {
+      const roleChecks = (list, extra) => el("div", { class: "row", style: "gap:14px" }, [...(extra || []), ...M.TASK_ROLES].map(([k, t]) => { const c = chk(list.includes(k), t); c.addEventListener("change", () => { const i = list.indexOf(k); if (c.checked && i < 0) list.push(k); if (!c.checked && i >= 0) list.splice(i, 1); }); return el("label", { class: "row small" }, c, t); }));
+      const self = chk(part.selfNeedsApproval, "Self-assigned tasks need approval"); self.addEventListener("change", () => { part.selfNeedsApproval = self.checked; });
+      const evRows = part.events.map(ev => {
+        const label = el("input", { class: "input", value: ev.label, maxlength: 60 }); label.addEventListener("input", () => { ev.label = label.value; });
+        const who = el("input", { class: "input", value: ev.who, maxlength: 60 }); who.addEventListener("input", () => { ev.who = who.value; });
+        const on = chk(ev.on, "Step on", ev.kind === "fixed" || ev.final); on.addEventListener("change", () => { ev.on = on.checked; });
+        return el("tr", {}, el("td", {}, label), el("td", {}, who), el("td", {}, roleChecks(ev.roles)), el("td", {}, on));
+      });
+      return [el("div", { class: "card", style: "padding:16px;display:grid;gap:12px" }, el("h3", { style: "margin:0;font-size:16px", text: "Tasks" }),
+          el("div", { class: "f" }, "Who approves a task waiting for approval, and rates it (a HOD, Manager Admin or HR Manager approves within their own department; the Regional Manager everywhere)", roleChecks(part.approvers)),
+          el("div", { class: "f" }, "Who may close a task (nobody closes a task assigned to themselves)", roleChecks(part.closers, [["assigner", "The person who assigned it"]])),
+          el("label", { class: "row small" }, self, "A task someone assigned to themselves is closed by an approver, not by them")),
+        el("div", { class: "card", style: "padding:16px;display:grid;gap:12px" }, el("h3", { style: "margin:0;font-size:16px", text: "Event approval chain" }),
+          el("p", { class: "small muted", text: "Steps of an event request, in order. Switch off a middle step to skip it. The request and the final approval are always on." }),
+          el("div", { class: "tblwrap" }, el("table", {}, el("thead", {}, el("tr", {}, ["Step", "Shown as", "Who may sign", "On"].map(t => el("th", { text: t })))), el("tbody", {}, evRows))))];
+    };
+
+    saveBtn.addEventListener("click", async () => {
+      if (which !== "tasks") {
+        if (part.steps.some(s => !String(s.label).trim() || !String(s.who).trim())) return toast("Every step needs a name and a 'shown as' text", true);
+      } else {
+        if (!part.approvers.length) return toast("Choose at least one role that approves tasks", true);
+        if (!part.closers.length) return toast("Choose at least one who may close tasks", true);
+        if (part.events.some(ev => !ev.roles.length)) return toast("Every event step needs at least one role", true);
+      }
+      saveBtn.disabled = true;
+      try {
+        const r = await q(sb.from("portal_rows").select("data").eq("collection", "settings").eq("id", "global").maybeSingle());
+        const fresh = (r && r.data && r.data.approvalMatrix) || {};
+        const next = Object.assign({ v: 1 }, fresh, { [which]: part });
+        await saveGlobal({ approvalMatrix: next }, `Approval matrix changed: ${MATRIX_PORTALS.find(p => p[0] === which)[1]}`);
+        toast("Approval matrix saved. New requests follow it; requests already in progress keep the steps they started with.");
+      } catch (e) { fail(e, "The approval matrix was not saved"); }
+      saveBtn.disabled = false;
+    });
+    const reset = el("button", { class: "btn ghost", text: "Restore the standard steps", onclick: () => { if (!confirm("Go back to the standard steps for this portal? (Not saved until you press Save.)")) return; Object.assign(part, JSON.parse(JSON.stringify(M.DEFAULTS[which]))); S.mxDraft = part; draw(); } });
+    const body = el("div", { style: "display:grid;gap:14px" });
+    const draw = () => body.replaceChildren(...(which === "tasks" ? tasksEditor() : stepsEditor()).filter(Boolean));
+    draw();
+    box.replaceChildren(
+      el("p", { class: "small muted", text: "Who approves what in each portal, step by step. Fixed steps are part of the process (purchasing, store issue, receiving goods) and always happen; approval steps can be switched off, moved, renamed, given to another person or limited to large amounts. The database checks every approval against this matrix, so nobody can skip a step." }),
+      tabs, body, el("div", { class: "row" }, saveBtn, reset));
+  })();
+  return box;
+}
+
+/* ---------- Settings → Tasks & Events: departments and workflow stages (stored in the shared settings record) ---------- */
+const TASK_DEPTS_DEFAULT = [["01","REG","Regional Office","#0B4A9F"],["02","FIN","Finance","#0E8C84"],["03","ADMIN","Administration","#6A4FD9"],["04","RMD","Resource Mobilization","#D98A14"],["05","EDU","Education","#2567CF"],
+  ["06","AKIM","Al-Khidmat Health (AKIM)","#D23B3B"],["07","BANO","Bano Qabil","#C2410C"],["08","ORPHAN","Orphan Care","#7C3AED"],["09","VOL","Volunteers","#1E9A5A"],["10","WASH","Clean Water (WASH)","#0891B2"],["11","MOWAKHAT","Mowakhat (Interest-free loans)","#9333EA"]]
+  .map(([id, code, name, color]) => ({ id, code, name, color }));
+const TASK_STAGES_DEFAULT = [["01","New","#7B8798"],["02","In progress","#0B4A9F"],["03","Ready for review","#D98A14"],["04","Waiting HOD","#6A4FD9"],["05","Approved","#0E8C84"],["06","Done","#1E9A5A"],["07","Cancelled","#D23B3B"]]
+  .map(([id, name, color]) => ({ id, name, color }));
+function settingsTasks() {
+  const box = el("section", { style: "padding-bottom:40px;display:grid;gap:16px" }, el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })));
+  (async () => {
+    let depts, stages, counts = {};
+    try {
+      const r = await q(sb.from("portal_rows").select("data").eq("collection", "settings").eq("id", "global").maybeSingle());
+      const d = (r && r.data) || {};
+      depts = JSON.parse(JSON.stringify(Array.isArray(d.taskDepts) && d.taskDepts.length ? d.taskDepts : TASK_DEPTS_DEFAULT));
+      stages = JSON.parse(JSON.stringify(Array.isArray(d.taskStages) && d.taskStages.length ? d.taskStages : TASK_STAGES_DEFAULT));
+      const tasks = await q(sb.from("portal_rows").select("dept:data->>dept").eq("collection", "tasks").range(0, 9999));
+      (tasks || []).forEach(t => { counts[t.dept] = (counts[t.dept] || 0) + 1; });
+    } catch (e) { box.replaceChildren(el("div", { class: "notice bad", text: "Task settings could not be loaded." })); return fail(e, "Task settings could not be loaded"); }
+    const draw = () => {
+      const deptRows = depts.map(d => {
+        const n = counts[d.id] || 0;
+        const color = el("input", { type: "color", value: /^#[0-9a-f]{6}$/i.test(d.color) ? d.color : "#2567CF", "aria-label": "Colour", class: "swatch" }); color.addEventListener("input", () => { d.color = color.value; });
+        const name = el("input", { class: "input", value: d.name, maxlength: 60, "aria-label": "Department name" }); name.addEventListener("input", () => { d.name = name.value; });
+        return el("tr", {}, el("td", {}, color), el("td", {}, name), el("td", { class: "small", text: d.code }), el("td", { class: "small muted", text: `${n} task${n === 1 ? "" : "s"}` }),
+          el("td", {}, el("button", { class: "btn ghost sm", text: "Remove", disabled: n > 0 ? "" : null, title: n ? "This department has tasks: move them first" : "Remove", onclick: () => { if (confirm(`Remove ${d.name}?`)) { depts = depts.filter(x => x !== d); draw(); } } })));
+      });
+      const stageRows = stages.map(s => {
+        const color = el("input", { type: "color", value: /^#[0-9a-f]{6}$/i.test(s.color) ? s.color : "#7B8798", "aria-label": "Colour", class: "swatch" }); color.addEventListener("input", () => { s.color = color.value; });
+        const name = el("input", { class: "input", value: s.name, maxlength: 40, "aria-label": "Stage name" }); name.addEventListener("input", () => { s.name = name.value; });
+        const rule = s.id === "04" ? "approval needed from HOD / RM" : s.id === "05" ? "only HOD / RM can approve" : s.id === "06" || s.id === "07" ? "closing rule applies" : "";
+        return el("tr", {}, el("td", {}, color), el("td", {}, name), el("td", { class: "small muted", text: `Stage ${s.id}${rule ? " · " + rule : ""}` }));
+      });
+      const code = el("input", { class: "input", placeholder: "CODE, e.g. MEDIA", maxlength: 10, style: "max-width:170px;text-transform:uppercase" }), dname = el("input", { class: "input", placeholder: "Department name", maxlength: 60, style: "max-width:280px" });
+      const add = el("button", { class: "btn sm", text: "Add department", onclick: () => {
+        const c = code.value.trim().toUpperCase(), n = dname.value.trim();
+        if (!/^[A-Z0-9_-]{2,10}$/.test(c) || n.length < 2) return toast("Enter a short CODE (letters / digits) and a name", true);
+        if (depts.some(d => d.code === c)) return toast("That code is already used", true);
+        depts.push({ id: String(Math.max(0, ...depts.map(d => +d.id || 0)) + 1).padStart(2, "0"), code: c, name: n, color: "#2567CF" }); draw(); } });
+      const save = el("button", { class: "btn", text: "Save task settings", onclick: async () => {
+        if (depts.some(d => d.name.trim().length < 2) || stages.some(s => s.name.trim().length < 2)) return toast("Every department and stage needs a name", true);
+        depts.forEach(d => { d.name = d.name.trim(); }); stages.forEach(s => { s.name = s.name.trim(); });
+        save.disabled = true;
+        try { await saveGlobal({ taskDepts: depts, taskStages: stages }, `Task settings: ${depts.length} departments, ${stages.length} stages`); toast("Task settings saved — Tasks & Events uses them now"); }
+        catch (e) { fail(e, "Task settings were not saved"); }
+        save.disabled = false; } });
+      box.replaceChildren(
+        el("div", { class: "card", style: "padding:16px;display:grid;gap:12px" }, el("h3", { style: "margin:0;font-size:16px", text: "Departments" }),
+          el("p", { class: "small muted", text: "Every task belongs to a department. A department with tasks can't be removed. Each person's task department is set on their profile (People & access)." }),
+          el("div", { class: "tblwrap" }, el("table", {}, el("thead", {}, el("tr", {}, ["Colour", "Name", "Code", "Tasks", ""].map(t => el("th", { text: t })))), el("tbody", {}, deptRows))),
+          el("div", { class: "row" }, code, dname, add)),
+        el("div", { class: "card", style: "padding:16px;display:grid;gap:12px" }, el("h3", { style: "margin:0;font-size:16px", text: "Workflow stages" }),
+          el("p", { class: "small muted", text: "Seven stages used by every department. You can rename them and change their colours." }),
+          el("div", { class: "tblwrap" }, el("table", {}, el("thead", {}, el("tr", {}, ["Colour", "Name", "Rule"].map(t => el("th", { text: t })))), el("tbody", {}, stageRows)))),
+        el("div", { class: "card", style: "padding:16px" }, el("div", { class: "notice info", text: "Closing rule: nobody closes a task assigned to themselves. The person who assigned it, the department HOD or the Regional Manager closes it and rates it 1 to 5. Tasks with unfinished dependencies can't be closed. Only the department HOD or the Regional Manager approves." })),
+        el("div", { class: "row" }, save));
+    };
+    draw();
+  })();
+  return box;
+}
+
+/* ---------- Settings → Donor Management: receipt header, delivery, message templates, lists, numbering, old data ----------
+   Stored in public.donor_rows (config) where Donor Management reads it. Only the Super Admin sees this page. */
+const DONOR_ORG_DEFAULTS = { name: "Alkhidmat Foundation Islamabad", address: "Office No. 4, Khyber Plaza, Fazal-e-Haq Road, Blue Area, Islamabad", phone: "+92-51-2611 911", email: "akf.isb@gmail.com", email2: "president@alkhidmatisb.org",
+  twitter: "www.twitter.com/alkhidmatisb", web: "www.alkhidmat.org", ntn: "C777982", stampPhone: "051-2611911", urdu: "الخدمت فاؤنڈیشن اسلام آباد",
+  footer: "JazakAllah Khair for your generous contribution. Zakat funds are kept in a restricted account and spent only on eligible beneficiaries." };
+const DONOR_TEMPLATES = {
+  ack: "Assalam-o-Alaikum {title} {name},\n\nWe have received your donation request of {amount} for {purpose} on {date} (reference {receipt}). A copy of your receipt is attached.\n\nOur Finance team will verify the payment. As soon as it is verified you will receive a thank-you message with your official receipt.\n\n{org}\n{phone}",
+  thanks: "Assalam-o-Alaikum {title} {name},\n\nJazakAllah Khair! Your donation of {amount} ({words}) for {purpose} has been verified by our Finance team.\n\nYour official receipt {receipt} is attached. Donations to Alkhidmat are exempted from income tax.\n\nMay Allah accept your generosity.\n{org}\n{phone} · {web}",
+  reminder: "Assalam-o-Alaikum {title} {name},\n\nA gentle reminder: installment {inst} of {count} ({instAmount}) of your pledge for {purpose} is due on {due}. Remaining pledge balance: {balance}.\n\nYou can pay by bank transfer, cheque or at our office. Please ignore this message if you have already paid.\n\n{org}\n{phone}",
+  correction: "Assalam-o-Alaikum {title} {name},\n\nPlease find attached your corrected receipt {receipt} for {amount} ({purpose}). It replaces the copy sent to you earlier, which is no longer valid.\n\nWe apologise for the inconvenience.\n{org}\n{phone}" };
+const DONOR_MSG_TYPES = { ack: "Acknowledgement (request received)", thanks: "Thank-you + official receipt", reminder: "Installment reminder", correction: "Corrected receipt" };
+const DONOR_LISTS = { categories: ["Zakat", "Sadaqah", "Sadaqah Jariyah", "Atiyat (General)", "General", "Lillah", "Fitrana", "Fidya", "Kaffarah", "Qurbani", "Aqiqah", "Waqf"], programs: [], banks: [],
+  stores: ["Alkhidmat Central Store, Islamabad", "Aghosh Home, Islamabad", "Alkhidmat Hospital / Clinic", "Field / camp site"], units: ["pcs", "packs", "bags", "boxes", "cartons", "kg", "litres", "sets", "metres"] };
+async function donorConfig(id) { const r = await q(sb.from("donor_rows").select("data").eq("collection", "config").eq("id", id).maybeSingle()); return (r && r.data) || null; }
+async function donorSaveConfig(id, patch, what) {
+  const next = { ...((await donorConfig(id)) || {}), ...patch };
+  await q(sb.from("donor_rows").upsert({ collection: "config", id, data: next }, { onConflict: "collection,id" }));
+  try { const aid = "A" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); await q(sb.from("donor_rows").insert({ collection: "audit", id: aid, data: { id: aid, action: "SETTINGS_UPDATED", target: what, detail: "Changed on the main page (Settings → Donor Management)", role: "super" } })); } catch (e) { }
+  return next;
+}
+function settingsDonor() {
+  const box = el("section", { style: "padding-bottom:40px;display:grid;gap:16px" }, el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })));
+  (async () => {
+    let org, st, counters;
+    try { [org, st, counters] = await Promise.all([donorConfig("org"), donorConfig("settings"), q(sb.rpc("donor_counters_now"))]); }
+    catch (e) { box.replaceChildren(el("div", { class: "notice bad", text: "Donor Management settings could not be loaded. Is Donor Management published?" })); return fail(e, "Donor settings could not be loaded"); }
+    const o = { ...DONOR_ORG_DEFAULTS, ...(org || {}) }, s = { idleMin: 10, autoShare: true, autoDownload: true, reminderDays: 3, ...(st || {}) };
+    const tpl = { ...DONOR_TEMPLATES, ...((st && st.templates) || {}) }, lists = { ...DONOR_LISTS, ...((st && st.lists) || {}) };
+    const card = (title, sub, ...kids) => el("div", { class: "card", style: "padding:16px;display:grid;gap:12px" }, el("h3", { style: "margin:0;font-size:16px", text: title }), sub ? el("p", { class: "small muted", text: sub }) : null, ...kids);
+    const inp = (v, max, extra) => el("input", Object.assign({ class: "input", value: String(v ?? ""), maxlength: max || 120 }, extra || {}));
+    const area = (v, rows, max) => { const t = el("textarea", { class: "input", rows: rows || 5, maxlength: max || 1200, style: "resize:vertical;font:inherit" }); t.value = v || ""; return t; };
+    const lab = (label, input) => el("label", { class: "f" }, label, input);
+    const btn = (text, fn) => { const b = el("button", { class: "btn", text }); b.addEventListener("click", async () => { b.disabled = true; try { await fn(); } catch (e) { fail(e, text + " failed"); } b.disabled = false; }); return b; };
+
+    // 1. receipt header & footer
+    const F = { name: inp(o.name), urdu: inp(o.urdu, 120, { dir: "rtl" }), address: inp(o.address, 200), phone: inp(o.phone, 40), stampPhone: inp(o.stampPhone, 20), email: inp(o.email), email2: inp(o.email2), twitter: inp(o.twitter, 80), web: inp(o.web, 80), ntn: inp(o.ntn, 30) };
+    const footer = area(o.footer, 3, 300), idle = inp(s.idleMin, 2, { type: "number", min: 2, max: 60 });
+    const share = el("input", { type: "checkbox" }), dl = el("input", { type: "checkbox" }); share.checked = !!s.autoShare; dl.checked = !!s.autoDownload;
+    const saveOrg = btn("Save receipt details", async () => {
+      const v = Object.fromEntries(Object.entries(F).map(([k, i]) => [k, i.value.trim()]));
+      if (v.name.length < 3) return toast("Enter the organisation name", true);
+      for (const k of ["email", "email2"]) if (v[k] && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v[k])) return toast("Check the e-mail address", true);
+      const im = parseInt(idle.value, 10); if (!(im >= 2 && im <= 60)) return toast("Auto sign-out must be 2 to 60 minutes", true);
+      await donorSaveConfig("org", { ...v, footer: footer.value.trim() }, "receipt header & footer");
+      await donorSaveConfig("settings", { idleMin: im, autoShare: share.checked, autoDownload: dl.checked }, "receipt delivery");
+      toast("Receipt details saved — new receipts use them");
+    });
+
+    // 2. message templates
+    const T = Object.fromEntries(Object.keys(DONOR_MSG_TYPES).map(k => [k, area(tpl[k], 6)]));
+    const days = inp(s.reminderDays, 2, { type: "number", min: 0, max: 30, style: "max-width:140px" });
+    const saveTpl = btn("Save message templates", async () => {
+      const d = parseInt(days.value, 10); if (!(d >= 0 && d <= 30)) return toast("Reminder days must be 0 to 30", true);
+      for (const k of Object.keys(T)) if (T[k].value.trim().length < 20) return toast(`The ${DONOR_MSG_TYPES[k].toLowerCase()} message is too short`, true);
+      await donorSaveConfig("settings", { reminderDays: d, templates: Object.fromEntries(Object.keys(T).map(k => [k, T[k].value.trim()])) }, "message templates");
+      toast("Templates saved — new messages use them");
+    });
+
+    // 3. lists
+    const L = Object.fromEntries(Object.keys(DONOR_LISTS).map(k => [k, area((lists[k] || []).join("\n"), 5, 6000)]));
+    const lines = t => [...new Set(t.value.split(/\r?\n/).map(x => x.trim()).filter(Boolean))];
+    const saveLists = btn("Save lists", async () => {
+      const next = Object.fromEntries(Object.keys(L).map(k => [k, lines(L[k])]));
+      if (!next.categories.length || !next.stores.length) return toast("Keep at least one donation type and one store", true);
+      if (Object.values(next).some(a => a.some(x => x.length > 80))) return toast("Each entry can be at most 80 characters", true);
+      await donorSaveConfig("settings", { lists: next }, "lists");
+      toast("Lists saved — new receipts use them");
+    });
+
+    // 4. numbering
+    const N = { donation: inp("", 9, { inputmode: "numeric", placeholder: String((counters && counters.donation) || 0) }), donor: inp("", 9, { inputmode: "numeric", placeholder: String((counters && counters.donor) || 0) }), pledge: inp("", 9, { inputmode: "numeric", placeholder: String((counters && counters.pledge) || 0) }) };
+    const saveNum = btn("Continue numbering after these", async () => {
+      let n = 0;
+      for (const k of Object.keys(N)) { const v = N[k].value.replace(/\D/g, ""); if (!v) continue; await q(sb.rpc("donor_counter_floor", { p_kind: k, p_floor: Number(v) })); n++; }
+      if (!n) return toast("Enter at least one number", true);
+      toast("Numbering updated"); render();
+    });
+
+    // 5. bring in old data from the offline Donor Portal (encrypted backup, decrypted here in the browser)
+    const file = el("input", { type: "file", accept: ".akbackup,application/json", class: "input" }), pass = inp("", 200, { type: "password", autocomplete: "off", placeholder: "Backup passphrase" });
+    const imp = btn("Decrypt & add to the database", async () => {
+      const f = file.files[0]; if (!f) return toast("Choose the backup file", true);
+      if (f.size > 600 * 1024 * 1024) return toast("This file is too large to be a portal backup", true);
+      let boxj; try { boxj = JSON.parse(await f.text()); } catch (e) { return toast("This is not a valid backup file", true); }
+      if (!boxj || boxj.format !== "AKDP-BACKUP" || !boxj.salt || !boxj.ct) return toast("This is not a Donor Portal backup", true);
+      showLoader("Decrypting the backup…");
+      let payload;
+      try {
+        const te = new TextEncoder(), un = s2 => Uint8Array.from(atob(s2), c => c.charCodeAt(0));
+        const base = await crypto.subtle.importKey("raw", te.encode(String(pass.value).normalize("NFKC")), "PBKDF2", false, ["deriveKey"]);
+        const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: un(boxj.salt), iterations: boxj.iter || 600000, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+        const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: un(boxj.iv), additionalData: te.encode("AKDP-backup-v1") }, key, un(boxj.ct));
+        payload = JSON.parse(new TextDecoder().decode(pt));
+      } catch (e) { hideLoader(); return toast("Wrong passphrase or the backup file is damaged", true); }
+      const old = payload && payload.store; if (!old) { hideLoader(); return toast("The backup is incomplete", true); }
+      const rows = [];
+      for (const c of ["donors", "donations", "pledges", "messages", "corrections", "signatories"]) for (const r of old[c] || []) if (r && r.id) rows.push({ collection: c, id: String(r.id), data: r });
+      for (const [id, url] of Object.entries(old.signatures || {})) rows.push({ collection: "signatures", id, data: { id, data: url } });
+      let added = 0;
+      try {
+        for (let i = 0; i < rows.length; i += 500) { added += Number(await q(sb.rpc("donor_import_rows", { p_rows: rows.slice(i, i + 500) }))) || 0; document.querySelector("#ak-loader .ldr-t").textContent = `Adding records… ${Math.min(rows.length, i + 500)} of ${rows.length}`; }
+        const seq = old.seq || {};
+        for (const k of ["donation", "donor", "pledge"]) if (seq[k]) await q(sb.rpc("donor_counter_floor", { p_kind: k, p_floor: Number(seq[k]) }));
+      } finally { hideLoader(); }
+      pass.value = ""; file.value = "";
+      toast(`${added} records brought in (records already there were left unchanged). Numbering continues after the old numbers.`);
+    });
+
+    box.replaceChildren(
+      el("p", { class: "small muted", text: "Everything Donor Management needs to be set. Who may record, verify or export is ticked per person in People & access → Donor Management." }),
+      card("Receipt header & footer", "Printed on every receipt and in donor messages.",
+        el("div", { class: "grid2" }, lab("Organisation name", F.name), lab("Name in Urdu", F.urdu), lab("Address", F.address), lab("Phone (T:)", F.phone), lab("Stamp phone", F.stampPhone), lab("NTN (receipt footer)", F.ntn), lab("E-mail 1", F.email), lab("E-mail 2", F.email2), lab("Twitter", F.twitter), lab("Website", F.web)),
+        lab("Thank-you line (WhatsApp / e-mail)", footer),
+        el("div", { class: "grid2" }, lab("Auto sign-out after inactivity (minutes)", idle), el("div", { style: "display:grid;gap:8px;align-content:end" }, el("label", { class: "row small" }, share, "Open the share sheet with the PDF on submit"), el("label", { class: "row small" }, dl, "Save a copy of the PDF on the device"))),
+        el("div", { class: "row" }, saveOrg)),
+      card("Donor message templates", "Placeholders: {title} {name} {amount} {words} {purpose} {date} {receipt} {org} {phone} {web} · reminders also {inst} {count} {instAmount} {due} {balance}",
+        lab("Tell RMD this many days before an installment is due", days), ...Object.entries(T).map(([k, t]) => lab(DONOR_MSG_TYPES[k], t)), el("div", { class: "row" }, saveTpl)),
+      card("Lists used on receipts", "One entry per line.",
+        el("div", { class: "grid2" }, lab("Donation types (\"Other\" is always added)", L.categories), lab("Extra programmes", L.programs), lab("Extra banks / wallets", L.banks), lab("In-kind: where goods are delivered", L.stores), lab("In-kind: units (\"other\" is always added)", L.units)),
+        el("div", { class: "row" }, saveLists)),
+      card("Receipt numbering", `Numbers come from the database, so two officers never get the same one. Last used now: receipts ${(counters && counters.donation) || 0} · donors ${(counters && counters.donor) || 0} · pledges ${(counters && counters.pledge) || 0}. After bringing in old receipts, enter the last number used so new ones continue after it.`,
+        el("div", { class: "grid2" }, lab("Last receipt no. used", N.donation), lab("Last donor no. used", N.donor), lab("Last pledge no. used", N.pledge)), el("div", { class: "row" }, saveNum)),
+      card("Bring in data from the offline Donor Portal", "In the offline portal: Settings & Backup → Export backup. Choose that .akbackup file and enter its passphrase. Donors, receipts, pledges, corrections, messages and signatures are added; records already here are not changed. It is decrypted in this browser only.",
+        el("div", { class: "grid2" }, lab("Backup file", file), lab("Passphrase", pass)), el("div", { class: "row" }, imp)));
   })();
   return box;
 }

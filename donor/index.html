@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-oLNcAbzKn9hGqvyNKTslY/aM3sduw9O6ey47q+iUJAc='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-CWbsr2CCbeEhHX80OTF0s+kS/jBoyU6aX41srV0hIfg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -1158,6 +1158,7 @@ html.side-pinned .side-pin{background:#fff;color:#0B3D91}
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script src="../akf-gate.js"></script>
+<script src="../akf-assistant.js"></script>
 <script>
 'use strict';
 (function () {
@@ -1215,7 +1216,7 @@ const moneyTotal = x => (x.amount || 0) - goodsTotal(x);
 /* money is checked by Finance, goods by the Store Officer; a mixed receipt is verified when both are done */
 const needsMoneyCheck = x => hasMoney(x) && !x.vMoney;
 const needsGoodsCheck = x => hasGoods(x) && !x.vGoods;
-const waitingFor = x => [needsMoneyCheck(x) ? 'Finance' : '', needsGoodsCheck(x) ? 'Store Officer' : ''].filter(Boolean).join(' & ');
+const waitingFor = x => [needsMoneyCheck(x) ? 'Finance' : '', ...(needsMoneyCheck(x) ? [] : pendingExtra(x).slice(0, 1).map(s => s.who || s.label)), needsGoodsCheck(x) ? 'Store Officer' : ''].filter(Boolean).join(' & ') || (pendingExtra(x).length ? pendingExtra(x)[0].who : '');
 const TITLES_NAME = ['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Prof.', 'Engr.', 'Haji', 'M/s'];
 const MAX_LINES = 6;
 /* Banks operating in Pakistan (State Bank of Pakistan scheduled banks, Islamic banks, microfinance banks, digital banks & wallets) */
@@ -1482,6 +1483,13 @@ const ERP_CFG = window.AKF_SUPABASE;
 const ERP = !!(ERP_CFG && ERP_CFG.url && ERP_CFG.anonKey && window.supabase && window.AKF_GATE);
 const ERP_HOME = new URL('../', location.href).href;
 let GRID = {};         // tab key → actions ticked for this person on the main page (ERP mode)
+/* approval matrix (main page → Settings → Approval matrix → Donor Management): extra approval steps after Finance,
+   e.g. "large donations from Rs 500,000 also need the Manager RMD". The database checks the same rules. */
+let MX = { steps: [], corrTick: 'corrections:approve' };
+const tickOK = t => !!ME && (ME.isSuper || gridHas(String(t || '').split(':')[0], String(t || '').split(':')[1]));
+const extraSteps = x => ERP && x ? MX.steps.filter(s => !(+s.minAmount) || (x.amount || 0) >= +s.minAmount) : [];
+const pendingExtra = x => extraSteps(x).filter(s => !(x.approvals && x.approvals[s.key]));
+const nextExtraFor = x => { const p = pendingExtra(x)[0]; return p && x.status === 'Pending' && tickOK(p.tick) && x.createdBy !== ME.email && !(x.correctedBy || []).includes(ME.email) && !needsMoneyCheck(x) ? p : null; };
 ROLES.viewer = ROLES.viewer || { label: 'Viewer', code: 'VWR', perms: ['reports', 'corrections.view'] };   // ERP: someone who may only look
 const gridHas = (tab, act) => !!(GRID[tab] && GRID[tab].includes(act || 'view'));
 /* what each permission of this portal means in the access grid: any one [tab, action] is enough */
@@ -1496,7 +1504,8 @@ const ERP_PERMS = {
 };
 /* the view → the tab ticked on the main page (views not listed are never shown in ERP mode) */
 const ERP_VIEW_TAB = { dashboard: 'dashboard', new: 'new', donations: 'donations', donors: 'donors', pledges: 'pledges', team: 'team', import: 'import',
-  corrections: 'corrections', messages: 'messages', reports: 'reports', verify: 'verify', signatories: 'signatories', audit: 'audit', settings: 'settings' };
+  corrections: 'corrections', messages: 'messages', reports: 'reports', verify: 'verify', signatories: 'signatories', audit: 'audit' };
+/* no settings page inside the portal: everything is set on the main page (Settings → Donor Management, Super Admin) */
 
 /* ---------------- State ---------------- */
 let USERS = [];        // plaintext auth metadata (wrapped keys, lockout state)
@@ -2897,10 +2906,10 @@ const canSendReceipt = () => can('donation.create') || can('donation.verify');
 /* money is verified by Finance, in-kind goods by the Store Officer (who also records them in the store) */
 /* the part still open decides who verifies next: Finance for money, Store Officer for goods */
 const verifyPerm = x => needsMoneyCheck(x) && can('donation.verify') ? 'donation.verify' : needsGoodsCheck(x) ? 'inkind.verify' : 'donation.verify';
-const canVerifyX = x => x.createdBy !== ME.email && !(x.correctedBy || []).includes(ME.email) && ((needsMoneyCheck(x) && can('donation.verify')) || (needsGoodsCheck(x) && can('inkind.verify')));
+const canVerifyX = x => x.createdBy !== ME.email && !(x.correctedBy || []).includes(ME.email) && ((needsMoneyCheck(x) && can('donation.verify')) || (needsGoodsCheck(x) && can('inkind.verify')) || !!nextExtraFor(x));
 /* corrections: pure in-kind receipts are approved by the Store Officer, everything else by Finance */
 const corrPerm = x => isInKind(x) ? 'inkind.verify' : 'donation.verify';
-const canDecideC = c => { const x = S.donations.find(d => d.id === c.donationId); return (ERP ? can('corrections.approve') : can(corrPerm(x))) && c.requestedBy !== ME.email; };
+const canDecideC = c => { const x = S.donations.find(d => d.id === c.donationId); return (ERP ? tickOK(MX.corrTick) : can(corrPerm(x))) && c.requestedBy !== ME.email; };
 function msgContext(m) {
   const x = m.donationId ? S.donations.find(d => d.id === m.donationId) : null;
   const p = m.pledgeId ? pledgeById(m.pledgeId) : null;
@@ -3533,6 +3542,15 @@ async function verifyDonation(id) {
   if (x.createdBy === ME.email) { toast('Maker-checker control: you cannot verify a donation you recorded.', 'error'); return; }
   if ((x.correctedBy || []).includes(ME.email)) { toast('Maker-checker control: you corrected this entry, so another officer must verify it.', 'error'); return; }
   const goodsTurn = needsGoodsCheck(x) && can('inkind.verify'), moneyTurn = needsMoneyCheck(x) && can('donation.verify');
+  /* an extra approval step from the approval matrix (after Finance) */
+  const ex = !moneyTurn && nextExtraFor(x);
+  if (ex) {
+    const r = await ask({ title: ex.label || 'Approve', message: `Approve <b>${esc(x.receipt)}</b> for <b>${esc(money(x.amount))}</b> from <b>${esc(donorName(donorById(x.donorId)))}</b>? This approval step applies to receipts${+ex.minAmount ? ` of ${esc(money(+ex.minAmount))} or more` : ''} (approval matrix).`, ok: 'Approve' });
+    if (!r.ok) return;
+    x.approvals = Object.assign({}, x.approvals, { [ex.key]: { by: ME.email, at: new Date().toISOString() } });
+    await audit('APPROVED', x.receipt, `${ex.label || ex.key} · ${money(x.amount)}`);
+    await finishVerification(x); return;
+  }
   if (!goodsTurn && !moneyTurn) { toast(needsGoodsCheck(x) && !needsMoneyCheck(x) ? 'The goods on this receipt are verified by the Store Officer when they are received.' : needsMoneyCheck(x) ? 'The money on this receipt is verified by Finance.' : 'You do not have permission for this action.', 'warn'); return; }
   if (goodsTurn && !moneyTurn) { storeReceive(x); return; }
   const dn = donorById(x.donorId), mixed = isMixed(x);
@@ -3544,7 +3562,7 @@ async function verifyDonation(id) {
 }
 /* called after each part (money by Finance, goods by Store); the receipt is verified when nothing is left */
 async function finishVerification(x) {
-  if (needsMoneyCheck(x) || needsGoodsCheck(x)) {
+  if (needsMoneyCheck(x) || needsGoodsCheck(x) || pendingExtra(x).length) {
     await persist(); closeModal(); buildChrome(); render();
     toast(`Part verified. ${x.receipt} now waits for the ${waitingFor(x)}.`, 'success', 6000); return;
   }
@@ -5824,8 +5842,14 @@ function erpSubscribe() {
   });
   if (!document.hidden) on();
 }
+/* the approval matrix set by the Super Admin (extra steps and who decides corrections) */
+async function erpLoadMatrix() {
+  try { const { data, error } = await erpSb.rpc('donor_matrix'); if (!error && data) MX = { steps: Array.isArray(data.steps) ? data.steps : [], corrTick: data.corrTick || 'corrections:approve' }; }
+  catch (e) { console.warn('[matrix]', e); }
+}
 /* after the tab was hidden: take the server's copy of every record that nobody changed here */
 function erpMerge(st) {
+  erpLoadMatrix();
   for (const c of ERP_COLS) for (const r of st[c]) { const k = erpKey(c, String(r.id)); if (ERP_SAVED.get(k) !== JSON.stringify(r)) erpReplace(c, String(r.id), r); }
   dataVer++; buildChrome(); if (!modalOpen() && UI.view !== 'new') { forceRender = true; render(); }
   erpReconcile();
@@ -5842,6 +5866,7 @@ async function erpBoot() {
     setLoader(null, 'Loading donor records…');
     const { st, staffMeta, seen } = await erpLoadAll();
     st.users = await erpLoadStaff(staffMeta);
+    await erpLoadMatrix();
     S = migrate(st);
     if (!S.receiptKey) { hideLoader(); fatal('Setup not finished', 'The receipt verification key is missing. Ask the Super Admin to publish Donor Management again (AKF-PORTALS.cmd → 2  Publish changes).'); return; }
     ME = { id: p.id, email: p.email, name: p.full_name, role: erpRoleOf(GRID, p.is_super), isSuper: !!p.is_super };
@@ -5856,8 +5881,30 @@ async function erpBoot() {
   hideLoader();
   enterApp();
   erpSubscribe();
+  /* Alkhidmat AI — every portal has it; it gets only figures, never donor names, CNIC or phone numbers */
+  if (window.AKF_ASSISTANT) AKF_ASSISTANT({ sb: erpSb, portal: 'Donor Management', user: ME.name.split(' ')[0], context: erpAiContext,
+    hints: ['What needs my attention today?', 'How much did we collect this month?', 'Explain how a receipt gets verified', 'Write a thank-you message for a Zakat donor', 'What is the difference between Zakat and Sadaqah?'] });
   await audit('LOGIN', ME.email, 'Opened Donor Management'); await persist();
   await erpReconcile();
+}
+/* what Alkhidmat AI may know: totals and counts this person can see. No names, CNIC, phones or addresses. */
+function erpAiContext() {
+  const t = todayISO(), mon = t.slice(0, 7), yr = t.slice(0, 4), sum = a => a.reduce((s, x) => s + (x.amount || 0), 0);
+  const ver = S.donations.filter(x => x.status === 'Verified'), verM = ver.filter(x => (x.date || '').slice(0, 7) === mon), verY = ver.filter(x => (x.date || '').slice(0, 4) === yr);
+  const byFund = {}, byProg = {};
+  verM.forEach(x => linesOf(x).forEach(l => { byFund[l.category] = (byFund[l.category] || 0) + (l.amount || 0); byProg[l.program] = (byProg[l.program] || 0) + (l.amount || 0); }));
+  const pend = S.donations.filter(x => x.status === 'Pending');
+  let due = 0; try { due = dueInstallments().length; } catch (e) { }
+  return JSON.stringify({
+    today: t, portal: 'Donor Management', org: S.org.name, myRole: (ROLES[ME.role] || {}).label, myTabs: Object.keys(GRID),
+    donors: { active: S.donors.filter(d => d.status === 'Active').length, total: S.donors.length, newThisMonth: S.donors.filter(d => (d.since || '').slice(0, 7) === mon).length },
+    receipts: { verifiedThisMonth: verM.length, collectedThisMonthPKR: sum(verM), collectedThisYearPKR: sum(verY), thisMonthByFundType: byFund, thisMonthByProgramme: byProg,
+      waitingForFinance: pend.filter(needsMoneyCheck).length, waitingForStoreGoods: pend.filter(needsGoodsCheck).length, inKindThisMonthPKR: verM.reduce((s, x) => s + goodsTotal(x), 0) },
+    pledges: { active: S.pledges.filter(p => p.status === 'Active').length, installmentsDueSoon: due },
+    messagesWaitingToSend: S.messages.filter(m => m.status === 'Queued').length, correctionsWaiting: S.corrections.filter(c => c.status === 'Pending').length,
+    rules: ['Finance verifies money (cash, cheques, online) and never their own entries', 'In-kind goods are received by the Store Officer in the Store portal as a GDN-D, which verifies them on the receipt',
+      'A verified receipt is changed only through Corrections; a wrong amount means cancel and reissue', 'Receipt numbers come from the server', 'Settings are changed by the Super Admin on the main page']
+  });
 }
 async function erpLogout(reason) {
   try { if (ME && S) { await audit('LOGOUT', ME.email, reason || 'User signed out'); await erpSync(); } } catch {}
