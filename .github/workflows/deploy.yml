@@ -1,0 +1,53 @@
+# Deploy workflow for EVERY portal repository (main page and each portal).
+# Put this file in the repository at  .github/workflows/deploy.yml  together with tools/csp-hash.js.
+# Repository → Settings → Secrets and variables → Actions: SUPABASE_URL, SUPABASE_ANON_KEY, AKF_EMAIL_DOMAIN
+# Repository → Settings → Pages → Source: GitHub Actions.
+name: Deploy portal
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build site (config.js from secrets, CSP hashes)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          AKF_EMAIL_DOMAIN: ${{ secrets.AKF_EMAIL_DOMAIN }}
+        run: |
+          set -e
+          for v in SUPABASE_URL SUPABASE_ANON_KEY; do
+            if [ -z "${!v}" ]; then echo "::error::Repository secret $v is not set"; exit 1; fi
+          done
+          case "$SUPABASE_ANON_KEY" in sb_secret_*) echo "::error::SUPABASE_ANON_KEY is a secret key - use the anon/publishable key"; exit 1;; esac
+          if echo "$SUPABASE_ANON_KEY" | cut -d. -f2 | base64 -d 2>/dev/null | grep -q service_role; then echo "::error::SUPABASE_ANON_KEY is the service_role key"; exit 1; fi
+          mkdir -p _site
+          # publish only web files: never .env, .sql, .md, tools or backups
+          find . -maxdepth 2 -type f \( -name '*.html' -o -name '*.js' -o -name '*.css' -o -name '*.png' -o -name '*.svg' -o -name '*.ico' \) \
+               -not -path './.git/*' -not -path './tools/*' -not -path './_site/*' -not -name 'config.js' -not -name 'config.example.js' \
+               -exec cp --parents {} _site/ \;
+          for f in $(find _site -name '*.html'); do node tools/csp-hash.js "$f"; done
+          # one config.js next to every page (staging keeps portals in sub-folders)
+          for dir in $(find _site -name '*.html' -exec dirname {} \; | sort -u); do
+            printf 'window.AKF_SUPABASE = { url: "%s", anonKey: "%s", emailDomain: "%s" };\n' "$SUPABASE_URL" "$SUPABASE_ANON_KEY" "$AKF_EMAIL_DOMAIN" > "$dir/config.js"
+          done
+          echo "site built (values not printed)"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: pages
+        uses: actions/deploy-pages@v4

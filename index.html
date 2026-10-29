@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Alkhidmat Islamabad Portals</title>
+<meta name="description" content="One sign-in for every Alkhidmat Islamabad portal">
+<!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-Mfj3DPzBMkgeHjdQAVlSpZCD9w18qda1vJROmtkKIMg='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<style id="no-frame">html{display:none!important}</style>
+<script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand:#0B2E8A; --brand-2:#0B51A7; --brand-3:#1E6FD9; --gold:#C9A227;
+  --bg:#F3F5FA; --card:#FFFFFF; --ink:#0F1B3D; --muted:#5A6684; --faint:#8A94AD; --line:#E2E7F1; --soft:#EEF2FA;
+  --ok:#137A3E; --ok-bg:#E4F5EA; --bad:#B42318; --bad-bg:#FDECEA; --warn:#8A5A00; --warn-bg:#FFF4D6;
+  --shadow:0 1px 2px rgba(15,27,61,.06),0 8px 24px -12px rgba(15,27,61,.18); --r:14px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --brand:#7EA6FF; --brand-2:#5B8CFF; --brand-3:#8FB4FF; --bg:#0C1220; --card:#141C2E; --ink:#E7ECF7; --muted:#A3AEC6; --faint:#76819B;
+  --line:#25304A; --soft:#1A2338; --ok:#62D394; --ok-bg:#13301F; --bad:#FF8C80; --bad-bg:#3A1716; --warn:#F2C661; --warn-bg:#352A10;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px -12px rgba(0,0,0,.6); } }
+:root[data-theme="dark"]{ --brand:#7EA6FF; --brand-2:#5B8CFF; --brand-3:#8FB4FF; --bg:#0C1220; --card:#141C2E; --ink:#E7ECF7; --muted:#A3AEC6; --faint:#76819B;
+  --line:#25304A; --soft:#1A2338; --ok:#62D394; --ok-bg:#13301F; --bad:#FF8C80; --bad-bg:#3A1716; --warn:#F2C661; --warn-bg:#352A10; --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px -12px rgba(0,0,0,.6); }
+*{box-sizing:border-box} html,body{margin:0} body{background:var(--bg);color:var(--ink);font:15px/1.5 Manrope,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--brand-2)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+/* top bar */
+.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--card) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:12px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.01em}
+.mark{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,#0B2E8A,#1E6FD9);box-shadow:0 6px 16px -6px #0B2E8A}
+.brand small{display:block;font-weight:600;color:var(--muted);font-size:12px;letter-spacing:0}
+.grow{flex:1}
+.who{display:flex;align-items:center;gap:10px;font-size:13px} .who b{display:block;font-size:14px} .who span{color:var(--muted)}
+.avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--soft);color:var(--brand);font-weight:800;font-size:13px}
+/* buttons, fields */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid transparent;border-radius:10px;padding:9px 16px;font-weight:700;cursor:pointer;background:var(--brand-2);color:#fff;text-decoration:none;white-space:nowrap}
+.btn:hover{filter:brightness(1.07)} .btn:disabled{opacity:.55;cursor:default;filter:none}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)} .btn.ghost:hover{background:var(--soft)}
+.btn.danger{background:var(--bad)} .btn.sm{padding:6px 11px;font-size:13px;border-radius:8px}
+.iconbtn{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:transparent;display:grid;place-items:center;cursor:pointer;color:var(--muted)} .iconbtn:hover{background:var(--soft);color:var(--ink)}
+label.f{display:grid;gap:5px;font-size:13px;font-weight:700;color:var(--muted)}
+.input,select.input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-weight:500}
+.input:focus{outline:2px solid color-mix(in srgb,var(--brand-3) 45%,transparent);outline-offset:1px;border-color:var(--brand-3)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.notice{padding:10px 12px;border-radius:10px;font-size:13px;font-weight:600} .notice.bad{background:var(--bad-bg);color:var(--bad)} .notice.ok{background:var(--ok-bg);color:var(--ok)} .notice.info{background:var(--soft);color:var(--muted)}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;background:var(--soft);color:var(--muted)}
+.tag.ok{background:var(--ok-bg);color:var(--ok)} .tag.bad{background:var(--bad-bg);color:var(--bad)} .tag.warn{background:var(--warn-bg);color:var(--warn)} .tag.brand{background:color-mix(in srgb,var(--brand-3) 16%,transparent);color:var(--brand-2)}
+/* sign-in */
+.auth{min-height:100vh;display:grid;place-items:center;padding:24px 16px;background:radial-gradient(1200px 600px at 10% -10%,color-mix(in srgb,var(--brand-3) 22%,transparent),transparent),radial-gradient(900px 500px at 110% 110%,color-mix(in srgb,var(--gold) 18%,transparent),transparent),var(--bg)}
+.auth .card{width:100%;max-width:420px;padding:30px 26px;display:grid;gap:16px}
+.auth h1{margin:0;font-size:24px;letter-spacing:-.02em} .auth p{margin:0;color:var(--muted)}
+.linkbtn{background:none;border:0;padding:0;color:var(--brand-2);font-weight:700;cursor:pointer}
+/* launcher */
+.hero{padding:30px 0 8px} .hero h2{margin:0;font-size:28px;letter-spacing:-.02em} .hero p{margin:4px 0 0;color:var(--muted)}
+.tabs{display:flex;gap:4px;margin:22px 0 18px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{border:0;background:none;padding:10px 14px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.tabs button.on{color:var(--brand-2);border-bottom-color:var(--brand-2)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px;padding-bottom:40px}
+.tile{display:grid;gap:12px;padding:20px;text-decoration:none;color:inherit;transition:transform .15s,box-shadow .15s;position:relative;overflow:hidden}
+.tile:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(15,27,61,.06),0 18px 34px -16px rgba(15,27,61,.35)}
+.tile .ic{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;color:#fff}
+.tile h3{margin:0;font-size:17px} .tile p{margin:0;color:var(--muted);font-size:13px;min-height:38px}
+.tile .foot{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:var(--muted);font-weight:700}
+.tile::after{content:"";position:absolute;right:-30px;top:-30px;width:110px;height:110px;border-radius:50%;background:var(--accent);opacity:.08}
+.empty{padding:40px 20px;text-align:center;color:var(--muted)}
+/* admin */
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.tblwrap{overflow-x:auto;border-radius:var(--r)}
+table{width:100%;border-collapse:collapse;font-size:14px} th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);background:var(--soft);position:sticky;top:0}
+td .sub{display:block;color:var(--muted);font-size:12px}
+select.role{padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);font-size:13px;font-weight:600;min-width:96px}
+select.role.has{border-color:color-mix(in srgb,var(--brand-3) 60%,transparent);background:color-mix(in srgb,var(--brand-3) 10%,var(--card))}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px} @media (max-width:640px){.grid2{grid-template-columns:1fr} .who .t{display:none}}
+/* dialog + toast */
+dialog{border:0;border-radius:16px;padding:0;width:min(520px,calc(100vw - 32px));background:var(--card);color:var(--ink);box-shadow:0 30px 80px -20px rgba(0,0,0,.5)}
+dialog::backdrop{background:rgba(10,16,32,.55)}
+.dlg-h{padding:18px 20px 0;display:flex;align-items:center;gap:10px} .dlg-h h3{margin:0;font-size:18px}
+.dlg-b{padding:16px 20px;display:grid;gap:12px} .dlg-f{padding:0 20px 18px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.secret{font:600 18px/1.3 ui-monospace,Consolas,monospace;letter-spacing:.04em;padding:12px;border-radius:10px;background:var(--soft);text-align:center;user-select:all}
+.toasts{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:grid;gap:8px;z-index:50;width:min(460px,calc(100vw - 32px))}
+.toast{padding:12px 14px;border-radius:12px;background:var(--ink);color:var(--bg);font-weight:600;font-size:14px;box-shadow:var(--shadow)} .toast.bad{background:var(--bad);color:#fff}
+.muted{color:var(--muted)} .small{font-size:13px} .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spinner{width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--brand-2);animation:spin 0.9s linear infinite} @keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){ .tile{transition:none} .spinner{animation:none} }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
+<script>
+"use strict";
+/* ========== Alkhidmat Islamabad — main page (portal launcher + people & access) ==========
+   All rules are enforced by the database (001_core.sql) and the admin-users function; this page only shows them. */
+const CFG = window.AKF_SUPABASE || null;
+const ROLES = ["viewer", "staff", "manager", "admin"];
+const ROLE_LABEL = { viewer: "Viewer", staff: "Staff", manager: "Manager", admin: "Admin", custom: "Custom" };
+const ACTIONS = ["view", "add", "edit", "delete", "approve", "export"];
+const ACTION_LABEL = { view: "See", add: "Add", edit: "Edit", delete: "Delete", approve: "Approve", export: "Export" };
+const AUTH_TYPE = (/[#&]type=(invite|recovery)/.exec(location.hash) || [])[1] || "";   // read before supabase-js clears the link
+const S = { view: "boot", session: null, me: null, portals: [], tab: "portals", admin: null, recovery: AUTH_TYPE === "recovery" || AUTH_TYPE === "invite", busy: false, q: "", dept: "" };
+let sb = null;
+
+/* ---------- safe DOM building: text is always set as text, never parsed as HTML ---------- */
+function el(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") e.className = v; else if (k === "text") e.textContent = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (k === "value") e.value = v; else e.setAttribute(k, v === true ? "" : v);
+  }
+  for (const k of kids.flat(9)) { if (k == null || k === false) continue; e.append(k instanceof Node ? k : document.createTextNode(String(k))); }
+  return e;
+}
+const ICONS = {
+  grid: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z", box: "M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8",
+  check: "M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9", truck: "M1 4h14v12H1zM15 8h4l3 4v4h-7M5.5 19a2 2 0 1 0 0-.1M18.5 19a2 2 0 1 0 0-.1",
+  heart: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z", users: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8",
+  logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9", moon: "M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z", arrow: "M7 17L17 7M8 7h9v9",
+  shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z", plus: "M12 5v14M5 12h14", search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3",
+};
+function icon(name, size = 20) {
+  const ns = "http://www.w3.org/2000/svg", s = document.createElementNS(ns, "svg");
+  s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("width", size); s.setAttribute("height", size); s.setAttribute("fill", "none");
+  s.setAttribute("stroke", "currentColor"); s.setAttribute("stroke-width", "2"); s.setAttribute("stroke-linecap", "round"); s.setAttribute("stroke-linejoin", "round"); s.setAttribute("aria-hidden", "true");
+  const p = document.createElementNS(ns, "path"); p.setAttribute("d", ICONS[name] || ICONS.grid); s.append(p); return s;
+}
+const initials = n => String(n || "?").replace(/^(Dr|Mr|Ms|Mrs|Hafiz)\.?\s+/i, "").split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase();
+const safeHref = u => /^(https:\/\/|\/(?!\/))/.test(String(u || "")) ? u : "#";
+const fmt = iso => { try { return new Date(iso).toLocaleString(undefined, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; } };
+
+/* ---------- messages: plain words + a reference; details only in this browser's console ---------- */
+function toast(msg, bad) { const t = el("div", { class: "toast" + (bad ? " bad" : ""), text: msg }); document.getElementById("toasts").append(t); setTimeout(() => t.remove(), bad ? 7000 : 3500); }
+function fail(e, what) {
+  if (e && e.userMessage) return toast(e.userMessage + (e.ref ? ` (ref ${e.ref})` : ""), true);
+  const ref = Math.random().toString(36).slice(2, 8).toUpperCase(); console.error(`[ref ${ref}]`, e);
+  toast(`${what || "Something went wrong"}. Reference ${ref}.`, true);
+}
+async function q(promise) { const r = await promise; if (r.error) throw r.error; return r.data; }
+async function adminCall(body) {
+  const { data } = await sb.auth.getSession();
+  const res = await fetch(`${CFG.url}/functions/v1/admin-users`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + (data.session && data.session.access_token), apikey: CFG.anonKey }, body: JSON.stringify(body) });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) { const e = new Error("admin-users " + res.status); e.userMessage = j.error || "The account service did not answer. Is the admin-users function deployed?"; e.ref = j.ref; throw e; }
+  return j;
+}
+
+/* ---------- start-up: refuse to run without a safe configuration ---------- */
+function configError() {
+  if (!CFG || !CFG.url || !CFG.anonKey || /YOUR-/i.test(CFG.url + CFG.anonKey)) return "config.js is missing or still has placeholder values.";
+  if (!/^https:\/\/[^\s/]+$/i.test(CFG.url)) return "SUPABASE_URL must be the https:// project address.";
+  if (/^sb_secret_/i.test(CFG.anonKey)) return "config.js contains a SECRET key. Use the anon / publishable key, and rotate the secret key now.";
+  try { const p = CFG.anonKey.split(".")[1]; if (p && JSON.parse(atob(p.replace(/-/g, "+").replace(/_/g, "/"))).role === "service_role") return "config.js contains the service_role key. It must never be in a web page: use the anon key and rotate the service_role key now."; } catch (e) { return "SUPABASE_ANON_KEY is not a valid key."; }
+  if (typeof supabase === "undefined") return "The sign-in library could not be loaded. Check the internet connection and reload.";
+  return "";
+}
+
+async function start() {
+  const err = configError();
+  if (err) { S.view = "config"; S.configErr = err; return render(); }
+  sb = supabase.createClient(CFG.url, CFG.anonKey);   // same address + same key = one sign-in shared by every portal
+  sb.auth.onAuthStateChange((ev, session) => {
+    if (ev === "PASSWORD_RECOVERY") S.recovery = true;
+    if (ev === "SIGNED_OUT") { S.session = null; S.me = null; S.view = "signin"; render(); }
+    else if (session && (!S.session || S.session.user.id !== session.user.id)) { S.session = session; loadMe(); }
+  });
+  const { data } = await sb.auth.getSession();
+  S.session = data.session;
+  if (S.session) await loadMe(); else { S.view = "signin"; render(); }
+}
+
+async function loadMe() {
+  try {
+    S.me = await q(sb.from("core_profiles").select("id,email,full_name,designation,dept,is_super,active,must_change_password").eq("id", S.session.user.id).maybeSingle());
+    if (!S.me || !S.me.active) { S.view = "noaccess"; return render(); }
+    if (S.recovery || S.me.must_change_password) { S.view = "setpw"; return render(); }
+    S.portals = await q(sb.rpc("core_my_portals"));
+    S.view = "home"; render();
+    if (S.me.is_super && S.tab !== "portals") loadAdmin();
+  } catch (e) { S.view = "error"; render(); fail(e, "Could not load your account"); }
+}
+
+async function loadAdmin() {
+  try {
+    const [people, modules, tabs, access, tabAccess, depts, audit, usage] = await Promise.all([
+      q(sb.from("core_profiles").select("id,email,full_name,designation,dept,is_super,active,must_change_password").order("full_name")),
+      q(sb.from("core_modules").select("*").order("sort")),
+      q(sb.from("core_module_tabs").select("*").order("sort")),
+      q(sb.from("core_module_access").select("user_id,module_key,preset")),
+      q(sb.from("core_tab_access").select("user_id,module_key,tab_key,actions")),
+      q(sb.from("core_departments").select("*").order("name")),
+      q(sb.from("core_audit").select("at,actor_email,module,action,target").order("at", { ascending: false }).limit(200)),
+      q(sb.rpc("core_usage")).catch(() => null),
+    ]);
+    /* acc[person][portal] = { preset, tabs: { tab: [actions] } } */
+    const acc = {};
+    access.forEach(a => { (acc[a.user_id] = acc[a.user_id] || {})[a.module_key] = { preset: a.preset, tabs: {} }; });
+    tabAccess.forEach(t => { const x = acc[t.user_id] && acc[t.user_id][t.module_key]; if (x) x.tabs[t.tab_key] = t.actions; });
+    S.admin = { people, modules, tabs, acc, depts, audit, usage }; render();
+  } catch (e) { fail(e, "Could not load people and access"); }
+}
+
+/* ---------- views ---------- */
+function render() {
+  const app = document.getElementById("app"); app.replaceChildren();
+  const v = S.view;
+  if (v === "boot") return app.append(el("div", { class: "auth" }, el("div", { class: "spinner", "aria-label": "Loading" })));
+  if (v === "config") return app.append(authCard("Setup needed", [el("div", { class: "notice bad", text: S.configErr }), el("p", { class: "small", text: "The page will not start until config.js is correct. See ERP-SETUP-GUIDE.md." })]));
+  if (v === "signin") return app.append(signIn());
+  if (v === "setpw") return app.append(setPassword());
+  if (v === "noaccess") return app.append(authCard("No access yet", [el("p", { text: "Your login works, but you have no active portal account. Ask the Super Admin to add you." }), el("button", { class: "btn ghost", onclick: () => sb.auth.signOut(), text: "Sign out" })]));
+  if (v === "error") return app.append(authCard("Something went wrong", [el("p", { text: "Your account could not be loaded. Check the internet connection." }), el("button", { class: "btn", onclick: () => location.reload(), text: "Try again" })]));
+  app.append(topBar(), home());
+}
+
+function authCard(title, body) {
+  return el("div", { class: "auth" }, el("div", { class: "card" },
+    el("div", { class: "brand" }, el("div", { class: "mark" }, icon("shield", 20)), el("div", {}, "Alkhidmat Islamabad", el("small", { text: "Staff portals" }))),
+    el("h1", { text: title }), body));
+}
+
+function signIn() {
+  let mode = "in";
+  const email = el("input", { class: "input", type: "email", autocomplete: "username", required: true, maxlength: 254 });
+  const pw = el("input", { class: "input", type: "password", autocomplete: "current-password", required: true, maxlength: 128 });
+  const msg = el("div");
+  const btn = el("button", { class: "btn", type: "submit", text: "Sign in" });
+  const pwField = el("label", { class: "f" }, "Password", pw);
+  const swap = el("button", { class: "linkbtn", type: "button", text: "Forgot your password?" });
+  swap.addEventListener("click", () => { mode = mode === "in" ? "reset" : "in"; pwField.hidden = mode === "reset"; pw.required = mode === "in"; btn.textContent = mode === "in" ? "Sign in" : "Send reset link"; swap.textContent = mode === "in" ? "Forgot your password?" : "Back to sign in"; msg.replaceChildren(); });
+  const form = el("form", { class: "grid", style: "display:grid;gap:14px" }, el("label", { class: "f" }, "Work e-mail", email), pwField, msg, btn, el("div", { class: "row small muted" }, swap));
+  form.addEventListener("submit", async ev => {
+    ev.preventDefault(); btn.disabled = true; msg.replaceChildren();
+    try {
+      if (mode === "reset") {
+        await sb.auth.resetPasswordForEmail(email.value.trim().toLowerCase(), { redirectTo: location.origin + location.pathname });
+        msg.append(el("div", { class: "notice ok", text: "If this e-mail has an account, a reset link is on its way. Check your inbox." }));   // same answer either way: no account fishing
+      } else {
+        const { error } = await sb.auth.signInWithPassword({ email: email.value.trim().toLowerCase(), password: pw.value });
+        if (error) msg.append(el("div", { class: "notice bad", text: /rate|too many/i.test(error.message) ? "Too many attempts. Wait a few minutes and try again." : "E-mail or password is incorrect." }));
+      }
+    } catch (e) { fail(e, "Could not sign in"); }
+    btn.disabled = false;
+  });
+  return authCard("Sign in", [el("p", { text: "One sign-in opens every portal you have access to." }), form]);
+}
+
+function setPassword() {
+  const a = el("input", { class: "input", type: "password", autocomplete: "new-password", minlength: 10, maxlength: 128, required: true });
+  const b = el("input", { class: "input", type: "password", autocomplete: "new-password", minlength: 10, maxlength: 128, required: true });
+  const msg = el("div"), btn = el("button", { class: "btn", type: "submit", text: "Save password" });
+  const form = el("form", { style: "display:grid;gap:14px" }, el("label", { class: "f" }, "New password (at least 10 characters)", a), el("label", { class: "f" }, "Type it again", b), msg, btn);
+  form.addEventListener("submit", async ev => {
+    ev.preventDefault(); msg.replaceChildren();
+    if (a.value.length < 10) return msg.append(el("div", { class: "notice bad", text: "Use at least 10 characters." }));
+    if (a.value !== b.value) return msg.append(el("div", { class: "notice bad", text: "The two passwords are different." }));
+    btn.disabled = true;
+    try {
+      const { error } = await sb.auth.updateUser({ password: a.value });
+      if (error) { msg.append(el("div", { class: "notice bad", text: /should be different|same/i.test(error.message) ? "Choose a password you have not used before." : /weak|short|characters/i.test(error.message) ? "That password is too weak. Make it longer." : "The password could not be saved." })); btn.disabled = false; return; }
+      await q(sb.rpc("core_password_changed"));
+      S.recovery = false; history.replaceState(null, "", location.pathname); toast("Password saved"); await loadMe();
+    } catch (e) { btn.disabled = false; fail(e, "The password could not be saved"); }
+  });
+  return authCard(S.me && S.me.must_change_password ? "Choose your own password" : "Set a new password", [el("p", { text: "This replaces any temporary password. Don't use one from another website." }), form]);
+}
+
+function topBar() {
+  const theme = el("button", { class: "iconbtn", title: "Light / dark", "aria-label": "Switch light or dark theme", onclick: () => { const r = document.documentElement, d = r.getAttribute("data-theme") === "dark" || (!r.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches); r.setAttribute("data-theme", d ? "light" : "dark"); try { localStorage.setItem("akf-theme", d ? "light" : "dark"); } catch (e) {} } }, icon("moon", 18));
+  return el("header", { class: "top" }, el("div", { class: "wrap" },
+    el("div", { class: "brand" }, el("div", { class: "mark" }, icon("grid", 18)), el("div", {}, "Alkhidmat Islamabad", el("small", { text: "Staff portals" }))),
+    el("div", { class: "grow" }),
+    el("div", { class: "who" }, el("div", { class: "t", style: "text-align:right" }, el("b", { text: S.me.full_name }), el("span", { text: S.me.is_super ? "Super Admin" : (S.me.designation || S.me.email) })), el("div", { class: "avatar", text: initials(S.me.full_name) })),
+    theme,
+    el("button", { class: "iconbtn", title: "Sign out of every portal", "aria-label": "Sign out", onclick: async () => { await sb.auth.signOut({ scope: "global" }); } }, icon("logout", 18))));
+}
+
+function home() {
+  const hour = new Date().getHours(), greet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const tabs = S.me.is_super ? [["portals", "My portals"], ["people", "People & access"], ["setup", "Portals & departments"], ["activity", "Activity & usage"]] : [];
+  return el("main", { class: "wrap" },
+    el("div", { class: "hero" }, el("h2", { text: `${greet}, ${S.me.full_name.split(" ")[0]}` }), el("p", { text: S.portals.length ? "Choose a portal. It opens in a new tab and you stay signed in." : "" })),
+    tabs.length ? el("nav", { class: "tabs", "aria-label": "Sections" }, tabs.map(([k, t]) => el("button", { class: S.tab === k ? "on" : "", text: t, onclick: () => { S.tab = k; render(); if (k !== "portals" && !S.admin) loadAdmin(); } }))) : el("div", { style: "height:18px" }),
+    S.tab === "portals" || !S.me.is_super ? tiles() : !S.admin ? el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })) : S.tab === "people" ? people() : S.tab === "setup" ? setup() : activity());
+}
+
+function tiles() {
+  if (!S.portals.length) return el("div", { class: "card empty" }, el("h3", { text: "No portals yet" }), el("p", { text: "The Super Admin has not given you access to any portal. Ask them to add you." }));
+  return el("div", { class: "tiles" }, S.portals.map(p => el("a", { class: "card tile", href: safeHref(p.url), target: "_blank", rel: "noopener", style: `--accent:${/^#[0-9a-f]{6}$/i.test(p.color) ? p.color : "#0B51A7"}` },
+    el("div", { class: "ic", style: `background:${/^#[0-9a-f]{6}$/i.test(p.color) ? p.color : "#0B51A7"}` }, icon(p.icon, 22)),
+    el("div", {}, el("h3", { text: p.name }), el("p", { text: p.description })),
+    el("div", { class: "foot" }, el("span", { class: "tag brand", text: ROLE_LABEL[p.role] || p.role }), el("span", { class: "row" }, "Open", icon("arrow", 16))))));
+}
+
+/* ---------- Super Admin: people & access ---------- */
+function people() {
+  const A = S.admin, mods = A.modules;
+  const search = el("input", { class: "input", type: "search", placeholder: "Search name or e-mail", value: S.q, style: "max-width:260px", "aria-label": "Search people" });
+  search.addEventListener("input", () => { S.q = search.value; drawRows(); });
+  const dept = el("select", { class: "input", style: "max-width:200px", "aria-label": "Filter by department" }, el("option", { value: "", text: "All departments" }), A.depts.map(d => el("option", { value: d.code, text: d.name })));
+  dept.value = S.dept; dept.addEventListener("change", () => { S.dept = dept.value; drawRows(); });
+  const tbody = el("tbody");
+  function drawRows() {
+    const needle = S.q.trim().toLowerCase();
+    const list = A.people.filter(p => (!needle || (p.full_name + " " + p.email).toLowerCase().includes(needle)) && (!S.dept || p.dept === S.dept));
+    tbody.replaceChildren(...list.map(p => el("tr", {},
+      el("td", {}, el("b", { text: p.full_name }), el("span", { class: "sub", text: p.email }), el("span", { class: "sub", text: [p.designation, (A.depts.find(d => d.code === p.dept) || {}).name].filter(Boolean).join(" · ") })),
+      el("td", {}, p.is_super ? el("span", { class: "tag brand", text: "Super Admin" }) : null, " ", p.active ? el("span", { class: "tag ok", text: "Active" }) : el("span", { class: "tag bad", text: "Deactivated" }), p.must_change_password ? el("span", { class: "tag warn", text: "Temp password" }) : null),
+      mods.map(m => el("td", {}, p.is_super ? el("span", { class: "muted small", text: "Everything" }) : accessButton(p, m))),
+      el("td", {}, el("button", { class: "btn ghost sm", text: "Manage", onclick: () => managePerson(p) })))));
+    if (!list.length) tbody.append(el("tr", {}, el("td", { colspan: mods.length + 3, class: "empty", text: "Nobody matches." })));
+  }
+  drawRows();
+  return el("section", {},
+    el("div", { class: "bar" }, search, dept, el("div", { class: "grow" }), el("span", { class: "muted small", text: `${A.people.length} people` }), el("button", { class: "btn", onclick: addPerson }, icon("plus", 16), "Add person")),
+    el("div", { class: "card tblwrap" }, el("table", {},
+      el("thead", {}, el("tr", {}, el("th", { text: "Person" }), el("th", { text: "Status" }), mods.map(m => el("th", { text: m.name + (m.enabled ? "" : " (off)") })), el("th", {}))), tbody)),
+    el("p", { class: "small muted", text: "Click a cell to choose exactly which tabs of that portal the person sees and what they may do on each (see, add, edit, delete, approve, export). Presets fill the ticks for you. Changes apply at once and are recorded in Activity." }));
+}
+
+/* one cell of the People & access table: shows the current access, opens the tab/action grid */
+function accessButton(p, m) {
+  const a = (S.admin.acc[p.id] || {})[m.key];
+  const n = a ? Object.keys(a.tabs).length : 0, total = S.admin.tabs.filter(t => t.module_key === m.key).length;
+  const label = !a ? "No access" : `${ROLE_LABEL[a.preset] || a.preset}${total ? ` · ${n}/${total} tabs` : ""}`;
+  return el("button", { class: "role" + (a ? " has" : ""), style: "cursor:pointer;text-align:left", title: "Choose tabs and actions", "aria-label": `${p.full_name} — ${m.name}: ${label}. Change`, text: label, onclick: () => accessDialog(p, m) });
+}
+
+function accessDialog(p, m) {
+  const tabs = S.admin.tabs.filter(t => t.module_key === m.key);
+  const cur = (S.admin.acc[p.id] || {})[m.key];
+  let preset = cur ? cur.preset : "";
+  const boxes = {};   // boxes[tab][action] = checkbox
+  const presetRow = el("div", { class: "row" });
+  const tick = name => {
+    preset = name;
+    tabs.forEach(t => { const want = name ? (t.presets[name] || (name === "admin" ? t.actions : [])) : []; ACTIONS.forEach(a => { if (boxes[t.tab_key][a]) boxes[t.tab_key][a].checked = want.includes(a); }); });
+    drawPresets();
+  };
+  function drawPresets() {
+    presetRow.replaceChildren(...["", ...ROLES].map(r => el("button", { class: "btn sm " + (preset === r ? "" : "ghost"), type: "button", text: r ? ROLE_LABEL[r] : "No access", onclick: () => tick(r) })),
+      preset === "custom" ? el("span", { class: "tag warn", text: "Custom" }) : null);
+  }
+  const rows = tabs.map(t => {
+    boxes[t.tab_key] = {};
+    const have = cur && cur.tabs[t.tab_key] || [];
+    return el("tr", {}, el("td", {}, el("b", { text: t.name }), el("span", { class: "sub", text: t.description })),
+      ACTIONS.map(a => {
+        if (!t.actions.includes(a)) return el("td", { class: "muted", style: "text-align:center", text: "–" });
+        const c = el("input", { type: "checkbox", "aria-label": `${t.name}: ${ACTION_LABEL[a]}` }); c.checked = have.includes(a);
+        c.addEventListener("change", () => {
+          if (a === "view" && !c.checked) ACTIONS.forEach(x => { if (boxes[t.tab_key][x]) boxes[t.tab_key][x].checked = false; });   // can't act on a tab you can't see
+          if (a !== "view" && c.checked && boxes[t.tab_key].view) boxes[t.tab_key].view.checked = true;
+          preset = "custom"; drawPresets();
+        });
+        boxes[t.tab_key][a] = c; return el("td", { style: "text-align:center" }, c);
+      }));
+  });
+  drawPresets();
+  const body = tabs.length
+    ? [el("p", { class: "small muted", text: "Pick a preset, then adjust any tick. A tab with no tick is hidden from this person." }), presetRow,
+       el("div", { class: "tblwrap", style: "border:1px solid var(--line)" }, el("table", {}, el("thead", {}, el("tr", {}, el("th", { text: "Tab" }), ACTIONS.map(a => el("th", { style: "text-align:center", text: ACTION_LABEL[a] })))), el("tbody", {}, rows)))]
+    : [el("p", { text: "This portal has no tabs registered yet, so access is simply open or closed." }), presetRow];
+  const d = dialog(`${p.full_name} — ${m.name}`, body, close => [el("button", { class: "btn ghost", text: "Cancel", onclick: close }), el("button", { class: "btn", text: "Save access", onclick: async ev => {
+    const chosen = {}; tabs.forEach(t => { const acts = ACTIONS.filter(a => boxes[t.tab_key][a] && boxes[t.tab_key][a].checked); if (acts.length) chosen[t.tab_key] = acts; });
+    const open = tabs.length ? Object.keys(chosen).length > 0 : !!preset;
+    ev.target.disabled = true;
+    try {
+      await q(sb.rpc("core_set_access", { p_user: p.id, p_module: m.key, p_preset: open ? (preset || "custom") : "", p_tabs: chosen }));
+      toast(`${p.full_name}: ${m.name} ${open ? "access saved" : "access removed"}`); close(); await loadAdmin();
+    } catch (e) { ev.target.disabled = false; fail(e, "Access was not changed"); }
+  } })]);
+  d.style.width = "min(760px, calc(100vw - 32px))";
+}
+
+function dialog(title, body, actions) {
+  const d = el("dialog", { "aria-label": title }, el("div", { class: "dlg-h" }, el("h3", { text: title })), el("div", { class: "dlg-b" }, body), el("div", { class: "dlg-f" }, actions(() => { d.close(); d.remove(); })));
+  d.addEventListener("close", () => d.remove()); document.body.append(d); d.showModal(); return d;
+}
+function showSecret(name, pw) {
+  dialog("Temporary password", [el("p", { text: `Give this to ${name} in person or by phone — not in a group chat. It is shown only once; they must choose their own password when they first sign in.` }), el("div", { class: "secret", text: pw })],
+    close => [el("button", { class: "btn ghost", text: "Copy", onclick: async () => { try { await navigator.clipboard.writeText(pw); toast("Copied"); } catch (e) {} } }), el("button", { class: "btn", text: "Done", onclick: close })]);
+}
+const deptSelect = cur => { const s = el("select", { class: "input" }, el("option", { value: "", text: "— none —" }), S.admin.depts.filter(d => d.active || d.code === cur).map(d => el("option", { value: d.code, text: d.name }))); s.value = cur || ""; return s; };
+
+function addPerson() {
+  const name = el("input", { class: "input", maxlength: 120, required: true }), email = el("input", { class: "input", type: "email", maxlength: 254, required: true });
+  const desig = el("input", { class: "input", maxlength: 120 }), dept = deptSelect("");
+  const how = el("select", { class: "input" }, el("option", { value: "invite", text: "E-mail an invitation (they choose a password)" }), el("option", { value: "temp", text: "Create a temporary password (I hand it over)" }));
+  const msg = el("div");
+  dialog("Add person", [el("div", { class: "grid2" }, el("label", { class: "f" }, "Full name", name), el("label", { class: "f" }, "Work e-mail", email), el("label", { class: "f" }, "Designation", desig), el("label", { class: "f" }, "Department", dept)), el("label", { class: "f" }, "How they get in", how), msg,
+    el("p", { class: "small muted", text: "After adding, give them access to portals in the table." })],
+    close => [el("button", { class: "btn ghost", text: "Cancel", onclick: close }), el("button", { class: "btn", text: "Add person", onclick: async ev => {
+      msg.replaceChildren(); if (name.value.trim().length < 2 || !/^\S+@\S+\.\S+$/.test(email.value.trim())) return msg.append(el("div", { class: "notice bad", text: "Enter the full name and a valid e-mail." }));
+      ev.target.disabled = true;
+      try { const r = await adminCall({ action: "create", full_name: name.value, email: email.value, designation: desig.value, dept: dept.value, send_invite: how.value === "invite" });
+        close(); toast(how.value === "invite" ? "Invitation sent" : "Person added"); if (r.temp_password) showSecret(name.value.trim(), r.temp_password); loadAdmin();
+      } catch (e) { ev.target.disabled = false; fail(e, "The person was not added"); }
+    } })]);
+}
+
+function managePerson(p) {
+  const self = p.id === S.me.id;
+  const name = el("input", { class: "input", value: p.full_name, maxlength: 120 }), desig = el("input", { class: "input", value: p.designation || "", maxlength: 120 }), dept = deptSelect(p.dept);
+  const sup = el("input", { type: "checkbox", disabled: self }); sup.checked = p.is_super;
+  const from = el("select", { class: "input", "aria-label": "Copy access from" }, el("option", { value: "", text: "Copy all portal access from…" }),
+    S.admin.people.filter(x => x.id !== p.id && !x.is_super && x.active).map(x => el("option", { value: x.id, text: `${x.full_name} (${x.designation || x.email})` })));
+  const copyBtn = el("button", { class: "btn ghost sm", text: "Copy", onclick: async () => {
+    if (!from.value) return toast("Choose a person to copy from", true);
+    const src = S.admin.people.find(x => x.id === from.value);
+    if (!confirm(`Replace ALL of ${p.full_name}'s portal access with ${src.full_name}'s?`)) return;
+    try { await q(sb.rpc("core_copy_access", { p_from: from.value, p_to: p.id })); toast("Access copied"); await loadAdmin(); } catch (e) { fail(e, "Access was not copied"); }
+  } });
+  const run = async (body, done, what) => { try { const r = await adminCall({ id: p.id, ...body }); toast(done); if (r.temp_password) showSecret(p.full_name, r.temp_password); await loadAdmin(); return true; } catch (e) { fail(e, what); return false; } };
+  dialog(p.full_name, [el("div", { class: "small muted", text: p.email }),
+    el("div", { class: "grid2" }, el("label", { class: "f" }, "Full name", name), el("label", { class: "f" }, "Designation", desig), el("label", { class: "f" }, "Department", dept),
+      el("label", { class: "f" }, "Super Admin", el("span", { class: "row", style: "font-weight:600;color:var(--ink)" }, sup, self ? "You (cannot remove your own)" : "Full control of everything"))),
+    p.is_super ? null : el("div", { class: "row" }, el("div", { style: "flex:1;min-width:200px" }, from), copyBtn),
+    el("div", { class: "row" },
+      el("button", { class: "btn ghost sm", text: "E-mail a reset link", onclick: () => run({ action: "reset", mode: "email" }, "Reset link sent", "The reset link was not sent") }),
+      el("button", { class: "btn ghost sm", text: "Temporary password", onclick: () => run({ action: "reset", mode: "temp" }, "Temporary password set", "The password was not reset") }),
+      self ? null : el("button", { class: "btn ghost sm", text: p.active ? "Deactivate" : "Activate", onclick: () => run({ action: "update", active: !p.active }, p.active ? "Deactivated — they can no longer sign in" : "Activated", "Status was not changed") }),
+      self ? null : el("button", { class: "btn danger sm", text: "Delete", onclick: async () => { if (confirm(`Delete ${p.full_name}'s login and all portal access? This cannot be undone. Records they created stay.`)) { if (await run({ action: "delete" }, "Deleted", "The person was not deleted")) document.querySelector("dialog")?.close(); } } }))],
+    close => [el("button", { class: "btn ghost", text: "Close", onclick: close }), el("button", { class: "btn", text: "Save", onclick: async () => {
+      const body = { action: "update", full_name: name.value, designation: desig.value, dept: dept.value }; if (!self && sup.checked !== p.is_super) body.is_super = sup.checked;
+      if (await run(body, "Saved", "Changes were not saved")) close(); } })]);
+}
+
+/* ---------- Super Admin: portals & departments ---------- */
+function setup() {
+  const A = S.admin;
+  const modRows = A.modules.map(m => {
+    const name = el("input", { class: "input", value: m.name, maxlength: 60 }), desc = el("input", { class: "input", value: m.description, maxlength: 200 });
+    const url = el("input", { class: "input", value: m.url, maxlength: 300 }), on = el("input", { type: "checkbox" }); on.checked = m.enabled;
+    const save = el("button", { class: "btn sm", text: "Save", onclick: async () => {
+      if (!/^(https:\/\/|\/)/.test(url.value.trim())) return toast("The link must start with https:// or /", true);
+      try { await q(sb.from("core_modules").update({ name: name.value.trim(), description: desc.value.trim(), url: url.value.trim(), enabled: on.checked }).eq("key", m.key)); toast(`${name.value} saved`); await loadAdmin(); S.portals = await q(sb.rpc("core_my_portals")); }
+      catch (e) { fail(e, "The portal was not saved"); } } });
+    const tabNames = A.tabs.filter(t => t.module_key === m.key).map(t => t.name);
+    return el("tr", {}, el("td", {}, name, el("span", { class: "sub", text: "key: " + m.key }), el("span", { class: "sub", text: tabNames.length ? "Tabs: " + tabNames.join(", ") : "No tabs registered" })), el("td", {}, desc), el("td", {}, url), el("td", {}, el("label", { class: "row small" }, on, "On")), el("td", {}, save));
+  });
+  const newDept = el("input", { class: "input", placeholder: "Name, e.g. Media", maxlength: 80, style: "max-width:220px" }), newCode = el("input", { class: "input", placeholder: "CODE", maxlength: 20, style: "max-width:120px;text-transform:uppercase" });
+  return el("section", { style: "display:grid;gap:22px;padding-bottom:40px" },
+    el("div", {}, el("h3", { text: "Portals" }), el("p", { class: "small muted", text: "Switch a portal on when it is ready. Staff see it only if they also have access in People & access." }),
+      el("div", { class: "card tblwrap" }, el("table", {}, el("thead", {}, el("tr", {}, ["Name", "Description", "Link", "Visible", ""].map(t => el("th", { text: t })))), el("tbody", {}, modRows)))),
+    el("div", {}, el("h3", { text: "Departments" }),
+      el("div", { class: "row", style: "margin-bottom:10px" }, A.depts.map(d => el("span", { class: "tag" + (d.active ? "" : " bad"), text: `${d.name} · ${d.code}` }))),
+      el("div", { class: "row" }, newDept, newCode, el("button", { class: "btn sm", text: "Add department", onclick: async () => {
+        const code = newCode.value.trim().toUpperCase(); if (!/^[A-Z0-9_-]{2,20}$/.test(code) || newDept.value.trim().length < 2) return toast("Enter a name and a short CODE (letters / digits)", true);
+        try { await q(sb.from("core_departments").insert({ code, name: newDept.value.trim() })); toast("Department added"); loadAdmin(); } catch (e) { fail(e, "The department was not added"); } } }))));
+}
+
+/* free-plan meter: database 500 MB and file storage 1 GB */
+function usageMeter() {
+  const u = S.admin.usage; if (!u) return null;
+  const bar = (label, used, limit) => {
+    const pct = used == null ? 0 : Math.min(100, Math.round(used / limit * 100)), tone = pct >= 80 ? "var(--bad)" : pct >= 60 ? "var(--warn)" : "var(--ok)";
+    return el("div", { class: "card", style: "padding:14px;display:grid;gap:8px" },
+      el("div", { class: "row", style: "justify-content:space-between" }, el("b", { text: label }), el("span", { class: "small muted", text: used == null ? "n/a" : `${(used / 1048576).toFixed(1)} MB of ${limit / 1048576} MB · ${pct}%` })),
+      el("div", { style: "height:8px;border-radius:99px;background:var(--soft);overflow:hidden" }, el("div", { style: `height:100%;width:${pct}%;background:${tone}` })));
+  };
+  return el("div", { style: "display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:18px" },
+    bar("Database (free plan)", u.db_bytes, 500 * 1048576), bar("Files (free plan)", u.file_bytes, 1024 * 1048576),
+    el("div", { class: "card", style: "padding:14px" }, el("b", { text: "Active people" }), el("div", { style: "font-size:24px;font-weight:800", text: String(u.people) })));
+}
+
+function activity() {
+  const rows = S.admin.audit;
+  return el("section", { style: "padding-bottom:40px" }, usageMeter(), el("p", { class: "small muted", text: "The last 200 changes to people, access and portals. This record cannot be edited. Above 80% on a meter, archive old files or move to the Pro plan." }),
+    el("div", { class: "card tblwrap" }, el("table", {}, el("thead", {}, el("tr", {}, ["When", "Who", "What", "About"].map(t => el("th", { text: t })))),
+      el("tbody", {}, rows.length ? rows.map(a => el("tr", {}, el("td", { class: "small", text: fmt(a.at) }), el("td", { class: "small", text: a.actor_email || "system" }), el("td", { text: a.action }), el("td", { class: "small muted", text: a.target }))) : el("tr", {}, el("td", { colspan: 4, class: "empty", text: "No activity yet." }))))));
+}
+
+try { const t = localStorage.getItem("akf-theme"); if (t) document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+window.addEventListener("unhandledrejection", e => fail(e.reason, "Unexpected error"));
+render(); start();
+</script>
+</body>
+</html>

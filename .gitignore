@@ -1,0 +1,16 @@
+# secrets and generated config — never commit
+.env
+.env.*
+!.env.example
+config.js
+
+# data exports and backups (they contain personal data)
+*.csv
+portal_rows-backup*
+AKF-portal-backup-*.json
+
+# local / editor files
+node_modules/
+.DS_Store
+Thumbs.db
+.claude/
