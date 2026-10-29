@@ -9,7 +9,7 @@
 (function () {
   "use strict";
   const ROLES = [["hod", "Head of Department (HOD)"], ["finance", "Finance"], ["manager_hr", "Manager Admin & HR"], ["regional_manager", "Regional Manager"], ["president", "President"],
-    ["gen_sec", "General Secretary"], ["admin_officer", "Admin Officer"], ["store_officer", "Store Officer"]];
+    ["gen_sec", "General Secretary"], ["admin_officer", "Admin Officer"], ["store_officer", "Store Officer"], ["transport_officer", "Transport Officer"]];
   const TASK_ROLES = [["RM", "Regional Manager"], ["HOD", "Head of Department"], ["MA", "Manager Admin"], ["HR", "HR Manager"], ["GS", "General Secretary"], ["President", "President"], ["Staff", "Staff"]];
   /* step: key · label (what it is called) · who (shown to people) · owner (who may do it) · kind: "fixed" = part of the
      process (cannot be switched off or moved) / "approval" = an approval the Super Admin may switch off, move, rename,
@@ -46,6 +46,14 @@
         { key: "recommended", label: "Recommended by", who: "Manager Admin", roles: ["MA", "RM"], kind: "approval", on: true },
         { key: "endorsed", label: "Recommended by", who: "Regional Manager", roles: ["RM"], kind: "approval", on: true },
         { key: "approved", label: "Approved by", who: "GS / President", roles: ["GS", "President"], kind: "approval", on: true, final: true }] },
+    /* Fleet & Ambulances Management: a department's vehicle request (minAmount = trip length in DAYS: 0 = every request) */
+    fleet: { steps: [
+      S("submitted", "Vehicle requested", "HOD (Requester)", "hod", "fixed"),
+      S("to_check", "Vehicle & driver assigned", "Transport Officer", "transport_officer", "fixed"),
+      S("rec_hr", "Recommended", "Manager Admin & HR", "manager_hr", "approval"),
+      S("approved", "Approved", "Regional Manager", "regional_manager", "approval", { final: true }),
+      S("dispatched", "On duty (dispatched)", "Transport Officer", "transport_officer", "fixed"),
+      S("returned", "Returned & verified", "Transport Officer", "transport_officer", "fixed")] },
     /* Donor Management: approvers are ticks in People & access ("tab:action") */
     donor: { steps: [
       { key: "record", label: "Receipt recorded", who: "RMO / Manager RMD", tick: "new:add", kind: "fixed", on: true, minAmount: 0 },
@@ -90,7 +98,8 @@
     const donor = { steps: mergeSteps(DEFAULTS.donor.steps, m.donor && m.donor.steps, () => false, "money").map(s => s.kind === "approval" ? Object.assign(s, { tick: DONOR_TICKS.some(t => t[0] === s.tick) ? s.tick : "team:edit", owner: undefined }) : s),
       corrections: { tick: DONOR_TICKS.some(t => t[0] === (m.donor && m.donor.corrections && m.donor.corrections.tick)) ? m.donor.corrections.tick : DEFAULTS.donor.corrections.tick, who: String((m.donor && m.donor.corrections && m.donor.corrections.who) || DEFAULTS.donor.corrections.who).slice(0, 60) } };
     return { v: 1, procurement: { steps: mergeSteps(DEFAULTS.procurement.steps, m.procurement && m.procurement.steps, roleOk) },
-      store: { steps: mergeSteps(DEFAULTS.store.steps, m.store && m.store.steps, roleOk) }, tasks, donor };
+      store: { steps: mergeSteps(DEFAULTS.store.steps, m.store && m.store.steps, roleOk) }, tasks, donor,
+      fleet: { steps: mergeSteps(DEFAULTS.fleet.steps, m.fleet && m.fleet.steps, roleOk) } };
   }
   /* the steps a request of this amount goes through (switched-off steps and steps for larger amounts are left out) */
   function steps(settings, portal, total) {

@@ -7,6 +7,7 @@
      ctx.tabs                                     // [{ tab_key, name, description, actions:[…] }] — only tabs this person was given
      ctx.can("trips", "approve")                  // true / false — use to show or hide buttons
      ctx.sb, ctx.profile, ctx.role                // database client, the person, preset label
+     ctx.portalName                               // the portal's name as set on the main page (Settings → Portal names)
 
    No sign-in → sent to the main page. No access → a "no access" screen.
    This only decides what the page SHOWS; the database rules (core_can) are what protect the data. */
@@ -32,16 +33,17 @@
     const { data } = await sb.auth.getSession();
     if (!data.session) { location.replace(HOME); throw new Error("signed out"); }
     sb.auth.onAuthStateChange(ev => { if (ev === "SIGNED_OUT") location.replace(HOME); });
-    const [{ data: profile }, { data: role }, { data: tabs }] = await Promise.all([
+    const [{ data: profile }, { data: role }, { data: tabs }, { data: mod }] = await Promise.all([
       sb.from("core_profiles").select("id,email,full_name,designation,dept,is_super,must_change_password").eq("id", data.session.user.id).maybeSingle(),
       sb.rpc("core_module_role", { p_module: moduleKey }),
       sb.rpc("core_my_tabs", { p_module: moduleKey }),
+      sb.from("core_modules").select("name").eq("key", moduleKey).maybeSingle(),   // the name the Super Admin gave this portal (Settings → Portal names)
     ]);
     if (!profile) { screen("No access", "Your account is not active. Ask the Super Admin."); throw new Error("no profile"); }
     if (profile.must_change_password) { location.replace(HOME); throw new Error("password"); }
     if (!role) { screen("No access to this portal", "Ask the Super Admin to give you access on the main page."); throw new Error("no access"); }
     const rights = {}; (tabs || []).forEach(t => { rights[t.tab_key] = t.actions || []; });
-    return { sb, profile, role, tabs: tabs || [], can: (tab, action) => (rights[tab] || []).includes(action || "view") };
+    return { sb, profile, role, tabs: tabs || [], portalName: (mod && mod.name) || "", can: (tab, action) => (rights[tab] || []).includes(action || "view") };
   };
 
   /* Free plan has 1 GB for files: shrink photos before upload (max 1600 px, JPEG). Other files pass through. */

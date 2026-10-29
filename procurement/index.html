@@ -3735,6 +3735,8 @@ const ROLES = {
   president:     { label:"President",          short:"President",     desc:"Final approval & dashboard" },
   hod:           { label:"Head of Department", short:"HOD",           desc:"Request & track" },
   staff:         { label:"Staff",              short:"Staff",         desc:"Tasks only" },
+  transport_officer:{ label:"Transport Officer", short:"Transport Off.", desc:"Fleet & Ambulances: vehicles, drivers, dispatch" },
+  driver:        { label:"Driver",             short:"Driver",        desc:"Fleet & Ambulances: trip log" },
 };
 /* Roles whose step is a decision (approve / recommend / reject) — shown on the Approvals page */
 const APPROVER_ROLES = ["finance","manager_hr","regional_manager","president"];
@@ -4096,7 +4098,8 @@ const SB_READY = !!(SB_CONFIG && !SB_CONFIG_ERR && typeof supabase!=="undefined"
 const SB_MODE = !!SB_CONFIG;
 const sb = SB_READY ? supabase.createClient(SB_CONFIG.url, SB_CONFIG.anonKey, { auth: { storageKey: "akf-portals-auth" } }) : null;   /* the main page's sign-in */
 /* ===== which portal this file is — set by erp/tools/build-portals.js, do not edit here ===== */
-const PORTAL = "procurement", PORTAL_NAME = "Procurement";
+const PORTAL = "procurement";
+let PORTAL_NAME = "Procurement";   /* replaced at sign-in by the name set on the main page (Settings → Portal names) */
 const PORTAL_TABS = ["dashboard","approvals","forms","procurement","vendors","finance","reports","imports","log"];
 const PORTAL_COLLECTIONS = ["vendors","stock","ledger","docs","requests","rfqs","pos","smsLog","budgets","invoices","assets","beneficiaries"];
 const PORTAL_IMPORTS = ["vendors","budgets"];
@@ -6312,7 +6315,8 @@ function App(){
   const dqApp=useDonorQueue(!!(dqUser&&dqUser.active&&dqUser.role!=="hod"&&!READ_ONLY_ROLES.includes(dqUser.role)));
   const [grid,setGrid]=useState(null);
   useEffect(()=>{ if(!SB_MODE||!authUser){ PORTAL_GRID=null; setGrid(null); return; }
-    sb.rpc("core_my_tabs",{p_module:PORTAL}).then(({data,error})=>{ const g=error?[]:(data||[]).map(t=>t.tab_key); PORTAL_GRID=g; setGrid(g); },()=>{ PORTAL_GRID=[]; setGrid([]); }); },[authUser&&authUser.id]);
+    sb.from("core_modules").select("name").eq("key",PORTAL).maybeSingle().then(({data})=>{ if(data&&data.name){ PORTAL_NAME=data.name; document.title="Alkhidmat Islamabad · "+data.name; } },()=>{})
+      .then(()=>sb.rpc("core_my_tabs",{p_module:PORTAL})).then(({data,error})=>{ const g=error?[]:(data||[]).map(t=>t.tab_key); PORTAL_GRID=g; setGrid(g); },()=>{ PORTAL_GRID=[]; setGrid([]); }); },[authUser&&authUser.id]);
   if(boot!=="ready"||!state) return html`<${BootScreen} status=${boot} err=${bootErr}/>`;
   SETTINGS=state.settings;
   let user=null;

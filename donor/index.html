@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-CWbsr2CCbeEhHX80OTF0s+kS/jBoyU6aX41srV0hIfg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-mH7zXcjIiBzw2DznWgXZwnOonov1wmtVwWa0mQ97rDQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -1483,6 +1483,7 @@ const ERP_CFG = window.AKF_SUPABASE;
 const ERP = !!(ERP_CFG && ERP_CFG.url && ERP_CFG.anonKey && window.supabase && window.AKF_GATE);
 const ERP_HOME = new URL('../', location.href).href;
 let GRID = {};         // tab key → actions ticked for this person on the main page (ERP mode)
+let PORTAL_TITLE = 'Donor Management';   // ERP: the name the Super Admin gave this portal (main page → Settings → Portal names)
 /* approval matrix (main page → Settings → Approval matrix → Donor Management): extra approval steps after Finance,
    e.g. "large donations from Rs 500,000 also need the Manager RMD". The database checks the same rules. */
 let MX = { steps: [], corrTick: 'corrections:approve' };
@@ -2172,7 +2173,7 @@ function render() {
   forceRender = false;
   if (keep) { buildChrome(); return; }
   $('#page-title').textContent = TITLES[UI.view] || '';
-  document.title = `${TITLES[UI.view] || 'Portal'} · Donor Management`;
+  document.title = `${TITLES[UI.view] || 'Portal'} · ${PORTAL_TITLE}`;
   markActiveNav();
   const V = VIEWS[UI.view] || VIEWS.dashboard;
   $('#view').innerHTML = V.html();
@@ -5860,6 +5861,7 @@ async function erpBoot() {
   try { ctx = await AKF_GATE('donor'); }
   catch (e) { hideLoader(); return; }                 // the gate has already shown "no access" or gone to the main page
   erpSb = ctx.sb; GRID = {};
+  if (ctx.portalName) { PORTAL_TITLE = ctx.portalName; const sp = $('.side-head > div > span'); if (sp) sp.textContent = 'Khidmat Hub · ' + PORTAL_TITLE; }
   (ctx.tabs || []).forEach(t => { GRID[t.tab_key] = t.actions || []; });
   const p = ctx.profile;
   try {
@@ -5882,7 +5884,7 @@ async function erpBoot() {
   enterApp();
   erpSubscribe();
   /* Alkhidmat AI — every portal has it; it gets only figures, never donor names, CNIC or phone numbers */
-  if (window.AKF_ASSISTANT) AKF_ASSISTANT({ sb: erpSb, portal: 'Donor Management', user: ME.name.split(' ')[0], context: erpAiContext,
+  if (window.AKF_ASSISTANT) AKF_ASSISTANT({ sb: erpSb, portal: PORTAL_TITLE, user: ME.name.split(' ')[0], context: erpAiContext,
     hints: ['What needs my attention today?', 'How much did we collect this month?', 'Explain how a receipt gets verified', 'Write a thank-you message for a Zakat donor', 'What is the difference between Zakat and Sadaqah?'] });
   await audit('LOGIN', ME.email, 'Opened Donor Management'); await persist();
   await erpReconcile();
@@ -5896,7 +5898,7 @@ function erpAiContext() {
   const pend = S.donations.filter(x => x.status === 'Pending');
   let due = 0; try { due = dueInstallments().length; } catch (e) { }
   return JSON.stringify({
-    today: t, portal: 'Donor Management', org: S.org.name, myRole: (ROLES[ME.role] || {}).label, myTabs: Object.keys(GRID),
+    today: t, portal: PORTAL_TITLE, org: S.org.name, myRole: (ROLES[ME.role] || {}).label, myTabs: Object.keys(GRID),
     donors: { active: S.donors.filter(d => d.status === 'Active').length, total: S.donors.length, newThisMonth: S.donors.filter(d => (d.since || '').slice(0, 7) === mon).length },
     receipts: { verifiedThisMonth: verM.length, collectedThisMonthPKR: sum(verM), collectedThisYearPKR: sum(verY), thisMonthByFundType: byFund, thisMonthByProgramme: byProg,
       waitingForFinance: pend.filter(needsMoneyCheck).length, waitingForStoreGoods: pend.filter(needsGoodsCheck).length, inKindThisMonthPKR: verM.reduce((s, x) => s + goodsTotal(x), 0) },

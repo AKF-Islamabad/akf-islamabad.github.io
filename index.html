@@ -6,7 +6,7 @@
 <title>Alkhidmat Islamabad Portals</title>
 <meta name="description" content="One sign-in for every Alkhidmat Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-t8IUycSWACTZE6rqLAKvfnzDexlTGXndYKGxY5qOlZ8='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-cexVpLhMi1mR1jUFqMYMBWbS73yGZ81dllMDJl2+TWk='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -286,6 +286,7 @@ textarea.input{line-height:1.45}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script src="akf-assistant.js"></script>
 <script src="akf-matrix.js"></script>
+<script src="settings-fleet.js"></script>
 <script>
 "use strict";
 /* ========== Alkhidmat Islamabad — main page (portal launcher + people & access) ==========
@@ -328,7 +329,7 @@ const initials = n => String(n || "?").replace(/^(Dr|Mr|Ms|Mrs|Hafiz)\.?\s+/i, "
 /* old portal logins are usernames: "adminofficer" means adminofficer@<login domain> */
 const loginEmail = v => { v = String(v || "").trim().toLowerCase(); return v.includes("@") || !(CFG && CFG.emailDomain) ? v : v + "@" + CFG.emailDomain; };
 /* approval role inside Procurement / Store / Tasks (who approves which step) */
-const ORG_ROLES = [["staff", "Staff"], ["hod", "HOD (Head of Department)"], ["finance", "Finance Department"], ["manager_hr", "Manager Admin & HR"], ["regional_manager", "Regional Manager"], ["president", "President"], ["gen_sec", "General Secretary (view only)"], ["admin_officer", "Admin Officer (procurement)"], ["store_officer", "Store Officer"]];
+const ORG_ROLES = [["staff", "Staff"], ["hod", "HOD (Head of Department)"], ["finance", "Finance Department"], ["manager_hr", "Manager Admin & HR"], ["regional_manager", "Regional Manager"], ["president", "President"], ["gen_sec", "General Secretary (view only)"], ["admin_officer", "Admin Officer (procurement)"], ["store_officer", "Store Officer"], ["transport_officer", "Transport Officer (fleet)"], ["driver", "Driver (fleet)"]];
 const roleSelect = cur => { const s = el("select", { class: "input" }, ORG_ROLES.map(([v, t]) => el("option", { value: v, text: t }))); s.value = cur || "staff"; return s; };
 const safeHref = u => /^(https:\/\/|\/(?!\/))/.test(String(u || "")) ? u : "#";
 const fmt = iso => { try { return new Date(iso).toLocaleString(undefined, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; } };
@@ -759,12 +760,56 @@ async function saveGlobal(patch, logText) {
 
 /* ONE Settings place for every portal: no portal has its own settings page */
 const SETTING_AREAS = [["general", "All portals", "settings", "Organisation, approvals, taxes, AI assistant"], ["matrix", "Approval matrix", "shield", "Who approves what, step by step, in each portal"], ["tasks", "Tasks & Events", "check", "Task departments and workflow stages"], ["donor", "Donor Management", "heart", "Receipts, lists, numbering, donor messages, old data"]];
+/* A portal brings its own settings panel as a file (e.g. settings-fleet.js) that registers itself in
+   window.AKF_SETTINGS_PANELS = [{ key, title, icon, desc, render(box, api) }] — it still shows HERE, in the one Settings place. */
+const settingsApi = () => ({ sb, el, icon, toast, fail, q, showLoader, hideLoader, saveGlobal });
 function settings() {
-  const cur = S.setArea || "general";
-  const nav = el("div", { class: "set-nav", role: "tablist", "aria-label": "Settings for" }, SETTING_AREAS.map(([k, t, ic, d]) =>
+  const panels = (window.AKF_SETTINGS_PANELS || []).filter(p => p && /^[a-z][a-z0-9_]{1,30}$/.test(p.key) && typeof p.render === "function");
+  const areas = [...SETTING_AREAS.slice(0, 1), ["portals", "Portal names", "grid", "Name, description, icon and colour of every portal"], ...SETTING_AREAS.slice(1),
+    ...panels.map(p => ["p:" + p.key, String(p.title || p.key).slice(0, 40), ICONS[p.icon] ? p.icon : "grid", String(p.desc || "").slice(0, 80)])];
+  const cur = areas.some(a => a[0] === S.setArea) ? S.setArea : "general";
+  const nav = el("div", { class: "set-nav", role: "tablist", "aria-label": "Settings for" }, areas.map(([k, t, ic, d]) =>
     el("button", { class: "set-pill" + (cur === k ? " on" : ""), role: "tab", "aria-selected": String(cur === k), onclick: () => { S.setArea = k; render(); } },
       el("span", { class: "si" }, icon(ic, 18)), el("span", {}, el("b", { text: t }), el("small", { text: d })))));
-  return el("section", { style: "display:grid;gap:18px" }, nav, cur === "matrix" ? settingsMatrix() : cur === "tasks" ? settingsTasks() : cur === "donor" ? settingsDonor() : settingsGeneral());
+  let body;
+  if (cur.startsWith("p:")) {
+    body = el("section", { style: "padding-bottom:40px;display:grid;gap:16px" });
+    try { panels.find(p => "p:" + p.key === cur).render(body, settingsApi()); } catch (e) { body.replaceChildren(el("div", { class: "notice bad", text: "These settings could not be shown." })); fail(e, "Settings panel failed"); }
+  } else body = cur === "portals" ? settingsPortals() : cur === "matrix" ? settingsMatrix() : cur === "tasks" ? settingsTasks() : cur === "donor" ? settingsDonor() : settingsGeneral();
+  return el("section", { style: "display:grid;gap:18px" }, nav, body);
+}
+
+/* ---------- Settings → Portal names: what every portal is called everywhere (main page tiles, the portal's own title and sidebar) ---------- */
+function settingsPortals() {
+  const box = el("section", { style: "padding-bottom:40px;display:grid;gap:16px" }, el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })));
+  (async () => {
+    let mods;
+    try { mods = await q(sb.from("core_modules").select("key,name,description,icon,color,sort,enabled").order("sort")); }
+    catch (e) { box.replaceChildren(el("div", { class: "notice bad", text: "The portals could not be loaded." })); return fail(e, "Portals could not be loaded"); }
+    const rows = mods.map(m => {
+      const name = el("input", { class: "input", value: m.name, maxlength: 60, "aria-label": "Portal name" });
+      const desc = el("input", { class: "input", value: m.description, maxlength: 200, "aria-label": "Description" });
+      const ic = el("select", { class: "input", "aria-label": "Icon", style: "max-width:130px" }, Object.keys(ICONS).filter(k => !["logout", "moon", "arrow", "plus", "search"].includes(k)).map(k => el("option", { value: k, text: k })));
+      ic.value = ICONS[m.icon] ? m.icon : "grid";
+      const color = el("input", { type: "color", class: "swatch", value: /^#[0-9a-f]{6}$/i.test(m.color) ? m.color : "#0B51A7", "aria-label": "Colour" });
+      const prev = el("span", { class: "ic", style: `display:inline-grid;place-items:center;width:38px;height:38px;border-radius:11px;color:#fff;background:${color.value}` }, icon(ic.value, 18));
+      const upd = () => { prev.style.background = color.value; prev.replaceChildren(icon(ic.value, 18)); };
+      ic.addEventListener("change", upd); color.addEventListener("input", upd);
+      const save = el("button", { class: "btn sm", text: "Save", onclick: async () => {
+        const n = name.value.trim(); if (n.length < 2) return toast("Enter a name of at least 2 letters", true);
+        save.disabled = true;
+        try {
+          await q(sb.from("core_modules").update({ name: n, description: desc.value.trim(), icon: ic.value, color: color.value }).eq("key", m.key));
+          m.name = n; toast(`Saved — the portal is now called "${n}" everywhere`);
+          S.portals = await q(sb.rpc("core_my_portals")); if (S.admin) S.admin.modules = await q(sb.from("core_modules").select("*").order("sort"));
+        } catch (e) { fail(e, "The portal was not saved"); }
+        save.disabled = false; } });
+      return el("tr", {}, el("td", {}, prev), el("td", {}, name, el("span", { class: "sub", text: "key: " + m.key + (m.enabled ? "" : " · switched off") })), el("td", {}, desc), el("td", {}, ic), el("td", {}, color), el("td", {}, save));
+    });
+    box.replaceChildren(el("p", { class: "small muted", text: "Rename any portal here. The new name shows on the main page, in the portal's own title and sidebar, in Alkhidmat AI and in the access grid. The portal's key (its web address) does not change. Switching a portal on or off is under Portals & departments." }),
+      el("div", { class: "card tblwrap" }, el("table", {}, el("thead", {}, el("tr", {}, ["", "Name", "Description", "Icon", "Colour", ""].map(t => el("th", { text: t })))), el("tbody", {}, rows))));
+  })();
+  return box;
 }
 function settingsGeneral() {
   const box = el("section", { style: "padding-bottom:40px;display:grid;gap:16px" }, el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })));
@@ -814,7 +859,7 @@ function settingsGeneral() {
 }
 
 /* ---------- Settings → Approval matrix: every portal's approval steps (akf-matrix.js; checked by the database too) ---------- */
-const MATRIX_PORTALS = [["procurement", "Procurement", "cart"], ["store", "Store", "box"], ["tasks", "Tasks & Events", "check"], ["donor", "Donor Management", "heart"]];
+const MATRIX_PORTALS = [["procurement", "Procurement", "cart"], ["store", "Store", "box"], ["tasks", "Tasks & Events", "check"], ["donor", "Donor Management", "heart"], ["fleet", "Fleet & Ambulances", "truck"]];
 function settingsMatrix() {
   const box = el("section", { style: "padding-bottom:40px;display:grid;gap:16px" }, el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })));
   if (!window.AKF_MATRIX) { box.replaceChildren(el("div", { class: "notice bad", text: "akf-matrix.js did not load. Reload the page." })); return box; }
@@ -833,7 +878,7 @@ function settingsMatrix() {
 
     /* ----- steps editor (Procurement, Store, Donor Management) ----- */
     const stepsEditor = () => {
-      const isDonor = which === "donor", rows = el("tbody");
+      const isDonor = which === "donor", isFleet = which === "fleet", rows = el("tbody");
       const draw = () => {
         rows.replaceChildren(...part.steps.map((s, i) => {
           const fixed = s.kind === "fixed", apIdx = part.steps.filter(x => x.kind === "approval").indexOf(s);
@@ -844,7 +889,8 @@ function settingsMatrix() {
           else if (isDonor) { owner = sel(M.DONOR_TICKS, s.tick || "team:edit", "Who approves (tick in People & access)"); owner.addEventListener("change", () => { s.tick = owner.value; }); }
           else { owner = sel(M.ROLES, s.owner, "Who approves"); owner.addEventListener("change", () => { s.owner = owner.value; }); }
           const on = chk(s.on, "Step on", fixed || s.final); on.addEventListener("change", () => { s.on = on.checked; showPreview(); });
-          const min = fixed ? el("span", { class: "small muted", text: "every request" }) : numIn(s.minAmount, "Only from this amount (PKR)", s.final ? "always" : "every request");
+          const min = fixed ? el("span", { class: "small muted", text: "every request" }) : numIn(s.minAmount, isFleet ? "Only for trips of this many days or more" : "Only from this amount (PKR)", s.final ? "always" : "every request");
+          if (isFleet && !fixed) min.step = 1;
           if (!fixed) { if (s.final) min.disabled = true; min.addEventListener("input", () => { s.minAmount = Math.max(0, Math.round(+min.value || 0)); showPreview(); }); }
           const hrs = numIn(s.hours, "Time limit in hours", "general"); hrs.step = 1; hrs.style.maxWidth = "100px"; hrs.addEventListener("input", () => { s.hours = Math.max(0, Math.round(+hrs.value || 0)); });
           const move = d => { const ap = part.steps.filter(x => x.kind === "approval"), j = apIdx + d; if (j < 0 || j >= ap.length) return; const a = part.steps.indexOf(ap[apIdx]), b = part.steps.indexOf(ap[j]); [part.steps[a], part.steps[b]] = [part.steps[b], part.steps[a]]; draw(); showPreview(); };
@@ -861,12 +907,12 @@ function settingsMatrix() {
         const at = isDonor ? part.steps.findIndex(s => s.key === "money") + 1 : part.steps.findIndex(s => s.final);   // before the final approval
         part.steps.splice(at < 0 ? part.steps.length : at, 0, st); draw(); showPreview(); } }, icon("plus", 16), isDonor ? "Add an approval step (e.g. large donations)" : "Add an approval step");
       draw();
-      const amount = el("input", { class: "input", type: "number", min: 0, step: 10000, value: "100000", style: "max-width:160px", "aria-label": "Amount for the preview" });
+      const amount = el("input", { class: "input", type: "number", min: 0, step: isFleet ? 1 : 10000, value: isFleet ? "1" : "100000", style: "max-width:160px", "aria-label": "Amount for the preview" });
       const showPreviewFn = () => { const list = M.steps({ approvalMatrix: { [which]: part } }, which, +amount.value || 0).filter(s => s.kind === "approval" || !isDonor || s.key !== "goods");
-        preview.replaceChildren(el("b", { text: `A ${isDonor ? "receipt" : "request"} of Rs ${(+amount.value || 0).toLocaleString("en-PK")} goes through: ` }), list.map(s => s.who + " (" + s.label + ")").join(" → ")); };
+        preview.replaceChildren(el("b", { text: isFleet ? `A vehicle request for ${+amount.value || 0} day(s) goes through: ` : `A ${isDonor ? "receipt" : "request"} of Rs ${(+amount.value || 0).toLocaleString("en-PK")} goes through: ` }), list.map(s => s.who + " (" + s.label + ")").join(" → ")); };
       showPreview = showPreviewFn; amount.addEventListener("input", showPreviewFn); showPreviewFn();
-      return [el("div", { class: "card tblwrap" }, el("table", {}, el("thead", {}, el("tr", {}, ["#", "Step", "Shown as", isDonor ? "Who approves (tick)" : "Who approves", "On", "Only from amount (PKR)", "Time limit (h)", ""].map(t => el("th", { text: t })))), rows)),
-        el("div", { class: "row" }, add, el("span", { class: "grow" }), el("label", { class: "row small" }, "Preview for an amount of Rs", amount)), preview,
+      return [el("div", { class: "card tblwrap" }, el("table", {}, el("thead", {}, el("tr", {}, ["#", "Step", "Shown as", isDonor ? "Who approves (tick)" : "Who approves", "On", isFleet ? "Only for trips of (days or more)" : "Only from amount (PKR)", "Time limit (h)", ""].map(t => el("th", { text: t })))), rows)),
+        el("div", { class: "row" }, add, el("span", { class: "grow" }), el("label", { class: "row small" }, isFleet ? "Preview for a trip of (days)" : "Preview for an amount of Rs", amount)), preview,
         isDonor ? corrEditor() : null];
     };
     let showPreview = () => {};
