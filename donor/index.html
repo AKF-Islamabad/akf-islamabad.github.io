@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-mH7zXcjIiBzw2DznWgXZwnOonov1wmtVwWa0mQ97rDQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-+C8LWWCw/9lX8LvpujnkIAO3Y5dXh6qFCS0UQUZwf0g='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -2182,7 +2182,7 @@ function render() {
   afterRender(navigated);
 }
 function markActiveNav() { $$('#nav [data-view], #bnav [data-view]').forEach(b => { const on = b.dataset.view === UI.view; b.classList.toggle('active', on); on ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'); }); }
-function openMenu() { $('#sidebar').classList.add('open'); $('#side-overlay').classList.add('open'); }
+function openMenu() { $('#sidebar').classList.add('open'); $('#side-overlay').classList.add('open'); requestAnimationFrame(moveNavInd); }
 function closeMenu() { $('#sidebar').classList.remove('open'); $('#side-overlay').classList.remove('open'); }
 
 /* theme */
@@ -5588,6 +5588,11 @@ function applySidePref() {
   /* after choosing a page from the rail, close it so the page is not covered */
   sb.addEventListener('click', e => { if (e.target.closest('[data-act="nav"]') && document.documentElement.classList.contains('side-auto')) { clearTimeout(tOpen); sb.classList.remove('peek'); document.activeElement && document.activeElement.blur(); } });
   applySidePref();
+  /* keep the white highlight on the chosen item when the menu opens, slides or the window changes size */
+  const reInd = () => requestAnimationFrame(moveNavInd);
+  sb.addEventListener('transitionend', e => { if (e.target === sb) reInd(); });
+  addEventListener('resize', reInd);
+  if (window.ResizeObserver) new ResizeObserver(reInd).observe(sb);
 })();
 function moveNavInd() {
   const nav = $('#nav'); if (!nav) return;
@@ -5598,6 +5603,7 @@ function moveNavInd() {
   }
   const a = $('.nav-item.active:not(.nav-primary)', nav);
   if (!a) { ind.style.opacity = '0'; return; }
+  if (!a.offsetHeight) return; /* menu hidden: measure again when it shows */
   const t = `translateY(${a.offsetTop}px)`, h = a.offsetHeight + 'px';
   ind.style.opacity = '1'; ind.style.transform = t; ind.style.height = h; moveNavInd.last = { t, h };
 }

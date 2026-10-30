@@ -287,6 +287,8 @@ textarea.input{line-height:1.45}
 <script src="akf-assistant.js"></script>
 <script src="akf-matrix.js"></script>
 <script src="settings-fleet.js"></script>
+<script src="akf-excel.js"></script>
+<script src="excel-procurement.js"></script><script src="excel-store.js"></script><script src="excel-tasks.js"></script><script src="excel-donor.js"></script><script src="excel-fleet.js"></script>
 <script>
 "use strict";
 /* ========== Alkhidmat Islamabad — main page (portal launcher + people & access) ==========
@@ -315,7 +317,7 @@ function el(tag, attrs, ...kids) {
 const ICONS = {
   grid: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z", box: "M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8",
   check: "M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9", truck: "M1 4h14v12H1zM15 8h4l3 4v4h-7M5.5 19a2 2 0 1 0 0-.1M18.5 19a2 2 0 1 0 0-.1",
-  heart: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z", users: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8",
+  sheet: "M4 3h16v18H4zM4 9h16M4 15h16M10 3v18", heart: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z", users: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8",
   logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9", moon: "M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z", arrow: "M7 17L17 7M8 7h9v9",
   shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z", cart: "M6 6h15l-1.5 9h-12zM6 6L5 3H2M9 20a1 1 0 1 0 0-.1M18 20a1 1 0 1 0 0-.1", settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z", plus: "M12 5v14M5 12h14", search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3",
 };
@@ -759,7 +761,7 @@ async function saveGlobal(patch, logText) {
 }
 
 /* ONE Settings place for every portal: no portal has its own settings page */
-const SETTING_AREAS = [["general", "All portals", "settings", "Organisation, approvals, taxes, AI assistant"], ["matrix", "Approval matrix", "shield", "Who approves what, step by step, in each portal"], ["tasks", "Tasks & Events", "check", "Task departments and workflow stages"], ["donor", "Donor Management", "heart", "Receipts, lists, numbering, donor messages, old data"]];
+const SETTING_AREAS = [["general", "All portals", "settings", "Organisation, approvals, taxes, AI assistant"], ["matrix", "Approval matrix", "shield", "Who approves what, step by step, in each portal"], ["tasks", "Tasks & Events", "check", "Task departments and workflow stages"], ["donor", "Donor Management", "heart", "Receipts, lists, numbering, donor messages, old data"], ["excel", "Excel import & export", "sheet", "One Excel format: download, fill, upload, for any portal"]];
 /* A portal brings its own settings panel as a file (e.g. settings-fleet.js) that registers itself in
    window.AKF_SETTINGS_PANELS = [{ key, title, icon, desc, render(box, api) }] — it still shows HERE, in the one Settings place. */
 const settingsApi = () => ({ sb, el, icon, toast, fail, q, showLoader, hideLoader, saveGlobal });
@@ -775,8 +777,67 @@ function settings() {
   if (cur.startsWith("p:")) {
     body = el("section", { style: "padding-bottom:40px;display:grid;gap:16px" });
     try { panels.find(p => "p:" + p.key === cur).render(body, settingsApi()); } catch (e) { body.replaceChildren(el("div", { class: "notice bad", text: "These settings could not be shown." })); fail(e, "Settings panel failed"); }
-  } else body = cur === "portals" ? settingsPortals() : cur === "matrix" ? settingsMatrix() : cur === "tasks" ? settingsTasks() : cur === "donor" ? settingsDonor() : settingsGeneral();
+  } else body = cur === "portals" ? settingsPortals() : cur === "matrix" ? settingsMatrix() : cur === "tasks" ? settingsTasks() : cur === "donor" ? settingsDonor() : cur === "excel" ? settingsExcel() : settingsGeneral();
   return el("section", { style: "display:grid;gap:18px" }, nav, body);
+}
+
+/* ---------- Settings → Excel import & export (Super Admin only): one Excel format for every portal ----------
+   Each portal brings a file excel-<key>.js that registers window.AKF_EXCEL_PORTALS[key] = { name, load(sb) → { sheets, save } };
+   the window itself is erp/site/akf-excel.js. Saving writes the portal's own tables, so the database rules check every row. */
+function settingsExcel() {
+  const box = el("section", { style: "padding-bottom:40px;display:grid;gap:16px" }, el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })));
+  (async () => {
+    const reg = window.AKF_EXCEL_PORTALS || {};
+    if (!S.me.is_super) { box.replaceChildren(el("div", { class: "notice bad", text: "Only the Super Admin can import or export with Excel." })); return; }
+    if (!window.AKF_EXCEL) { box.replaceChildren(el("div", { class: "notice bad", text: "akf-excel.js did not load. Reload the page." })); return; }
+    let mods = [];
+    try { mods = await q(sb.from("core_modules").select("key,name,sort,enabled").order("sort")); } catch (e) { fail(e, "Portals could not be loaded"); }
+    const list = mods.filter(m => reg[m.key] && typeof reg[m.key].load === "function").map(m => ({ key: m.key, name: m.name || reg[m.key].name }));
+    Object.keys(reg).forEach(k => { if (!list.some(x => x.key === k) && !mods.length) list.push({ key: k, name: reg[k].name || k }); });
+    if (!list.length) { box.replaceChildren(el("div", { class: "notice", text: "No portal has an Excel format yet." })); return; }
+    let def = null;
+    const logExcel = (action, rows) => { sb.rpc("core_log_excel", { p_module: pick.value, p_action: action, p_rows: rows == null ? null : rows }).then(r => { if (r.error) fail(r.error, "Excel activity not logged"); }); };
+    const pick = el("select", { class: "input", "aria-label": "Portal" }, list.map(m => el("option", { value: m.key, text: m.name })));
+    const sheetsBox = el("div", { style: "display:grid;gap:8px" });
+    const status = el("p", { class: "muted small" });
+    const chosen = () => def ? def.sheets.filter(sh => sh._on) : [];
+    const openBtn = el("button", { class: "btn btn-primary", type: "button", text: "Open Excel import & export", disabled: true, onclick: () => {
+      const sel = chosen(); if (!sel.length) return toast("Tick at least one sheet", true);
+      const name = (list.find(m => m.key === pick.value) || {}).name;
+      AKF_EXCEL.open({ portal: name, sheets: sel.map(sh => Object.assign({}, sh, { canImport: sh.canImport !== false, canExport: sh.canExport !== false })), save: def.save,
+        onExport: what => { logExcel(what === "data" ? "excel data downloaded" : "excel format downloaded"); try { def.onExport && def.onExport(what); } catch (e) { fail(e, "Export audit failed"); } },
+        onDone: r => { logExcel("excel import", r.saved); loadSheets(); } });
+    } });
+    const all = el("input", { type: "checkbox", "aria-label": "All sheets" });
+    all.addEventListener("change", () => { if (def) def.sheets.forEach(sh => { sh._on = all.checked; }); drawSheets(); });
+    function drawSheets() {
+      if (!def) return;
+      all.checked = def.sheets.every(sh => sh._on);
+      sheetsBox.replaceChildren(...def.sheets.map(sh => {
+        const c = el("input", { type: "checkbox" }); c.checked = !!sh._on;
+        c.addEventListener("change", () => { sh._on = c.checked; all.checked = def.sheets.every(x => x._on); openBtn.disabled = !chosen().length; });
+        let n = 0; try { n = (sh.rows ? sh.rows() || [] : []).length; } catch (e) {}
+        return el("label", { class: "card", style: "display:flex;gap:12px;align-items:flex-start;padding:12px 14px;cursor:pointer" }, c,
+          el("span", {}, el("b", { text: sh.name }), el("small", { class: "muted", style: "display:block", text: (sh.about ? sh.about + " · " : "") + n + " in the portal now · " + sh.cols.length + " columns" })));
+      }));
+      openBtn.disabled = !chosen().length;
+    }
+    async function loadSheets() {
+      def = null; openBtn.disabled = true; sheetsBox.replaceChildren(el("div", { class: "spinner" })); status.textContent = "";
+      const key = pick.value;
+      try { const d = await reg[key].load(sb); if (pick.value !== key) return; def = d; def.sheets.forEach(sh => { sh._on = true; }); drawSheets(); }
+      catch (e) { sheetsBox.replaceChildren(el("div", { class: "notice bad", text: "This portal's data could not be loaded. Is it published?" })); fail(e, "Excel data could not be loaded"); }
+    }
+    pick.addEventListener("change", loadSheets);
+    box.replaceChildren(
+      el("div", { class: "card", style: "display:grid;gap:14px" },
+        el("div", {}, el("h3", { text: "Excel import & export", style: "margin:0" }), el("p", { class: "muted small", style: "margin:4px 0 0", text: "One Excel format for every portal. Choose the portal and the sheets, then download the format (or the current data), fill it, and upload it: every sheet is read at once and checked before anything is saved." })),
+        el("div", { class: "field" }, el("label", { text: "1  Choose the portal" }), pick),
+        el("div", { class: "field" }, el("label", { style: "display:flex;gap:8px;align-items:center" }, "2  Choose the sheets", el("span", { class: "grow" }), all, el("small", { text: "All" })), sheetsBox),
+        el("div", { style: "display:flex;gap:10px;flex-wrap:wrap;align-items:center" }, openBtn, status)));
+    loadSheets();
+  })();
+  return box;
 }
 
 /* ---------- Settings → Portal names: what every portal is called everywhere (main page tiles, the portal's own title and sidebar) ---------- */
@@ -789,7 +850,7 @@ function settingsPortals() {
     const rows = mods.map(m => {
       const name = el("input", { class: "input", value: m.name, maxlength: 60, "aria-label": "Portal name" });
       const desc = el("input", { class: "input", value: m.description, maxlength: 200, "aria-label": "Description" });
-      const ic = el("select", { class: "input", "aria-label": "Icon", style: "max-width:130px" }, Object.keys(ICONS).filter(k => !["logout", "moon", "arrow", "plus", "search"].includes(k)).map(k => el("option", { value: k, text: k })));
+      const ic = el("select", { class: "input", "aria-label": "Icon", style: "max-width:130px" }, Object.keys(ICONS).filter(k => !["logout", "moon", "arrow", "plus", "search", "sheet"].includes(k)).map(k => el("option", { value: k, text: k })));
       ic.value = ICONS[m.icon] ? m.icon : "grid";
       const color = el("input", { type: "color", class: "swatch", value: /^#[0-9a-f]{6}$/i.test(m.color) ? m.color : "#0B51A7", "aria-label": "Colour" });
       const prev = el("span", { class: "ic", style: `display:inline-grid;place-items:center;width:38px;height:38px;border-radius:11px;color:#fff;background:${color.value}` }, icon(ic.value, 18));

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-fleet.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-6iomEICGb6MI6LQLqeHOVHcQiDXYClchGxCPmrSc2HE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-5GD9VsLw7swu9TvCT9MFIUaMu6OQxOA3wQ1jGTTPn2Y='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -2429,6 +2429,7 @@ function moveNavInd() {
   const nav = $('nav'); if (!nav) return; let ind = nav.querySelector('.nav-ind');
   if (!ind) { ind = document.createElement('div'); ind.className = 'nav-ind'; nav.prepend(ind); if (moveNavInd.last) { ind.style.transition = 'none'; ind.style.transform = moveNavInd.last.t; ind.style.height = moveNavInd.last.h; ind.style.opacity = '1'; void ind.offsetWidth; ind.style.transition = ''; } }
   const a = nav.querySelector('.nav-item.active'); if (!a) { ind.style.opacity = '0'; return; }
+  if (!a.offsetHeight) return; /* menu hidden: measure again when it shows */
   const t = `translateY(${a.offsetTop}px)`, hh = a.offsetHeight + 'px'; ind.style.opacity = '1'; ind.style.transform = t; ind.style.height = hh; moveNavInd.last = { t, h: hh };
 }
 function navTo(v, k) {
@@ -2440,7 +2441,7 @@ function navTo(v, k) {
 const closeMenu = () => { $('sidebar').classList.remove('open'); $('side-overlay').classList.remove('open'); };
 document.addEventListener('click', e => {
   const n = e.target.closest('[data-nav]'); if (n) { e.preventDefault(); navTo(n.dataset.nav, n.dataset.k); if (document.documentElement.classList.contains('side-auto')) { $('sidebar').classList.remove('peek'); document.activeElement && document.activeElement.blur(); } return; }
-  if (e.target.closest('[data-menu]') || e.target.closest('#menu-btn')) { $('sidebar').classList.add('open'); $('side-overlay').classList.add('open'); return; }
+  if (e.target.closest('[data-menu]') || e.target.closest('#menu-btn')) { $('sidebar').classList.add('open'); $('side-overlay').classList.add('open'); requestAnimationFrame(moveNavInd); return; }
   if (e.target.closest('#side-overlay')) { closeMenu(); return; }
   if (e.target === $('modal')) { cm(); return; }
 });
@@ -2465,6 +2466,11 @@ function applySidePref() {
   $('me-btn').addEventListener('click', () => pmenu());
   $('out-btn').addEventListener('click', () => logout());
   applySidePref();
+  /* keep the white highlight on the chosen item when the menu opens, slides or the window changes size */
+  const reInd = () => requestAnimationFrame(moveNavInd);
+  sb.addEventListener('transitionend', e => { if (e.target === sb) reInd(); });
+  addEventListener('resize', reInd);
+  if (window.ResizeObserver) new ResizeObserver(reInd).observe(sb);
 })();
 /* the branded loader, as in the other portals */
 let loaderT = 0, loaderN = 0;
