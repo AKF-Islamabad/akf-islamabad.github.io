@@ -154,7 +154,9 @@ jobs:
   # ---------------------------------------------------------------- 4. Supabase / BaaS
   baas-rules:
     name: "4 BaaS · Keys + Row-Level Security"
-    if: github.event.pull_request.head.repo.fork != true
+    if: >-
+      github.event.pull_request.head.repo.fork != true &&
+      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
