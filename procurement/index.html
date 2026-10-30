@@ -7,7 +7,8 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-jLndPcuJftNaOLJMwiQRgXqTmnOPXPlLDzGYHFAcMGk='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-A1AJcPpEoJ1fyMbY2onrk0w8xlWcS3AuLyn3mHw8pTg='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<link rel="stylesheet" href="../fonts/manrope.css">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <!-- clickjacking guard: GitHub Pages cannot send X-Frame-Options, so the page stays hidden if another site frames it -->
 <style id="no-frame">html{display:none!important}</style>
@@ -1400,6 +1401,7 @@ button.item:hover{transform:translateX(3px);border-color:var(--brand-300);border
      ============================================================ -->
 <script src="config.js"></script>
 <script src="../akf-matrix.js"></script>
+<script src="../akf-desk.js" defer></script>
 <script>if(window.AKF_SUPABASE===undefined) window.AKF_SUPABASE={};   /* no config.js → "connect Supabase" screen; config.js may set null for the offline demo */</script>
 <div id="app"></div>
 <script>
@@ -6347,6 +6349,7 @@ function App(){
   if(pendingTrack){ const id=pendingTrack; setTimeout(()=>{ setPendingTrack(null); try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} openDoc(id); },0); }
 
   const notes=buildNotifications(state,user).filter(n=>PORTAL==="tasks"?!!(n.task||n.event||n.taskView):!(n.task||n.event||n.taskView));
+  useEffect(()=>{ if(window.AKF_NOTIFY) AKF_NOTIFY(notes.map(n=>({key:n.key||n.t,title:n.t,body:n.d,pushed:/^(tas|tcm|trq)\|/.test(n.key||"")}))); }); /* system notification + bell sound (akf-desk.js); tas/tcm/trq are also pushed by the server */
   const dqN=dqApp&&dqApp.items&&tabs.some(t=>t.id==="store")?dqApp.items.length:0;
   if(dqN>0) notes.unshift({tone:"info",icon:"box",t:`${dqN} in-kind donation${dqN===1?"":"s"} to receive`,d:"From Donor Management · Store → In-kind from Donor Management",at:nowISO(),goTab:"store",key:"box|DONQ|"+dqN+"|"+dqApp.items.map(x=>x.id).sort().slice(-1)[0]});
   if(readKeys.__uid!==user.id){ setTimeout(()=>{ loadRead(user.id); setReadKeys(r=>({...r,__uid:user.id})); },0); }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-assistance.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-sykCnbQAkCWA6+wuMXSFOpjHLfId6GiAvrCCFjOWzII='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-k3Y8zdmmljDdCaHkr47iDUZvAu1lBTPI0pOPGZcBeog='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1284,6 +1284,7 @@ ol.as-stages b{font-weight:600;font-size:14px} ol.as-stages small{display:block;
 <script src="../akf-gate.js"></script>
 <script src="../akf-assistant.js"></script>   <!-- REQUIRED in every portal: Alkhidmat AI (SECURITY-PROTOCOL.md §9) -->
 <script src="../akf-matrix.js"></script>
+<script src="../akf-desk.js" defer></script>   <!-- REQUIRED in every portal: sticky note + notifications -->
 <script>
 /* =====================================================================================================
    ASSISTANCE MANAGEMENT — beneficiary applications inside the Alkhidmat Islamabad portals.
@@ -2151,6 +2152,7 @@ const navActive = n => n.v === V.view || n.v === SUBVIEWS[V.view] && !(V.view ==
 function viewAllowed(v) { if (v === "case" || v === "submitted") return can("applications"); return NAVX.some(n => navOK(n) && n.v === v); }
 function pageTitle() { if (V.view === "case") return V.id || "Application"; if (V.view === "submitted") return "Application submitted"; const n = NAVX.find(x => !x.sec && x.v === V.view); return n ? navLabel(n) : NAME; }
 function buildChrome() {
+  if (window.AKF_NOTIFY) AKF_NOTIFY(unread().map(n => ({ key: 'as|' + n.id, title: 'Assistance · case ' + (n.app || ''), body: n.text, pushed: true })));   // the server pushes these too
   if (!ME) return;
   let h = "", sec = null;
   for (const n of NAVX) {

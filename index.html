@@ -6,13 +6,11 @@
 <title>Alkhidmat Islamabad Portals</title>
 <meta name="description" content="One sign-in for every Alkhidmat Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-H0oYY7SALCYfT1F0Nx0O43Ji/CMGRUJ/pmG6FYSZZ+4='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-H0oYY7SALCYfT1F0Nx0O43Ji/CMGRUJ/pmG6FYSZZ+4='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="fonts/manrope.css">
 <style>
 :root{
   --brand:#0B2E8A; --brand-2:#0B51A7; --brand-3:#1E6FD9; --gold:#C9A227;
@@ -286,6 +284,7 @@ textarea.input{line-height:1.45}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script src="akf-assistant.js"></script>
 <script src="akf-matrix.js"></script>
+<script src="akf-desk.js" defer></script>   <!-- REQUIRED in every portal: sticky note + notifications -->
 <script src="settings-fleet.js"></script>
 <script src="settings-assistance.js"></script>
 <script src="akf-excel.js"></script>

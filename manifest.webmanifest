@@ -1,0 +1,10 @@
+{
+  "name": "Alkhidmat Islamabad Portals",
+  "short_name": "Alkhidmat",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F3F5FA",
+  "theme_color": "#0B51A7",
+  "icons": [{ "src": "icon.jpg", "sizes": "480x480", "type": "image/jpeg", "purpose": "any" }]
+}

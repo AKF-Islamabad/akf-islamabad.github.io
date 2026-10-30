@@ -36,7 +36,7 @@ jobs:
           if echo "$SUPABASE_ANON_KEY" | cut -d. -f2 | base64 -d 2>/dev/null | grep -q service_role; then echo "::error::SUPABASE_ANON_KEY is the service_role key"; exit 1; fi
           mkdir -p _site
           # publish only web files: never .env, .sql, .md, tools or backups
-          find . -maxdepth 2 -type f \( -name '*.html' -o -name '*.js' -o -name '*.css' -o -name '*.png' -o -name '*.svg' -o -name '*.ico' \) \
+          find . -maxdepth 2 -type f \( -name '*.html' -o -name '*.js' -o -name '*.css' -o -name '*.png' -o -name '*.svg' -o -name '*.ico' -o -name '*.woff2' -o -name '*.jpg' -o -name '*.webmanifest' \) \
                -not -path './.git/*' -not -path './tools/*' -not -path './_site/*' -not -name 'config.js' -not -name 'config.example.js' \
                -exec cp --parents {} _site/ \;
           for f in $(find _site -name '*.html'); do node tools/csp-hash.js "$f"; done

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-fleet.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-k9gr9ATzM0G1IZC0HpsCm47xMj2AAFgBsGHJtDpYOeg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-O/7xAULToE48jQdM1cOWmoDS65RWKPIbD/98bFu83A8='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1152,6 +1152,7 @@ tr:nth-child(even) td{background:var(--surface-2)}
 <script src="../akf-gate.js"></script>
 <script src="../akf-assistant.js"></script>   <!-- REQUIRED in every portal: Alkhidmat AI (SECURITY-PROTOCOL.md §9) -->
 <script src="../akf-matrix.js"></script>
+<script src="../akf-desk.js" defer></script>   <!-- REQUIRED in every portal: sticky note + notifications -->
 <!-- the original app's libraries, pinned on jsDelivr with Subresource Integrity (cdnjs / cdn.tailwindcss.com are not allowed by the CSP) -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
 <script>
@@ -1784,8 +1785,9 @@ P.track = '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/>'; P.audit 
 const ic = (n, s = 18) => svg(P[n] || P.grid, s, 'i');
 
 /* ---------- text safety: no stored text can break out of HTML or a handler (the database checks the same) ---------- */
-const BADCH = /[<>"'`\\]/, BADMAP = { '<': '‹', '>': '›', '"': '”', "'": '’', '`': 'ʼ', '\\': '/' };
-const cleanStr = s => BADCH.test(s) ? s.replace(/[<>"'`\\]/g, c => BADMAP[c]) : s;
+// HTML entities (&#39;) are blocked too: they decode to quotes inside the data-on* attributes
+const BADCH = /[<>"'`\\]|&(?=#|[A-Za-z][A-Za-z0-9]*;)/, BADMAP = { '<': '‹', '>': '›', '"': '”', "'": '’', '`': 'ʼ', '\\': '/', '&': '＆' };
+const cleanStr = s => BADCH.test(s) ? s.replace(/[<>"'`\\]|&(?=#|[A-Za-z][A-Za-z0-9]*;)/g, c => BADMAP[c]) : s;
 function cleanDeep(o, d = 0) {
   if (!o || typeof o !== 'object' || d > 8) return o;
   for (const k of Object.keys(o)) { const v = o[k]; if (typeof v === 'string') o[k] = cleanStr(v); else if (v && typeof v === 'object') cleanDeep(v, d + 1); }
@@ -2408,6 +2410,8 @@ function pageTitle() { if (PQ.view === 'det') return PQ.sel || 'Request'; const 
 function buildChrome() {
   if (!ME) return;
   const nb = todo().length + ckTodo().length;
+  if (window.AKF_NOTIFY) AKF_NOTIFY(todo().map(o => ({ key: 'fr|' + o.no + '|' + o.status, title: 'Vehicle request ' + o.no + ' · ' + o.status, body: [o.name, o.place].filter(Boolean).join(' · ') }))
+    .concat(ckTodo().map(k => ({ key: 'fc|' + k.id, title: 'Daily checklist to check · ' + (k.veh || ''), body: k.date || '' }))));   // system notification + bell sound (akf-desk.js)
   let h = '', sec = null;
   for (const n of NAVX) {
     if (n.sec) { sec = n.sec; continue; }

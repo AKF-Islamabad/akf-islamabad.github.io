@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-rtmY1yylCsGeoVdjfullmY+q1f79CosG/0qDdug8DlA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-X7l8sPXDvdXNDKDaiSBzOEt1Xu59Y05UgMDpj1V3fHQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -1160,6 +1160,7 @@ html.side-pinned .side-pin{background:#fff;color:#0B3D91}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script src="../akf-gate.js"></script>
 <script src="../akf-assistant.js"></script>
+<script src="../akf-desk.js" defer></script>   <!-- REQUIRED in every portal: sticky note + notifications -->
 <script>
 'use strict';
 (function () {
@@ -2136,7 +2137,8 @@ function buildChrome() {
   const pick = ['dashboard', 'goods', 'donations', 'new', 'pledges', 'donors', 'corrections'].map(v => NAV.find(n => n.v === v)).filter(n => n && (!n.perm || can(n.perm)) && viewOK(n.v)).slice(0, 4);
   $('#top-search').classList.toggle('hidden', !viewOK('donors'));
   $('#bnav').innerHTML = pick.map(n => `<button data-act="nav" data-view="${n.v}" class="${n.primary ? 'bn-primary' : ''}">${ic(n.icon)}<span>${esc(n.primary ? 'New' : n.label.split(' ')[0])}</span></button>`).join('') + `<button data-act="menu">${ic('more')}<span>More</span></button>`;
-  const nc = computeNotifications().length;
+  const nl = computeNotifications(), nc = nl.length;
+  if (window.AKF_NOTIFY) AKF_NOTIFY(nl.map(n => ({ key: 'dn|' + n.title, title: n.title, body: n.text })));   // system notification + bell sound (akf-desk.js)
   $('#bell-count').textContent = nc; $('#bell-count').classList.toggle('hidden', !nc); ringBell(nc);
   markActiveNav(); requestAnimationFrame(moveNavInd);
   $('#bell-btn').setAttribute('aria-label', `Notifications (${nc})`);
