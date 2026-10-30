@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-njl4gx9/EO5bWBp/Xa2yDAwzmKhhjghLF6makHDbYZ8='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-0Av2J97Y3YHjf1AWGkZySKtF4nxD4QImyQk0BHlNTq4='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <!-- clickjacking guard: GitHub Pages cannot send X-Frame-Options, so the page stays hidden if another site frames it -->
 <style id="no-frame">html{display:none!important}</style>
@@ -3737,6 +3737,8 @@ const ROLES = {
   staff:         { label:"Staff",              short:"Staff",         desc:"Tasks only" },
   transport_officer:{ label:"Transport Officer", short:"Transport Off.", desc:"Fleet & Ambulances: vehicles, drivers, dispatch" },
   driver:        { label:"Driver",             short:"Driver",        desc:"Fleet & Ambulances: trip log" },
+  front_desk:    { label:"Front Desk Officer", short:"Front Desk",    desc:"Assistance: registers beneficiary applications" },
+  director:      { label:"Department Director", short:"Director",     desc:"Assistance: reviews after the Department Head" },
 };
 /* Roles whose step is a decision (approve / recommend / reject) — shown on the Approvals page */
 const APPROVER_ROLES = ["finance","manager_hr","regional_manager","president"];
@@ -7823,7 +7825,7 @@ function VendorQuote({token}){
 }
 
 /* Any unexpected error is shown as a red message, so a failure is never silent ("button does nothing"). */
-const BUILD="2026-10-29 tasks";
+const BUILD="2026-10-30 tasks";
 (()=>{ let last=0; const show=m=>{ const msg=errRef(m,"Unexpected error"); if(Date.now()-last<1500) return; last=Date.now(); if(window.__toast) window.__toast(msg+" (build "+BUILD+")","bad"); };   /* no raw error text on screen: details stay in the console under the reference */
   window.addEventListener("error",e=>show(e.message||e.error)); window.addEventListener("unhandledrejection",e=>show((e.reason&&e.reason.message)||e.reason)); })();
 const vendorToken=(/#rfq=([0-9a-f]{16,})/i.exec(location.hash||"")||[])[1];

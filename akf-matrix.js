@@ -1,7 +1,7 @@
 /* Alkhidmat Islamabad — APPROVAL MATRIX for every portal (one definition, used by the main page and every portal).
    The Super Admin edits it on the main page → Settings → Approval matrix. It is saved in the shared settings record
    (portal_rows: collection "settings", id "global", key "approvalMatrix"); the database checks it on every step
-   (erp/supabase/sql/005_approval_matrix.sql and erp/supabase/portals/donor.sql).
+   (erp/supabase/sql/005_approval_matrix.sql, erp/supabase/portals/donor.sql, fleet.sql and assistance.sql).
    Load with <script src="../akf-matrix.js"></script> (main page: akf-matrix.js), then:
      AKF_MATRIX.get(settings)                    → the full matrix (saved values over the defaults below)
      AKF_MATRIX.steps(settings, "procurement", total) → the steps a request of that amount goes through, in order
@@ -9,7 +9,8 @@
 (function () {
   "use strict";
   const ROLES = [["hod", "Head of Department (HOD)"], ["finance", "Finance"], ["manager_hr", "Manager Admin & HR"], ["regional_manager", "Regional Manager"], ["president", "President"],
-    ["gen_sec", "General Secretary"], ["admin_officer", "Admin Officer"], ["store_officer", "Store Officer"], ["transport_officer", "Transport Officer"]];
+    ["gen_sec", "General Secretary"], ["admin_officer", "Admin Officer"], ["store_officer", "Store Officer"], ["transport_officer", "Transport Officer"],
+    ["front_desk", "Front Desk Officer"], ["director", "Department Director"]];
   const TASK_ROLES = [["RM", "Regional Manager"], ["HOD", "Head of Department"], ["MA", "Manager Admin"], ["HR", "HR Manager"], ["GS", "General Secretary"], ["President", "President"], ["Staff", "Staff"]];
   /* step: key · label (what it is called) · who (shown to people) · owner (who may do it) · kind: "fixed" = part of the
      process (cannot be switched off or moved) / "approval" = an approval the Super Admin may switch off, move, rename,
@@ -54,6 +55,15 @@
       S("approved", "Approved", "Regional Manager", "regional_manager", "approval", { final: true }),
       S("dispatched", "On duty (dispatched)", "Transport Officer", "transport_officer", "fixed"),
       S("returned", "Returned & verified", "Transport Officer", "transport_officer", "fixed")] },
+    /* Assistance Management: a beneficiary application (minAmount = requested amount in PKR: 0 = every case).
+       The Department Head may skip the Director with a reason; the last step is Finance (money) or the Store Officer (in-kind items). */
+    assistance: { steps: [
+      S("submitted", "Registered", "Front Desk Officer", "front_desk", "fixed"),
+      S("dept", "Reviewed by department", "Department Head", "hod", "fixed"),
+      S("director", "Reviewed by director", "Department Director", "director", "approval"),
+      S("rm", "Recommended", "Regional Manager", "regional_manager", "approval"),
+      S("president", "Approved", "President", "president", "approval", { final: true }),
+      S("exec", "Paid / items issued", "Finance / Store Officer", "finance", "fixed")] },
     /* Donor Management: approvers are ticks in People & access ("tab:action") */
     donor: { steps: [
       { key: "record", label: "Receipt recorded", who: "RMO / Manager RMD", tick: "new:add", kind: "fixed", on: true, minAmount: 0 },
@@ -99,7 +109,8 @@
       corrections: { tick: DONOR_TICKS.some(t => t[0] === (m.donor && m.donor.corrections && m.donor.corrections.tick)) ? m.donor.corrections.tick : DEFAULTS.donor.corrections.tick, who: String((m.donor && m.donor.corrections && m.donor.corrections.who) || DEFAULTS.donor.corrections.who).slice(0, 60) } };
     return { v: 1, procurement: { steps: mergeSteps(DEFAULTS.procurement.steps, m.procurement && m.procurement.steps, roleOk) },
       store: { steps: mergeSteps(DEFAULTS.store.steps, m.store && m.store.steps, roleOk) }, tasks, donor,
-      fleet: { steps: mergeSteps(DEFAULTS.fleet.steps, m.fleet && m.fleet.steps, roleOk) } };
+      fleet: { steps: mergeSteps(DEFAULTS.fleet.steps, m.fleet && m.fleet.steps, roleOk) },
+      assistance: { steps: mergeSteps(DEFAULTS.assistance.steps, m.assistance && m.assistance.steps, roleOk) } };
   }
   /* the steps a request of this amount goes through (switched-off steps and steps for larger amounts are left out) */
   function steps(settings, portal, total) {

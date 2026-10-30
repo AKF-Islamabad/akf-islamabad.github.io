@@ -6,7 +6,7 @@
 <title>Alkhidmat Islamabad Portals</title>
 <meta name="description" content="One sign-in for every Alkhidmat Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-cexVpLhMi1mR1jUFqMYMBWbS73yGZ81dllMDJl2+TWk='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-jLiCNGZrv6uj1U2sLA/zOMTAWzZOpKs2n95U6Qqvzgo='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -287,8 +287,9 @@ textarea.input{line-height:1.45}
 <script src="akf-assistant.js"></script>
 <script src="akf-matrix.js"></script>
 <script src="settings-fleet.js"></script>
+<script src="settings-assistance.js"></script>
 <script src="akf-excel.js"></script>
-<script src="excel-procurement.js"></script><script src="excel-store.js"></script><script src="excel-tasks.js"></script><script src="excel-donor.js"></script><script src="excel-fleet.js"></script>
+<script src="excel-procurement.js"></script><script src="excel-store.js"></script><script src="excel-tasks.js"></script><script src="excel-donor.js"></script><script src="excel-fleet.js"></script><script src="excel-assistance.js"></script>
 <script>
 "use strict";
 /* ========== Alkhidmat Islamabad — main page (portal launcher + people & access) ==========
@@ -317,7 +318,7 @@ function el(tag, attrs, ...kids) {
 const ICONS = {
   grid: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z", box: "M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8",
   check: "M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9", truck: "M1 4h14v12H1zM15 8h4l3 4v4h-7M5.5 19a2 2 0 1 0 0-.1M18.5 19a2 2 0 1 0 0-.1",
-  sheet: "M4 3h16v18H4zM4 9h16M4 15h16M10 3v18", heart: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z", users: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8",
+  sheet: "M4 3h16v18H4zM4 9h16M4 15h16M10 3v18", helping: "M11 12h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 14M7 18l1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.8-2.9l-4.2 3.9M2 13l6 6", heart: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z", users: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8",
   logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9", moon: "M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z", arrow: "M7 17L17 7M8 7h9v9",
   shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z", cart: "M6 6h15l-1.5 9h-12zM6 6L5 3H2M9 20a1 1 0 1 0 0-.1M18 20a1 1 0 1 0 0-.1", settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z", plus: "M12 5v14M5 12h14", search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3",
 };
@@ -331,7 +332,7 @@ const initials = n => String(n || "?").replace(/^(Dr|Mr|Ms|Mrs|Hafiz)\.?\s+/i, "
 /* old portal logins are usernames: "adminofficer" means adminofficer@<login domain> */
 const loginEmail = v => { v = String(v || "").trim().toLowerCase(); return v.includes("@") || !(CFG && CFG.emailDomain) ? v : v + "@" + CFG.emailDomain; };
 /* approval role inside Procurement / Store / Tasks (who approves which step) */
-const ORG_ROLES = [["staff", "Staff"], ["hod", "HOD (Head of Department)"], ["finance", "Finance Department"], ["manager_hr", "Manager Admin & HR"], ["regional_manager", "Regional Manager"], ["president", "President"], ["gen_sec", "General Secretary (view only)"], ["admin_officer", "Admin Officer (procurement)"], ["store_officer", "Store Officer"], ["transport_officer", "Transport Officer (fleet)"], ["driver", "Driver (fleet)"]];
+const ORG_ROLES = [["staff", "Staff"], ["hod", "HOD (Head of Department)"], ["finance", "Finance Department"], ["manager_hr", "Manager Admin & HR"], ["regional_manager", "Regional Manager"], ["president", "President"], ["gen_sec", "General Secretary (view only)"], ["admin_officer", "Admin Officer (procurement)"], ["store_officer", "Store Officer"], ["transport_officer", "Transport Officer (fleet)"], ["driver", "Driver (fleet)"], ["front_desk", "Front Desk Officer (assistance)"], ["director", "Department Director (assistance)"]];
 const roleSelect = cur => { const s = el("select", { class: "input" }, ORG_ROLES.map(([v, t]) => el("option", { value: v, text: t }))); s.value = cur || "staff"; return s; };
 const safeHref = u => /^(https:\/\/|\/(?!\/))/.test(String(u || "")) ? u : "#";
 const fmt = iso => { try { return new Date(iso).toLocaleString(undefined, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; } };
@@ -920,7 +921,7 @@ function settingsGeneral() {
 }
 
 /* ---------- Settings → Approval matrix: every portal's approval steps (akf-matrix.js; checked by the database too) ---------- */
-const MATRIX_PORTALS = [["procurement", "Procurement", "cart"], ["store", "Store", "box"], ["tasks", "Tasks & Events", "check"], ["donor", "Donor Management", "heart"], ["fleet", "Fleet & Ambulances", "truck"]];
+const MATRIX_PORTALS = [["procurement", "Procurement", "cart"], ["store", "Store", "box"], ["tasks", "Tasks & Events", "check"], ["donor", "Donor Management", "heart"], ["fleet", "Fleet & Ambulances", "truck"], ["assistance", "Assistance", "helping"]];
 function settingsMatrix() {
   const box = el("section", { style: "padding-bottom:40px;display:grid;gap:16px" }, el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })));
   if (!window.AKF_MATRIX) { box.replaceChildren(el("div", { class: "notice bad", text: "akf-matrix.js did not load. Reload the page." })); return box; }
