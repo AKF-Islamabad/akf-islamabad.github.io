@@ -45,6 +45,7 @@
 .kai-setup{margin-top:8px;border:0;border-radius:10px;padding:7px 12px;font:inherit;font-size:13px;font-weight:700;color:#fff;cursor:pointer;background:linear-gradient(135deg,#1A66CC,#0B51A7)}
 .kai-foot{padding:0 14px 10px;font-size:11.5px;color:var(--faint,#6B7A93);background:var(--card,var(--surface,#fff))}
 @media (max-width:640px){ .kai-fab{right:14px;bottom:76px;width:54px;padding:0;justify-content:center} .kai-fab span{display:none} .kai-panel{right:8px;left:8px;bottom:8px;width:auto;height:calc(100vh - 16px);border-radius:18px} }
+.kai-portals{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px} .kai-portals button{border:1px solid var(--line,var(--border,#CDD7E5));background:var(--card,var(--surface,#fff));color:#0B51A7;border-radius:99px;padding:6px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer} .kai-portals button:hover{border-color:#1A66CC;background:rgba(26,102,204,.06)}
 .kai-fab[hidden],.kai-panel[hidden]{display:none!important}
 @media print{ .kai-fab,.kai-panel{display:none!important} }
 @media (prefers-reduced-motion: reduce){ .kai-fab::after,.kai-panel,.kai-msg{animation:none!important} }`;
@@ -80,7 +81,31 @@
     const fab = el("button", "kai-fab"); fab.type = "button"; fab.setAttribute("aria-label", "Open Alkhidmat AI assistant"); fab.append(svg("spark"), el("span", "", "Ask Alkhidmat AI"));
     let panel = null, log, input, sendBtn, chips, busy = false;
     const add = (who, text, cls) => { const m = el("div", "kai-msg " + (cls || (who === "me" ? "me" : "bot"))); if (who === "me") m.textContent = text; else m.append(format(text)); log.append(m); log.scrollTop = log.scrollHeight; return m; };
-    const welcome = () => add("bot", `Assalam o Alaikum${o.user ? " " + o.user : ""}! I'm **Alkhidmat AI**, your assistant in ${portal}. Ask me anything about the ERP portals: what a tab is for, how to do a task, who approves what, or what is waiting for you.`);
+    /* the portal guide: the person's portals and tabs, straight from the database (instant, no AI and no key needed) */
+    let guideP = null;
+    const loadGuide = () => guideP || (guideP = (async () => {
+      if (!o.sb || !o.sb.rpc) return [];
+      const { data } = await o.sb.rpc("core_my_portals");
+      return Promise.all((data || []).map(async p => { const t = await o.sb.rpc("core_my_tabs", { p_module: p.key }); return { name: p.name, description: p.description || "", tabs: t.data || [] }; }));
+    })().catch(() => { guideP = null; return []; }));
+    const ACT = { view: "see", add: "add", edit: "edit", delete: "delete", approve: "approve", export: "export" };
+    const portalText = p => `**${p.name}**${p.description ? " — " + p.description : ""}\n` + (p.tabs.length
+      ? "Your tabs:\n" + p.tabs.map(t => `- **${t.name}**${t.description ? " — " + t.description : ""}${(t.actions || []).length ? " (you can " + t.actions.map(a => ACT[a] || a).join(", ") + ")" : ""}`).join("\n")
+      : "You have no tabs here yet. Ask the Super Admin for access.");
+    /* typed question without the AI: the tabs whose name or description share words with it */
+    const STOP = new Set("the how what where which can for and does this that with who when you are tab tabs portal portals do i my me is to in of a an".split(" "));
+    const fromGuide = (g, q) => {
+      const w = (String(q).toLowerCase().match(/[a-z0-9؀-ۿ]{3,}/g) || []).filter(x => !STOP.has(x)); if (!w.length) return "";
+      const hits = [];
+      g.forEach(p => p.tabs.forEach(t => { const txt = (p.name + " " + t.name + " " + (t.description || "")).toLowerCase(); const n = w.filter(x => txt.includes(x) || txt.includes(x.replace(/s$/, ""))).length; if (n) hits.push([n, `- **${p.name} → ${t.name}**${t.description ? " — " + t.description : ""}`]); }));
+      return hits.sort((a, b) => b[0] - a[0]).slice(0, 4).map(h => h[1]).join("\n");
+    };
+    const welcome = () => {
+      const m = add("bot", `Assalam o Alaikum${o.user ? " " + o.user : ""}! I'm **Alkhidmat AI**. Tap a portal to see what you can do there, or type a question about the ERP portals.`);
+      loadGuide().then(g => { if (!g.length) return; const row = el("div", "kai-portals");
+        g.forEach(p => { const b = el("button", "", p.name); b.type = "button"; b.addEventListener("click", () => { add("me", p.name); add("bot", portalText(p)); }); row.append(b); });
+        m.append(row); log.scrollTop = log.scrollHeight; });
+    };
     async function ask(text) {
       const q = String(text || input.value).trim(); if (!q || busy) return;
       input.value = ""; input.style.height = "46px"; if (chips) chips.hidden = true; add("me", q); busy = true; sendBtn.disabled = true;
@@ -95,7 +120,9 @@
       } catch (e) {
         const local = typeof o.local === "function" ? (() => { try { return o.local(q); } catch (x) { return null; } })() : null;
         const why = e && e.code === "not_configured" ? (e.message || "The AI assistant is not switched on yet.") : e && e.code === "offline" ? "" : (e && e.message) || "The AI service could not be reached. Please try again.";
+        const g = local ? "" : fromGuide(await loadGuide(), q);
         if (local) { answer = local; if (why) note = why + " Meanwhile, this answer comes from the portal's own data."; }
+        else if (g) { answer = "From the portal guide:\n" + g; if (why) note = why; }
         else answer = why || "The AI assistant is not available here.";
         if (e && e.ref && e.code !== "not_configured") note = (note ? note + " " : "") + `(ref ${e.ref})`;
         off = e && e.code === "not_configured";
@@ -116,7 +143,7 @@
       head.append(ic, t, clear, close);
       log = el("div", "kai-log"); log.setAttribute("role", "log"); log.setAttribute("aria-live", "polite");
       chips = el("div", "kai-chips"); hints.slice(0, 6).forEach(h => { const b = el("button", "", h); b.type = "button"; b.addEventListener("click", () => ask(h)); chips.append(b); });
-      const form = el("form", "kai-in"); input = el("textarea"); input.rows = 1; input.maxLength = 6000; input.placeholder = "Ask anything…"; input.setAttribute("aria-label", "Your question");
+      const form = el("form", "kai-in"); input = el("textarea"); input.rows = 1; input.maxLength = 6000; input.placeholder = "Ask about any portal…"; input.setAttribute("aria-label", "Your question");
       sendBtn = el("button"); sendBtn.type = "submit"; sendBtn.setAttribute("aria-label", "Send"); sendBtn.append(svg("send")); form.append(input, sendBtn);
       const foot = el("div", "kai-foot", "Answers can be wrong: check important figures. Don't type passwords, CNIC or bank numbers.");
       panel.append(head, log, chips, form, foot); document.body.append(panel);
