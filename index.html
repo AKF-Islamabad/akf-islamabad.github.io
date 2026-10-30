@@ -6,7 +6,7 @@
 <title>Alkhidmat Islamabad Portals</title>
 <meta name="description" content="One sign-in for every Alkhidmat Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-DHNhbSZi8T0+XoYcBpjbt0z415STmOeNraUI7XP3zkY='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-ym9aJAN+Ew0aw3rokv89sHdQWm9DD+qyWeGgZVOIRq0='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -903,9 +903,9 @@ function settingsGeneral() {
         if (JSON.stringify(next[k]) !== JSON.stringify(val)) { changed.push(k); next[k] = val; }
       }
       /* the Gemini key never goes into the shared settings record: it is kept where no browser can read it */
-      const keyI = inputs.aiKey && inputs.aiKey[0], newKey = keyI ? keyI.value.trim() : "";
+      const keyI = inputs.aiKey && inputs.aiKey[0], newKey = keyI ? keyI.value.replace(/\s+/g, "") : "";
       const ci = changed.indexOf("aiKey"); if (ci >= 0) changed.splice(ci, 1);
-      if (newKey) { try { await q(sb.rpc("core_set_ai_key", { p_key: newKey })); keyI.value = ""; keyI.placeholder = "•••••• saved"; toast("AI key saved on the server"); } catch (e) { return fail(e, "The AI key was not saved"); } }
+      if (newKey) { try { await q(sb.rpc("core_set_ai_key", { p_key: newKey })); keyI.value = ""; keyI.placeholder = "•••••• saved"; toast("AI key saved on the server"); } catch (e) { if (e && (e.code === "22023" || e.code === "42501")) { e.userMessage = "The AI key was not saved: " + e.message; } return fail(e, "The AI key was not saved"); } }
       if (!changed.length) return newKey ? null : toast("Nothing changed");
       save.disabled = true;
       try {
