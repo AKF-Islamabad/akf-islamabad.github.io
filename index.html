@@ -6,7 +6,7 @@
 <title>Alkhidmat Islamabad Portals</title>
 <meta name="description" content="One sign-in for every Alkhidmat Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-ym9aJAN+Ew0aw3rokv89sHdQWm9DD+qyWeGgZVOIRq0='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-71RGYADquDRHsC2N4WSJ232F//HsFM7hHAutjHsGrE8='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -905,7 +905,8 @@ function settingsGeneral() {
       /* the Gemini key never goes into the shared settings record: it is kept where no browser can read it */
       const keyI = inputs.aiKey && inputs.aiKey[0], newKey = keyI ? keyI.value.replace(/\s+/g, "") : "";
       const ci = changed.indexOf("aiKey"); if (ci >= 0) changed.splice(ci, 1);
-      if (newKey) { try { await q(sb.rpc("core_set_ai_key", { p_key: newKey })); keyI.value = ""; keyI.placeholder = "•••••• saved"; toast("AI key saved on the server"); } catch (e) { if (e && (e.code === "22023" || e.code === "42501")) { e.userMessage = "The AI key was not saved: " + e.message; } return fail(e, "The AI key was not saved"); } }
+      if (newKey) { try { await q(sb.rpc("core_set_ai_key", { p_key: newKey })); keyI.value = ""; keyI.placeholder = "•••••• saved"; toast("AI key saved on the server"); } catch (e) { e = e || {}; e.userMessage = "The AI key was not saved: " + (e.code === "PGRST202" ? "the database is not up to date — run AKF-PORTALS.cmd → 2 Publish changes" : (e.message || "the server did not answer — check the internet connection and try again")) + (e.code ? ` [${e.code}]` : ""); return fail(e, "The AI key was not saved"); }
+        testAI(); }
       if (!changed.length) return newKey ? null : toast("Nothing changed");
       save.disabled = true;
       try {
@@ -916,9 +917,18 @@ function settingsGeneral() {
     } });
     box.replaceChildren(el("p", { class: "small muted", text: "The rules Procurement, Store and every other portal follow." }),
       ...SETTING_FIELDS.map(([title, fields]) => el("div", { class: "card", style: "padding:16px;display:grid;gap:12px" }, el("h3", { style: "margin:0;font-size:16px", text: title }), el("div", { class: "grid2" }, fields.map(field)))),
-      el("div", { class: "row" }, save));
+      el("div", { class: "row" }, save, el("button", { class: "btn btn-ghost", type: "button", text: "Test Alkhidmat AI", onclick: () => testAI() })));
   })();
   return box;
+}
+/* asks the assistant one tiny question and says plainly whether it works (and if not, why) */
+async function testAI() {
+  toast("Testing Alkhidmat AI…");
+  try {
+    const { data, error } = await sb.functions.invoke("ai-chat", { body: { portal: "Khidmat Hub (main page)", question: "Reply with the single word OK.", history: [], context: "" } });
+    if (error) { let b = {}; try { b = await error.context.json(); } catch (x) { } return toast("Alkhidmat AI is not working yet: " + (b.error || "the AI service could not be reached") + (b.ref ? ` (ref ${b.ref})` : ""), true); }
+    toast(data && data.answer ? "Alkhidmat AI is working ✓ — every portal can use it now" : "Alkhidmat AI answered, but with an empty reply. Try again in a minute.", !(data && data.answer));
+  } catch (e) { fail(e, "The AI test could not run"); }
 }
 
 /* ---------- Settings → Approval matrix: every portal's approval steps (akf-matrix.js; checked by the database too) ---------- */
