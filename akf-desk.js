@@ -128,7 +128,7 @@
     if (!rows.length) { box.append(el("div", "akd-none", empty)); return box; }
     const ul = el("ul");
     rows.slice(0, 6).forEach((r) => {
-      const li = el("li"); const a = el("a"); a.href = BASE + "tasks/";
+      const li = el("li"); const a = el("a"); a.href = BASE + "tasks/#task=" + encodeURIComponent(r.open);
       a.append(el("span", "", r.text));
       if (r.due) a.append(el("div", "akd-due" + (r.due < today() ? " akd-late" : ""), (r.due < today() ? "Overdue · " : "Due ") + fmt(r.due)));
       li.append(a); ul.append(li);
@@ -178,7 +178,8 @@
       sb.from("portal_rows").select("data").eq("collection", "notes").eq("data->>ownerId", pid).eq("data->>kind", "todo").limit(300),
     ]);
     const tasks = (tk.data || []).map((r) => r.data).filter((x) => x && x.v === 2);
-    const row = (x) => ({ text: (x.id ? x.id + " · " : "") + String(x.title || x.text || "").slice(0, 120), due: x.plannedDate || x.due || "" });
+    // open: the task itself, or the To-Do & Notes section for a to-do (portal-app reads #task=)
+    const row = (x) => ({ text: (x.id ? x.id + " · " : "") + String(x.title || x.text || "").slice(0, 120), due: x.plannedDate || x.due || "", open: x.title ? String(x.key || "") : "view:myspace" });
     const byDue = (a, b) => (a.due || "9999").localeCompare(b.due || "9999");
     data = {
       pid,

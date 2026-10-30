@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-A1AJcPpEoJ1fyMbY2onrk0w8xlWcS3AuLyn3mHw8pTg='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-Gd2M0p0XMcvuAJiNigfxsYudShYb5R1lIgY95esnxzE='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <!-- clickjacking guard: GitHub Pages cannot send X-Frame-Options, so the page stays hidden if another site frames it -->
@@ -6286,7 +6286,8 @@ function App(){
   },[]);
   const [tab,setTabRaw]=useState(null);
   const [modal,setModal]=useState(null); // {kind:'req'|'doc'|'stock', id}
-  const [taskOpen,setTaskOpen]=useState(null); // key of the task open on the Tasks page
+  const [taskOpen,setTaskOpen]=useState(()=>{ const m=/#task=([^&]+)/.exec(location.hash||""); if(m){ try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} } return m?decodeURIComponent(m[1]):null; }); // key of the task open on the Tasks page; the sticky note links here with #task=KEY
+  useEffect(()=>{ const f=()=>{ const m=/#task=([^&]+)/.exec(location.hash||""); if(!m) return; try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} setTab("tasks"); setTaskOpen(decodeURIComponent(m[1])); }; addEventListener("hashchange",f); return ()=>removeEventListener("hashchange",f); },[]); // a click on the sticky note while already in this portal
   const [taskView,setTaskView]=useState("home"); // section open on the Tasks page (shown in the sidebar of the Tasks & Events portal)
   const [toasts,setToasts]=useState([]);
   const [bell,setBell]=useState(false); const [pw,setPw]=useState(false); const [myData,setMyData]=useState(false); const [signOpen,setSignOpen]=useState(false);
