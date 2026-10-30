@@ -36,12 +36,13 @@
 .kai-msg.note{align-self:stretch;max-width:none;font-size:13px;color:var(--muted,#3A4B66);background:color-mix(in srgb,#E7A93B 14%,transparent);border:1px solid color-mix(in srgb,#E7A93B 40%,transparent)}
 .kai-dots{display:inline-flex;gap:4px} .kai-dots i{width:7px;height:7px;border-radius:50%;background:#8797AF;animation:kaiDot 1s infinite} .kai-dots i:nth-child(2){animation-delay:.15s} .kai-dots i:nth-child(3){animation-delay:.3s}
 @keyframes kaiDot{0%,80%,100%{opacity:.3}40%{opacity:1}}
-.kai-chips{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px 0;background:var(--card,var(--surface,#fff));border-top:1px solid var(--line,var(--border,#E3E9F2))}
-.kai-chips button{border:1px solid var(--line,var(--border,#CDD7E5));background:var(--card,var(--surface,#fff));color:inherit;border-radius:99px;padding:6px 11px;font:inherit;font-size:12.5px;cursor:pointer} .kai-chips button:hover{border-color:#1A66CC;color:#0B51A7}
+.kai-chips{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;padding:8px 14px 2px;background:var(--card,var(--surface,#fff));border-top:1px solid var(--line,var(--border,#E3E9F2))}
+.kai-chips[hidden]{display:none!important} .kai-chips button{flex:none;width:auto;white-space:nowrap;margin:0;line-height:1.3;border:1px solid var(--line,var(--border,#CDD7E5));background:var(--card,var(--surface,#fff));color:inherit;border-radius:99px;padding:6px 11px;font:inherit;font-size:12.5px;cursor:pointer} .kai-chips button:hover{border-color:#1A66CC;color:#0B51A7}
 .kai-in{display:flex;gap:8px;padding:10px 14px 6px;background:var(--card,var(--surface,#fff))}
-.kai-in textarea{flex:1;resize:none;height:46px;max-height:140px;border:1px solid var(--line,var(--border,#CDD7E5));border-radius:12px;padding:12px;font:inherit;background:var(--card,var(--surface,#fff));color:inherit}
+.kai-in textarea{flex:1;resize:none;height:46px;max-height:140px;overflow-y:hidden;border:1px solid var(--line,var(--border,#CDD7E5));border-radius:12px;padding:12px;font:inherit;background:var(--card,var(--surface,#fff));color:inherit}
 .kai-in textarea:focus{outline:none;border-color:#1A66CC;box-shadow:0 0 0 4px rgba(26,102,204,.16)}
 .kai-in button{width:46px;height:46px;border:0;border-radius:12px;color:#fff;cursor:pointer;background:linear-gradient(135deg,#1A66CC,#0B51A7);display:grid;place-items:center} .kai-in button:disabled{opacity:.5;cursor:default}
+.kai-setup{margin-top:8px;border:0;border-radius:10px;padding:7px 12px;font:inherit;font-size:13px;font-weight:700;color:#fff;cursor:pointer;background:linear-gradient(135deg,#1A66CC,#0B51A7)}
 .kai-foot{padding:0 14px 10px;font-size:11.5px;color:var(--faint,#6B7A93);background:var(--card,var(--surface,#fff))}
 @media (max-width:640px){ .kai-fab{right:14px;bottom:76px;width:54px;padding:0;justify-content:center} .kai-fab span{display:none} .kai-panel{right:8px;left:8px;bottom:8px;width:auto;height:calc(100vh - 16px);border-radius:18px} }
 .kai-fab[hidden],.kai-panel[hidden]{display:none!important}
@@ -77,14 +78,14 @@
     const portal = o.portal || "Alkhidmat Islamabad portals", hints = o.hints || ["What can you help me with?", "Write a thank-you message for a donor", "Explain Zakat eligibility"];
     const history = [];   // this tab only, never saved
     const fab = el("button", "kai-fab"); fab.type = "button"; fab.setAttribute("aria-label", "Open Alkhidmat AI assistant"); fab.append(svg("spark"), el("span", "", "Ask Alkhidmat AI"));
-    let panel = null, log, input, sendBtn, busy = false;
+    let panel = null, log, input, sendBtn, chips, busy = false;
     const add = (who, text, cls) => { const m = el("div", "kai-msg " + (cls || (who === "me" ? "me" : "bot"))); if (who === "me") m.textContent = text; else m.append(format(text)); log.append(m); log.scrollTop = log.scrollHeight; return m; };
     const welcome = () => add("bot", `Assalam o Alaikum${o.user ? " " + o.user : ""}! I'm **Alkhidmat AI**, your assistant in ${portal}. Ask me anything: about your work here, or any other question. There is no limit on messages.`);
     async function ask(text) {
       const q = String(text || input.value).trim(); if (!q || busy) return;
-      input.value = ""; add("me", q); busy = true; sendBtn.disabled = true;
+      input.value = ""; input.style.height = "46px"; if (chips) chips.hidden = true; add("me", q); busy = true; sendBtn.disabled = true;
       const wait = el("div", "kai-msg bot"); const d = el("span", "kai-dots"); d.append(el("i"), el("i"), el("i")); wait.append(d); log.append(wait); log.scrollTop = log.scrollHeight;
-      let answer = null, note = null;
+      let answer = null, note = null, off = false;
       try {
         if (!o.sb || !o.sb.functions) throw { code: "offline" };
         let ctx = ""; try { ctx = typeof o.context === "function" ? String(o.context() || "") : String(o.context || ""); } catch (e) { ctx = ""; }
@@ -96,9 +97,12 @@
         const why = e && e.code === "not_configured" ? (e.message || "The AI assistant is not switched on yet.") : e && e.code === "offline" ? "" : (e && e.message) || "The AI service could not be reached. Please try again.";
         if (local) { answer = local; if (why) note = why + " Meanwhile, this answer comes from the portal's own data."; }
         else answer = why || "The AI assistant is not available here.";
-        if (e && e.ref) note = (note ? note + " " : "") + `(ref ${e.ref})`;
+        if (e && e.ref && e.code !== "not_configured") note = (note ? note + " " : "") + `(ref ${e.ref})`;
+        off = e && e.code === "not_configured";
       }
-      wait.remove(); add("bot", answer); if (note) add("bot", note, "note");
+      wait.remove(); const m = add("bot", answer); if (note) add("bot", note, "note");
+      /* the Super Admin can switch it on straight away (the page passes onSetup only for the Super Admin) */
+      if (off && typeof o.onSetup === "function") { const b = el("button", "kai-setup", "Open AI settings"); b.type = "button"; b.addEventListener("click", () => { panel.hidden = true; fab.hidden = false; o.onSetup(); }); m.append(b); }
       history.push({ role: "user", text: q }, { role: "assistant", text: answer });
       busy = false; sendBtn.disabled = false; input.focus();
     }
@@ -111,7 +115,7 @@
       const close = el("button"); close.type = "button"; close.title = "Close"; close.setAttribute("aria-label", "Close the assistant"); close.append(svg("x"));
       head.append(ic, t, clear, close);
       log = el("div", "kai-log"); log.setAttribute("role", "log"); log.setAttribute("aria-live", "polite");
-      const chips = el("div", "kai-chips"); hints.slice(0, 6).forEach(h => { const b = el("button", "", h); b.type = "button"; b.addEventListener("click", () => ask(h)); chips.append(b); });
+      chips = el("div", "kai-chips"); hints.slice(0, 6).forEach(h => { const b = el("button", "", h); b.type = "button"; b.addEventListener("click", () => ask(h)); chips.append(b); });
       const form = el("form", "kai-in"); input = el("textarea"); input.rows = 1; input.maxLength = 6000; input.placeholder = "Ask anything…"; input.setAttribute("aria-label", "Your question");
       sendBtn = el("button"); sendBtn.type = "submit"; sendBtn.setAttribute("aria-label", "Send"); sendBtn.append(svg("send")); form.append(input, sendBtn);
       const foot = el("div", "kai-foot", "Answers can be wrong: check important figures. Don't type passwords, CNIC or bank numbers.");
@@ -119,7 +123,7 @@
       form.addEventListener("submit", e => { e.preventDefault(); ask(); });
       input.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(); } });
       input.addEventListener("input", () => { input.style.height = "46px"; input.style.height = Math.min(140, input.scrollHeight) + "px"; });
-      clear.addEventListener("click", () => { history.length = 0; log.replaceChildren(); welcome(); });
+      clear.addEventListener("click", () => { history.length = 0; log.replaceChildren(); chips.hidden = false; welcome(); });
       close.addEventListener("click", () => { panel.hidden = true; fab.hidden = false; fab.focus(); });
       panel.addEventListener("keydown", e => { if (e.key === "Escape") close.click(); });
       welcome(); fab.hidden = true; input.focus();
