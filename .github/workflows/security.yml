@@ -5,8 +5,8 @@
 #   2 Secrets   Gitleaks over the full git history
 #   3 DAST      HTTP security headers + CSP meta check, then an OWASP ZAP full scan of the live site
 #   4 BaaS      no service_role / secret key in the code or on the live site; RLS on every public table
-# Secrets (Settings → Secrets and variables → Actions → Secrets): SUPABASE_DB_URL, and GITLEAKS_LICENSE
-# if this repository belongs to an organisation. Optional variable DAST_TARGET_URL (default: this site).
+# No database password is needed: the RLS check calls core_rls_report() with the public key. GITLEAKS_LICENSE: only for an organisation account.
+# Optional variable DAST_TARGET_URL (default: this site).
 name: Security
 
 on:
@@ -167,12 +167,16 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then node tools/check-keys.js
           else node tools/check-keys.js --live "$SITE_URL"; fi
+      # core_rls_report() (sql/012) returns counts only, so the public key from the live config.js is enough: no password on GitHub
       - name: Row-Level Security is on for every public table
-        env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          if [ -z "$SUPABASE_DB_URL" ]; then
-            echo "::error::Repository secret SUPABASE_DB_URL is not set (see the setup notes at the top of this file)"; exit 1
-          fi
-          case "$SUPABASE_DB_URL" in *sslmode=*) url="$SUPABASE_DB_URL";; *\?*) url="$SUPABASE_DB_URL&sslmode=require";; *) url="$SUPABASE_DB_URL?sslmode=require";; esac
-          psql "$url" -X -q -v ON_ERROR_STOP=1 -f tools/check-rls.sql
+          cfg=$(curl -sf "${SITE_URL%/}/config.js") || { echo "::error::Could not load ${SITE_URL%/}/config.js"; exit 1; }
+          url=$(printf '%s' "$cfg" | grep -o 'url: *"[^"]*"' | cut -d'"' -f2); key=$(printf '%s' "$cfg" | grep -o 'anonKey: *"[^"]*"' | cut -d'"' -f2)
+          rep=$(curl -sf -X POST "$url/rest/v1/rpc/core_rls_report" -H "apikey: $key" -H "Authorization: Bearer $key" -H "Content-Type: application/json" -d '{}') \
+            || { echo "::error::The database did not answer core_rls_report (is sql/012_rls_report.sql applied?)"; exit 1; }
+          echo "Report: $rep"
+          node -e '
+            const r = JSON.parse(process.argv[1]);
+            if (r.anon_open_policies) console.log(`::warning::${r.anon_open_policies} policy(ies) let signed-out visitors see or write every row - review with tools/check-rls.sql`);
+            if (r.no_rls || r.open_views) { console.log(`::error::${r.no_rls} table(s) without RLS, ${r.open_views} view(s) that skip RLS - list them with tools/check-rls.sql in the Supabase SQL editor`); process.exit(1); }
+            console.log(`OK: all ${r.tables} public tables have Row-Level Security on`);' "$rep"

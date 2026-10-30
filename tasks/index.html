@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-+6Gx/I6+U45yIGblJtcyTENcqUtcagSh7sAkWe03EbY='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-SdIxR0Ys40+H0iKj+i/TuFdy/S3+VWYOQgL5YpedxOQ='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <!-- clickjacking guard: GitHub Pages cannot send X-Frame-Options, so the page stays hidden if another site frames it -->
@@ -385,6 +385,10 @@ body{background:radial-gradient(1200px 600px at 100% -10%,color-mix(in srgb,var(
 .chart .bar-g,.clickable .slice{transition:opacity .15s}
 .chart.clickable .bar-g,.clickable .slice{cursor:pointer}
 .chart .bar-g:hover .bar,.slice:hover{filter:brightness(1.12)}
+.donut2 .seg{transform-box:view-box;transform-origin:50% 50%;transition:transform .2s ease-out,filter .2s ease-out,opacity .15s;animation:dn2Draw 1.1s cubic-bezier(.22,1,.36,1) both}
+.donut2.clickable .seg{cursor:pointer}
+.donut2 .seg.on{transform:scale(1.045);filter:drop-shadow(0 0 4px var(--glow)) brightness(1.08)}
+@keyframes dn2Draw{from{stroke-dasharray:0 var(--c);opacity:0}}
 .legend .lg{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--ink-2);padding:2px 6px;border-radius:6px;text-align:left}
 .legend .lg:not(:disabled):hover,.legend .lg.on{background:var(--ice);color:var(--ink)}
 .legend .lg:disabled{opacity:1;cursor:default}
@@ -4434,13 +4438,21 @@ function Columns({data,money,onPick,active,height=170}){
   </svg>`;
 }
 function Donut({data,center,onPick,active,money}){
-  const total=data.reduce((s,d)=>s+d.value,0)||1; let acc=0; const R=46,r=30,C=60;
-  const arcs=data.map(d=>{ const a0=acc/total*2*Math.PI-Math.PI/2; acc+=d.value; let a1=acc/total*2*Math.PI-Math.PI/2; if(a1-a0>=2*Math.PI-1e-6) a1=a0+2*Math.PI-1e-4; const big=a1-a0>Math.PI?1:0;
-    const p=(a,rad)=>[C+rad*Math.cos(a),C+rad*Math.sin(a)];
-    const [x0,y0]=p(a0,R),[x1,y1]=p(a1,R),[x2,y2]=p(a1,r),[x3,y3]=p(a0,r);
-    return {d:`M${x0} ${y0}A${R} ${R} 0 ${big} 1 ${x1} ${y1}L${x2} ${y2}A${r} ${r} 0 ${big} 0 ${x3} ${y3}Z`,color:d.color,v:d.value,src:d};});
-  return html`<div class="row" style="gap:16px;flex-wrap:wrap"><svg class=${onPick?"clickable":""} viewBox="0 0 120 120" style="width:130px;height:130px;flex:none" onMouseLeave=${hideTip}>${arcs.filter(a=>a.v>0).map(a=>html`<path class="slice" d=${a.d} fill=${a.color} opacity=${active&&active!==a.src.label?.35:1} onMouseMove=${e=>showTip(e,tipText(a.src,money,total)+(onPick?'<br><span style="opacity:.7">Click to filter</span>':""))} onMouseLeave=${hideTip} onClick=${()=>{ hideTip(); onPick&&onPick(a.src); }}/>`)}<text x="60" y="57" text-anchor="middle" font-size="20" font-weight="800" fill="var(--ink)" pointer-events="none">${center}</text><text x="60" y="72" text-anchor="middle" font-size="9" fill="var(--ink-3)" pointer-events="none">total</text></svg>
-    <div class="legend" style="flex-direction:column;gap:6px">${data.map(d=>html`<button class=${"lg"+(active===d.label?" on":"")} disabled=${!onPick} onClick=${()=>onPick&&onPick(d)} onMouseMove=${e=>showTip(e,tipText(d,money,total))} onMouseLeave=${hideTip}><i style=${`background:${d.color}`}/>${d.label} <b class="num">${money?fmt(d.value):d.value}</b></button>`)}</div></div>`;
+  /* ring that draws itself in, rounded ends; pointing at a slice or its legend row lights both and shows it in the centre */
+  const [hov,setHov]=useState(null);
+  const total=data.reduce((s,d)=>s+d.value,0)||1; const R=46,SW=14,C=2*Math.PI*R; let acc=0;
+  const segs=data.map((d,i)=>{ const len=d.value/total*C, start=acc; acc+=len; const round=len>SW+3;   // round ends stick out SW/2 each side: shorten so slices do not overlap
+    return {d,i,round,len:round?len-SW-2:Math.max(len-1.5,.5),off:round?start+SW/2+1:start}; }).filter(s=>s.d.value>0);
+  const h=hov&&data.find(d=>d.label===hov); const show=v=>money?fmt(v):v;
+  return html`<div class="row" style="gap:16px;flex-wrap:wrap"><svg class=${"donut2"+(onPick?" clickable":"")} viewBox="0 0 120 120" style="width:130px;height:130px;flex:none;overflow:visible" role="img" aria-label=${"Total "+center} onMouseLeave=${()=>setHov(null)}>
+    <circle cx="60" cy="60" r=${R} fill="none" stroke="var(--line)" stroke-width=${SW} opacity=".55"/>
+    <g transform="rotate(-90 60 60)">${segs.map(s=>html`<circle key=${s.d.label} class=${"seg"+(hov===s.d.label?" on":"")} cx="60" cy="60" r=${R} fill="none" stroke=${s.d.color} stroke-width=${SW} stroke-linecap=${s.round?"round":"butt"}
+      stroke-dasharray=${`${s.len} ${C}`} stroke-dashoffset=${-s.off} style=${`--c:${C.toFixed(1)};--glow:${s.d.color};animation-delay:${s.i*70}ms`} opacity=${active&&active!==s.d.label?.35:1}
+      onMouseEnter=${()=>setHov(s.d.label)} onClick=${()=>onPick&&onPick(s.d)}><title>${s.d.label}: ${show(s.d.value)} (${Math.round(s.d.value/total*100)}%)${onPick?" · click to filter":""}</title></circle>`)}</g>
+    <g pointer-events="none" text-anchor="middle">${h?html`<text x="60" y="47" font-size="7.5" fill="var(--ink-3)">${String(h.label).length>16?String(h.label).slice(0,15)+"…":h.label}</text>
+      <text x="60" y="65" font-size=${money?14:19} font-weight="800" fill="var(--ink)">${show(h.value)}</text><text x="60" y="78" font-size="9" font-weight="700" fill=${h.color}>${Math.round(h.value/total*100)}%</text>`
+      :html`<text x="60" y="63" font-size="20" font-weight="800" fill="var(--ink)">${center}</text><text x="60" y="76" font-size="9" fill="var(--ink-3)">total</text>`}</g></svg>
+    <div class="legend" style="flex-direction:column;gap:6px">${data.map(d=>html`<button class=${"lg"+(active===d.label||hov===d.label?" on":"")} disabled=${!onPick} onClick=${()=>onPick&&onPick(d)} onMouseEnter=${()=>setHov(d.label)} onMouseMove=${e=>showTip(e,tipText(d,money,total))} onMouseLeave=${()=>{ hideTip(); setHov(null); }}><i style=${`background:${d.color}`}/>${d.label} <b class="num">${show(d.value)}</b></button>`)}</div></div>`;
 }
 const PALETTE=["#0B51A7","#0F8A5F","#B96A00","#5B3FD3","#C8322B","#0E7490","#7A86A6"];
 

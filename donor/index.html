@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-X7l8sPXDvdXNDKDaiSBzOEt1Xu59Y05UgMDpj1V3fHQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-TGZsLstiY+VOj2YVQ3MoeZb2nJ8RlPXdS2MEKyYWYTo='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -234,6 +234,10 @@ svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .donut .track{fill:none;stroke:var(--surface-3);stroke-width:22}
 .donut .dv{font-size:17px;font-weight:800;fill:var(--text)}
 .donut .dl{font-size:10px;fill:var(--muted)}
+.donut{overflow:visible} .donut .dp{font-size:11px;font-weight:700;fill:var(--brand)}
+.donut circle[data-seg]{transform-box:view-box;transform-origin:50% 50%;transition:transform .2s ease-out,filter .2s ease-out;cursor:pointer}
+.donut circle[data-seg].on{transform:scale(1.045);filter:drop-shadow(0 0 5px var(--g)) brightness(1.08)}
+.legend li.on{background:var(--brand-50);border-radius:8px}
 .legend{list-style:none;margin:0;padding:0;display:grid;gap:8px;flex:1;min-width:170px}
 .legend li{display:flex;align-items:center;gap:8px;font-size:13px}
 .legend .sw{width:10px;height:10px;border-radius:3px;flex:none}
@@ -2241,16 +2245,29 @@ function barChart(data, label) {
 }
 function donut(data, centerLabel) {
   const total = data.reduce((s, d) => s + d.value, 0), r = 58, C = 2 * Math.PI * r;
-  let off = 0, s = `<svg class="donut" viewBox="0 0 160 160" role="img" aria-label="${esc(centerLabel)} breakdown"><circle class="track" cx="80" cy="80" r="${r}"/>`;
+  const pct = v => total ? Math.round(v / total * 100) : 0;
+  let off = 0, s = `<svg class="donut" viewBox="0 0 160 160" role="img" aria-label="${esc(centerLabel)} breakdown" data-total="${esc(compact(total))}" data-label="${esc(centerLabel)}"><circle class="track" cx="80" cy="80" r="${r}"/><g transform="rotate(-90 80 80)">`;
   if (total) data.filter(d => d.value > 0).forEach(d => {
-    const len = C * d.value / total;
-    s += `<circle cx="80" cy="80" r="${r}" fill="none" style="stroke:var(${d.cv})" stroke-width="22" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 80 80)"><title>${esc(d.label)}: ${esc(money(d.value))}</title></circle>`;
+    const len = C * d.value / total, round = len > 25;     // round ends stick out 11 each side: shorten so slices do not overlap
+    s += `<circle data-seg="${esc(d.label)}" data-v="${esc(compact(d.value))}" data-p="${pct(d.value)}" cx="80" cy="80" r="${r}" fill="none" style="stroke:var(${d.cv});--g:var(${d.cv})" stroke-width="22" stroke-linecap="${round ? 'round' : 'butt'}" stroke-dasharray="${(round ? len - 24 : Math.max(len - 1.5, .5)).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-(round ? off + 12 : off)).toFixed(2)}"><title>${esc(d.label)}: ${esc(money(d.value))}</title></circle>`;
     off += len;
   });
-  s += `<text class="dv" x="80" y="80" text-anchor="middle">${esc(compact(total))}</text><text class="dl" x="80" y="97" text-anchor="middle">${esc(centerLabel)}</text></svg>`;
-  const leg = `<ul class="legend">${data.filter(d => d.value > 0 || !d.hideZero).map(d => `<li>${d.act ? `<button class="leg-btn" data-act="dash" data-k="cat" data-v="${esc(d.label)}" title="Show ${esc(d.label)} donations">` : ''}<span class="sw" style="background:var(${d.cv})"></span>${esc(d.label)}<span class="lv">${total ? Math.round(d.value / total * 100) : 0}%</span>${d.act ? '</button>' : ''}</li>`).join('')}</ul>`;
+  s += `</g><text class="dv" x="80" y="80" text-anchor="middle">${esc(compact(total))}</text><text class="dl" x="80" y="97" text-anchor="middle">${esc(centerLabel)}</text><text class="dp" x="80" y="112" text-anchor="middle"></text></svg>`;
+  const leg = `<ul class="legend">${data.filter(d => d.value > 0 || !d.hideZero).map(d => `<li data-seg="${esc(d.label)}">${d.act ? `<button class="leg-btn" data-act="dash" data-k="cat" data-v="${esc(d.label)}" title="Show ${esc(d.label)} donations">` : ''}<span class="sw" style="background:var(${d.cv})"></span>${esc(d.label)}<span class="lv">${pct(d.value)}%</span>${d.act ? '</button>' : ''}</li>`).join('')}</ul>`;
   return `<div class="donut-wrap">${s}${leg}</div>`;
 }
+// pointing at a donut slice or its legend row lights both and shows that slice in the centre (one listener for every donut)
+function donutHover(w, key) {
+  const svg = w.querySelector('svg.donut'); if (!svg) return;
+  w.querySelectorAll('[data-seg]').forEach(x => x.classList.toggle('on', x.getAttribute('data-seg') === key));
+  const seg = key ? [...svg.querySelectorAll('circle[data-seg]')].find(c => c.getAttribute('data-seg') === key) : null;
+  const dv = svg.querySelector('.dv'), dl = svg.querySelector('.dl'), dp = svg.querySelector('.dp');
+  dv.textContent = seg ? seg.getAttribute('data-v') : svg.getAttribute('data-total');
+  dl.textContent = seg ? (key.length > 20 ? key.slice(0, 19) + '…' : key) : svg.getAttribute('data-label');
+  dp.textContent = seg ? seg.getAttribute('data-p') + '%' : '';
+}
+document.addEventListener('pointerover', e => { const w = e.target.closest && e.target.closest('.donut-wrap'); if (!w) return; const t = e.target.closest('[data-seg]'); donutHover(w, t ? t.getAttribute('data-seg') : null); });
+document.addEventListener('pointerout', e => { const w = e.target.closest && e.target.closest('.donut-wrap'); if (w && !w.contains(e.relatedTarget)) donutHover(w, null); });
 function hbars(rows) {
   const max = Math.max(...rows.map(r => r.value), 1);
   return `<div class="hbar">${rows.map(r => `<${r.act ? `button class="hr hr-btn" data-act="dash" data-k="prog" data-v="${esc(r.label)}" title="Show donations for ${esc(r.label)}"` : 'div class="hr"'}><span>${esc(r.label)}</span><div class="tr"><div class="fl" style="width:${(r.value / max * 100).toFixed(1)}%"></div></div><b class="num">${esc(compact(r.value))}</b></${r.act ? 'button' : 'div'}>`).join('')}</div>`;
