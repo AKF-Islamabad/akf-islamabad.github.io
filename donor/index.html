@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-TGZsLstiY+VOj2YVQ3MoeZb2nJ8RlPXdS2MEKyYWYTo='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-krET+qwQR/ztrwVU0HLpxnpj/oumDmDkGR2hAguZ52g='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -825,6 +825,8 @@ html.rm *,html.rm *::before,html.rm *::after{animation-duration:1ms!important;an
 .chart .bar{fill:url(#barGrad);transform-box:fill-box;transform-origin:50% 100%;animation:grow .9s var(--ease) both;animation-delay:calc(var(--b,0) * 45ms + 200ms)}
 .chart .bar.cur{fill:url(#barGradCur)}
 .chart .bar-hit:hover + .bar{filter:brightness(1.15)}
+.chart .bar{transition:opacity .25s ease-out,filter .25s ease-out} .chart.hov .bar{opacity:.28} .chart.hov .bar.nb{opacity:.6} .chart.hov .bar.on{opacity:1;filter:brightness(1.12) drop-shadow(0 4px 8px rgba(11,81,167,.35))}
+.chart .bv{font-size:12px;font-weight:800;fill:var(--text);opacity:0;transition:opacity .2s} .chart .bv.on{opacity:1}
 .donut circle:not(.track){animation:donutIn 1.2s var(--ease) both .25s}
 .legend li{animation:rise .5s var(--ease) both;animation-delay:calc(var(--j,0) * 50ms + 300ms)}
 .hbar .fl{background:linear-gradient(90deg,#1A66CC,#19C2AE);animation:widthIn 1s var(--ease) both .3s}
@@ -2237,8 +2239,10 @@ function barChart(data, label) {
   for (let i = 0; i <= 4; i++) { const y = pt + ih - ih * i / 4; s += `<line class="grid" x1="${pl}" x2="${W - pr}" y1="${y}" y2="${y}"/><text class="axis" x="${pl - 8}" y="${y + 4}" text-anchor="end">${esc(compact(max * i / 4))}</text>`; }
   data.forEach((d, i) => {
     const h = Math.max(d.value ? 2 : 0, ih * d.value / max), x = pl + i * bw + bw * .2, w = bw * .6;
-    if (d.key) s += `<rect class="bar-hit" data-act="dash" data-k="month" data-m="${esc(d.key)}" x="${(pl + i * bw).toFixed(1)}" y="${pt}" width="${bw.toFixed(1)}" height="${ih}" tabindex="0" role="button" aria-label="${esc(d.title)}: ${esc(money(d.value))}. Show donations"><title>${esc(d.title)}: ${esc(money(d.value))} · click to see donations</title></rect>`;
-    s += `<rect class="bar${i === data.length - 1 ? ' cur' : ''}" style="--b:${i}" pointer-events="none" x="${x.toFixed(1)}" y="${(pt + ih - h).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="4"><title>${esc(d.title)}: ${esc(money(d.value))}</title></rect>`;
+    if (d.key) s += `<rect class="bar-hit" data-i="${i}" data-act="dash" data-k="month" data-m="${esc(d.key)}" x="${(pl + i * bw).toFixed(1)}" y="${pt}" width="${bw.toFixed(1)}" height="${ih}" tabindex="0" role="button" aria-label="${esc(d.title)}: ${esc(money(d.value))}. Show donations"><title>${esc(d.title)}: ${esc(money(d.value))} · click to see donations</title></rect>`;
+    else s += `<rect class="bar-hit" data-i="${i}" x="${(pl + i * bw).toFixed(1)}" y="${pt}" width="${bw.toFixed(1)}" height="${ih}"/>`;
+    s += `<rect class="bar${i === data.length - 1 ? ' cur' : ''}" data-i="${i}" style="--b:${i}" pointer-events="none" x="${x.toFixed(1)}" y="${(pt + ih - h).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="4"><title>${esc(d.title)}: ${esc(money(d.value))}</title></rect>`;
+    s += `<text class="bv" data-i="${i}" pointer-events="none" x="${(x + w / 2).toFixed(1)}" y="${(pt + ih - h - 7).toFixed(1)}" text-anchor="middle">${esc(compact(d.value))}</text>`;
     s += `<text class="axis" x="${(x + w / 2).toFixed(1)}" y="${H - 10}" text-anchor="middle">${esc(d.label)}</text>`;
   });
   return s + '</svg>';
@@ -2266,6 +2270,13 @@ function donutHover(w, key) {
   dl.textContent = seg ? (key.length > 20 ? key.slice(0, 19) + '…' : key) : svg.getAttribute('data-label');
   dp.textContent = seg ? seg.getAttribute('data-p') + '%' : '';
 }
+// bar charts: the bar you point at stays solid with its value above it, its neighbours dim a little, the rest fade
+function barHover(svg, i) {
+  svg.classList.toggle('hov', i != null);
+  svg.querySelectorAll('.bar[data-i], .bv[data-i]').forEach(b => { const j = +b.getAttribute('data-i'); b.classList.toggle('on', j === i); b.classList.toggle('nb', i != null && Math.abs(j - i) === 1); });
+}
+document.addEventListener('pointerover', e => { const svg = e.target.closest && e.target.closest('svg.chart'); if (!svg) return; const t = e.target.closest('.bar-hit[data-i]'); barHover(svg, t ? +t.getAttribute('data-i') : null); });
+document.addEventListener('pointerout', e => { const svg = e.target.closest && e.target.closest('svg.chart'); if (svg && !svg.contains(e.relatedTarget)) barHover(svg, null); });
 document.addEventListener('pointerover', e => { const w = e.target.closest && e.target.closest('.donut-wrap'); if (!w) return; const t = e.target.closest('[data-seg]'); donutHover(w, t ? t.getAttribute('data-seg') : null); });
 document.addEventListener('pointerout', e => { const w = e.target.closest && e.target.closest('.donut-wrap'); if (w && !w.contains(e.relatedTarget)) donutHover(w, null); });
 function hbars(rows) {

@@ -112,6 +112,14 @@
 .akd .akd-due{font-size:11px;color:#8A7A2A} .akd .akd-late{color:#C0392B;font-weight:700}
 .akd .akd-none{color:#8A7A2A;font-size:12px;padding:2px 0}
 .akd-foot{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 12px;border-top:1px solid var(--n3);background:var(--n2)}
+.akd-week{margin:8px 0 2px} .akd-wh{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:#7A6400;font-weight:700}
+.akd-wv{text-transform:none;letter-spacing:0;color:#3B3208;font-weight:800;font-variant-numeric:tabular-nums;transition:opacity .2s}
+.akd-wbars{display:flex;align-items:flex-end;gap:6px;height:58px;margin-top:6px}
+.akd-wc{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.akd-wc i{display:block;width:min(14px,70%);min-height:3px;border-radius:99px;background:rgba(59,50,8,.22);transition:background .3s ease-out,transform .3s ease-out;transform-origin:50% 100%}
+.akd-wc span{font-size:10px;color:#8A7A2A;margin-top:3px} .akd-wc.today span{font-weight:800;color:#3B3208}
+.akd-wbars.hov .akd-wc i{background:rgba(59,50,8,.1)} .akd-wbars.hov .akd-wc.nb i{background:rgba(59,50,8,.3)}
+.akd-wbars.hov .akd-wc.on i{background:#3B3208;transform:scaleX(1.15)} .akd-wbars.hov .akd-wc.on span{color:#3B3208;font-weight:800}
 .akd-cols{display:flex;gap:6px;align-items:center;padding:8px 0 2px;font-size:11.5px;color:#7A6400}
 .akd-cols button{width:20px;height:20px;border-radius:50%;border:1px solid rgba(0,0,0,.18);cursor:pointer;padding:0}
 .akd-cols button.on{outline:2px solid #3B3208;outline-offset:1px}
@@ -167,6 +175,23 @@
     if (rows.length > 6) { const li = el("li"); const a = el("a", "", `+ ${rows.length - 6} more in Tasks`); a.href = BASE + "tasks/"; li.append(a); ul.append(li); }
     box.append(ul); return box;
   }
+  // "My week": tasks I finished on each of the last 7 days; point at a day to see its number
+  function week(days) {
+    const box = el("div", "akd-week"), total = days.reduce((s, d) => s + d.n, 0), max = Math.max(1, ...days.map((d) => d.n));
+    const sum = `${total} done this week`, wv = el("span", "akd-wv", sum);
+    const hd = el("div", "akd-wh"); hd.append(el("span", "", "My week"), wv);
+    const bars = el("div", "akd-wbars"); bars.setAttribute("role", "img");
+    bars.setAttribute("aria-label", "Tasks done: " + days.map((d) => `${d.name} ${d.n}`).join(", "));
+    const cols = days.map((d, i) => {
+      const c = el("div", "akd-wc" + (i === days.length - 1 ? " today" : "")); const b = el("i"); b.style.height = Math.max(3, Math.round(d.n / max * 40)) + "px";
+      c.append(b, el("span", "", d.name.charAt(0)));
+      c.addEventListener("pointerenter", () => { bars.classList.add("hov"); cols.forEach((x, j) => { x.classList.toggle("on", j === i); x.classList.toggle("nb", Math.abs(j - i) === 1); });
+        wv.textContent = `${d.n} done · ${d.name}`; });
+      return c;
+    });
+    bars.addEventListener("pointerleave", () => { bars.classList.remove("hov"); cols.forEach((x) => x.classList.remove("on", "nb")); wv.textContent = sum; });
+    bars.append(...cols); box.append(hd, bars); return box;
+  }
   function bellLabel() {
     if (!("Notification" in window) && !isIOS) return null;
     return ("Notification" in window && Notification.permission === "granted") ? ["🔔 Notifications on", true] : ["🔕 Turn on notifications", false];
@@ -193,6 +218,7 @@
     if (!data) body.append(el("div", "akd-none", "Loading…"));
     else if (!data.pid) body.append(el("div", "akd-none", "Your tasks appear here once you are added to Tasks & Events."));
     else {
+      body.append(week(data.week));
       body.append(section("Today's plan", data.plan, "Nothing planned for today."));
       body.append(section("My to-do", data.todo, "No to-dos. Add them in Tasks → To-Do & Notes."));
       body.append(section("Assigned to me", data.assigned, "No open tasks from others."));
@@ -214,16 +240,20 @@
     let pid = who && who[0] && who[0].id;
     if (!pid) { const r = await sb.from("portal_rows").select("id").eq("collection", "users").eq("data->>username", me.email.split("@")[0]).limit(1); pid = r.data && r.data[0] && r.data[0].id; }
     if (!pid) { data = { pid: null, plan: [], todo: [], assigned: [] }; paint(); return; }
-    const [tk, nt] = await Promise.all([
+    const day0 = new Date(); day0.setHours(0, 0, 0, 0); day0.setDate(day0.getDate() - 6);   // the last 7 days, today included
+    const [tk, nt, dn] = await Promise.all([
       sb.from("portal_rows").select("data").eq("collection", "tasks").eq("data->>assigneeId", pid).not("data->>stage", "in", '("06","07")').limit(300),
       sb.from("portal_rows").select("data").eq("collection", "notes").eq("data->>ownerId", pid).eq("data->>kind", "todo").limit(300),
+      sb.from("portal_rows").select("data").eq("collection", "tasks").eq("data->>assigneeId", pid).eq("data->>stage", "06").gte("data->>completedAt", day0.toISOString()).limit(500),
     ]);
+    const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(day0); d.setDate(d.getDate() + i); return { t: d.toDateString(), name: d.toLocaleDateString(undefined, { weekday: "short" }), n: 0 }; });
+    (dn.data || []).forEach((r) => { const c = r.data && new Date(r.data.completedAt); const d = c && days.find((x) => x.t === c.toDateString()); if (d) d.n++; });
     const tasks = (tk.data || []).map((r) => r.data).filter((x) => x && x.v === 2);
     // open: the task itself, or the To-Do & Notes section for a to-do (portal-app reads #task=)
     const row = (x) => ({ text: (x.id ? x.id + " · " : "") + String(x.title || x.text || "").slice(0, 120), due: x.plannedDate || x.due || "", open: x.title ? String(x.key || "") : "view:myspace" });
     const byDue = (a, b) => (a.due || "9999").localeCompare(b.due || "9999");
     data = {
-      pid,
+      pid, week: days,
       plan: tasks.filter((x) => x.plannedDate && x.plannedDate <= t).map(row).sort(byDue),
       todo: (nt.data || []).map((r) => r.data).filter((x) => x && !x.done).map(row).sort(byDue),
       assigned: tasks.filter((x) => x.creatorId && x.creatorId !== pid).map(row).sort(byDue),

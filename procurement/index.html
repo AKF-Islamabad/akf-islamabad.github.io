@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-Wl2sVp3zvPL3rYax74ijdJW1qkSFT32RklB3lmWOMDA='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-bODg8h4z6e4OZFLDqi7E84sBUlWYhMvz53xsfFVNoh4='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <!-- clickjacking guard: GitHub Pages cannot send X-Frame-Options, so the page stays hidden if another site frames it -->
@@ -389,6 +389,8 @@ body{background:radial-gradient(1200px 600px at 100% -10%,color-mix(in srgb,var(
 .donut2.clickable .seg{cursor:pointer}
 .donut2 .seg.on{transform:scale(1.045);filter:drop-shadow(0 0 4px var(--glow)) brightness(1.08)}
 @keyframes dn2Draw{from{stroke-dasharray:0 var(--c);opacity:0}}
+.barsh .bar-g{transition:opacity .25s ease-out} .barsh .bar-g .bar{transition:filter .25s ease-out}
+.barsh .bar-g.on .bar{filter:brightness(1.1) drop-shadow(0 3px 6px rgba(11,81,167,.3))}
 .legend .lg{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--ink-2);padding:2px 6px;border-radius:6px;text-align:left}
 .legend .lg:not(:disabled):hover,.legend .lg.on{background:var(--ice);color:var(--ink)}
 .legend .lg:disabled{opacity:1;cursor:default}
@@ -4423,10 +4425,12 @@ function hideTip(){ const t=document.getElementById("chart-tip"); if(t) t.style.
 if(typeof window!=="undefined"){ window.addEventListener("scroll",hideTip,true); window.addEventListener("pointerdown",e=>{ if(!(e.target.closest&&e.target.closest(".chart,.clickable,.legend"))) hideTip(); },true); }
 const tipText=(d,money,total)=>`<b>${escHTML(d.label)}</b><br>${money?"PKR "+fmt(d.value):fmt(d.value)+escHTML(d.unit||"")}${total?` · ${Math.round(d.value/total*100)}%`:""}${d.hint?`<br><span style="opacity:.75">${escHTML(d.hint)}</span>`:""}`;   /* labels come from data (item, vendor, department names): escaped before innerHTML */
 function BarsH({data,money,onPick,active}){
+  const [hov,setHov]=useState(null);   // the row you point at stays solid, its neighbours dim a little, the rest fade
   const max=Math.max(1,...data.map(d=>d.value)); const rowH=26, W=440, labelW=118; const valW=money?92:40; const total=data.reduce((s,d)=>s+d.value,0);
-  return html`<svg class=${"chart"+(onPick?" clickable":"")} viewBox=${`0 0 ${W} ${data.length*rowH+4}`} role="img" onMouseLeave=${hideTip}>
+  return html`<svg class=${"chart barsh"+(onPick?" clickable":"")} viewBox=${`0 0 ${W} ${data.length*rowH+4}`} role="img" onMouseLeave=${()=>{ hideTip(); setHov(null); }}>
     ${data.map((d,i)=>{ const w=(W-labelW-valW)*d.value/max; const y=i*rowH; const dim=active&&active!==d.label;
-      return html`<g class="bar-g" transform=${`translate(0 ${y})`} opacity=${dim?.35:1} onMouseMove=${e=>showTip(e,tipText(d,money,total)+(onPick?'<br><span style="opacity:.7">Click to filter</span>':""))} onMouseLeave=${hideTip} onClick=${()=>{ hideTip(); onPick&&onPick(d); }}><rect x="0" y="0" width=${W} height=${rowH} fill="transparent"/><text x="0" y="17" font-size="12" font-weight="600" fill="var(--ink-2)">${d.label.length>17?d.label.slice(0,16)+"…":d.label}</text><rect class="bar" x=${labelW} y="5" width=${Math.max(2,w)} height="16" rx="5" fill=${d.color||"var(--brand-2)"}/><text x=${labelW+Math.max(2,w)+6} y="17" font-size="11.5" font-weight="700" fill="var(--ink)">${money?fmt(d.value):d.value}</text></g>`;})}
+      const op=hov!==null?(i===hov?1:Math.abs(i-hov)===1?.6:.3):dim?.35:1;
+      return html`<g class=${"bar-g"+(hov===i?" on":"")} transform=${`translate(0 ${y})`} opacity=${op} onMouseEnter=${()=>setHov(i)} onMouseMove=${e=>showTip(e,tipText(d,money,total)+(onPick?'<br><span style="opacity:.7">Click to filter</span>':""))} onMouseLeave=${hideTip} onClick=${()=>{ hideTip(); onPick&&onPick(d); }}><rect x="0" y="0" width=${W} height=${rowH} fill="transparent"/><text x="0" y="17" font-size="12" font-weight="600" fill="var(--ink-2)">${d.label.length>17?d.label.slice(0,16)+"…":d.label}</text><rect class="bar" x=${labelW} y="5" width=${Math.max(2,w)} height="16" rx="5" fill=${d.color||"var(--brand-2)"}/><text x=${labelW+Math.max(2,w)+6} y="17" font-size="11.5" font-weight="700" fill="var(--ink)">${money?fmt(d.value):d.value}</text></g>`;})}
   </svg>`;
 }
 function Columns({data,money,onPick,active,height=170}){
