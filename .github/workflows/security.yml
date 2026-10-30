@@ -1,0 +1,176 @@
+# Security checks for the Alkhidmat portals website (main page and every portal folder).
+# Runs on every push and pull request to main/master, after every successful "Deploy portal" run,
+# every Monday at 02:00 UTC, and by hand (Actions → Security → Run workflow).
+#   1 SAST      CodeQL (JavaScript, including scripts inside the HTML pages) + Semgrep
+#   2 Secrets   Gitleaks over the full git history
+#   3 DAST      HTTP security headers + CSP meta check, then an OWASP ZAP full scan of the live site
+#   4 BaaS      no service_role / secret key in the code or on the live site; RLS on every public table
+# Secrets (Settings → Secrets and variables → Actions → Secrets): SUPABASE_DB_URL, and GITLEAKS_LICENSE
+# if this repository belongs to an organisation. Optional variable DAST_TARGET_URL (default: this site).
+name: Security
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_run:
+    workflows: ["Deploy portal"]
+    types: [completed]
+  schedule:
+    - cron: "0 2 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SITE_URL: ${{ vars.DAST_TARGET_URL || format('https://{0}.github.io/', github.repository_owner) }}
+
+jobs:
+  # ---------------------------------------------------------------- 1. SAST
+  sast-codeql:
+    name: "1 SAST · CodeQL"
+    if: github.event_name != 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          queries: security-extended
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: codeql-javascript
+
+  sast-semgrep:
+    name: "1 SAST · Semgrep"
+    if: github.event_name != 'workflow_run' && github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan JavaScript for XSS, unsafe DOM use and hard-coded secrets
+        run: |
+          semgrep scan --metrics=off \
+            --config p/javascript --config p/xss --config p/secrets \
+            --config p/owasp-top-ten --config p/github-actions \
+            --sarif-output=semgrep.sarif
+      - uses: github/codeql-action/upload-sarif@v4
+        if: always() && hashFiles('semgrep.sarif') != ''
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+      - name: Fail on high-severity findings
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          runs = json.load(open("semgrep.sarif"))["runs"]
+          bad = [r for run in runs for r in run.get("results", []) if r.get("level") == "error"]
+          for r in bad:
+              loc = r["locations"][0]["physicalLocation"]
+              print(f"::error file={loc['artifactLocation']['uri']},line={loc['region']['startLine']}::{r['ruleId']}: {r['message']['text'][:200]}")
+          print(f"{len(bad)} high-severity finding(s); all findings are in Security → Code scanning")
+          sys.exit(1 if bad else 0)
+          PY
+
+  # ---------------------------------------------------------------- 2. Secrets
+  secrets-gitleaks:
+    name: "2 Secrets · Gitleaks"
+    if: github.event_name != 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # every commit, not only the last one
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "true"
+          GITLEAKS_ENABLE_COMMENTS: "false"
+
+  # ---------------------------------------------------------------- 3. DAST
+  # Only the deployed site is scanned, so it runs after a deploy, weekly and by hand (not on PRs).
+  dast-zap:
+    name: "3 DAST · Headers + OWASP ZAP"
+    if: >-
+      github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check HTTPS, HSTS and the CSP of every portal page
+        run: |
+          set -u; fail=0; base="${SITE_URL%/}/"
+          echo "Target: $base"
+          code=$(curl -s -o /dev/null -w '%{http_code}' "http://${base#https://}")
+          case "$code" in 301|308) echo "OK  plain http redirects to https";; *) echo "::error::http:// does not redirect to https (got $code)"; fail=1;; esac
+          if curl -sI "$base" | grep -qi '^strict-transport-security:'; then echo "OK  HSTS header"; else echo "::error::Strict-Transport-Security header missing"; fail=1; fi
+          for f in $(find . -name index.html -not -path './.git/*' -not -path './tools/*'); do
+            page="${f#./}"; url="$base${page%index.html}"
+            html=$(curl -sfL "$url") || { echo "::warning::$url did not load"; continue; }
+            csp=$(printf '%s' "$html" | grep -oi '<meta http-equiv="Content-Security-Policy" content="[^"]*"' | head -1)
+            if [ -z "$csp" ]; then echo "::error::$url has no Content-Security-Policy"; fail=1; continue; fi
+            src=$(printf '%s' "$csp" | grep -o "script-src [^;\"]*")
+            if printf '%s' "$src" | grep -q "'unsafe-inline'\|'unsafe-eval'"; then echo "::error::$url script-src allows unsafe-inline/unsafe-eval"; fail=1; fi
+            printf '%s' "$csp" | grep -q "object-src 'none'" || { echo "::error::$url CSP lacks object-src 'none'"; fail=1; }
+            printf '%s' "$html" | grep -q 'window.top\|top !== self\|top.location' || echo "::warning::$url has no frame-buster (GitHub Pages cannot send X-Frame-Options)"
+            echo "OK  CSP on $url"
+          done
+          exit $fail
+      - name: OWASP ZAP full scan (XSS, injection, headers, CSRF)
+        uses: zaproxy/action-full-scan@v0.12.0
+        with:
+          target: ${{ env.SITE_URL }}
+          rules_file_name: .zap/rules.tsv
+          cmd_options: "-a -j -m 5 -I" # alpha rules, AJAX spider, 5 min spider; FAIL rules fail the job, WARN rules only report
+          allow_issue_writing: false
+          fail_action: true
+          artifact_name: zap-report
+
+  # ---------------------------------------------------------------- 4. Supabase / BaaS
+  baas-rules:
+    name: "4 BaaS · Keys + Row-Level Security"
+    if: github.event.pull_request.head.repo.fork != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: No service_role or secret key in the code or on the live site
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then node tools/check-keys.js
+          else node tools/check-keys.js --live "$SITE_URL"; fi
+      - name: Row-Level Security is on for every public table
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::Repository secret SUPABASE_DB_URL is not set (see the setup notes at the top of this file)"; exit 1
+          fi
+          case "$SUPABASE_DB_URL" in *sslmode=*) url="$SUPABASE_DB_URL";; *\?*) url="$SUPABASE_DB_URL&sslmode=require";; *) url="$SUPABASE_DB_URL?sslmode=require";; esac
+          psql "$url" -X -q -v ON_ERROR_STOP=1 -f tools/check-rls.sql
