@@ -6,7 +6,7 @@
 <title>Alkhidmat Islamabad Portals</title>
 <meta name="description" content="One sign-in for every Alkhidmat Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-71RGYADquDRHsC2N4WSJ232F//HsFM7hHAutjHsGrE8='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-ERDUHOl3em1FdCnXHNV8CCKDzEzB2PU5HCPYfCptuPI='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -741,13 +741,15 @@ function setup() {
 
 /* ---------- Super Admin: the ONE Settings place for every portal (stored where the portals read it) ---------- */
 const SETTING_DEFAULTS = { orgName: "Alkhidmat Foundation Islamabad Region", fiscalYear: "2026-27", escalationHours: 48, directPurchaseLimit: 100000, assetThreshold: 50000, actingApprover: "",
-  gst: 0.18, whtGoodsFiler: 0.04, whtGoodsNonFiler: 0.08, whtServicesFiler: 0.08, whtServicesNonFiler: 0.16, aiProvider: "builtin", aiModel: "gemini-2.5-flash", aiKey: "" };
+  gst: 0.18, whtGoodsFiler: 0.04, whtGoodsNonFiler: 0.08, whtServicesFiler: 0.08, whtServicesNonFiler: 0.16, aiProvider: "gemini", aiModel: "gemini-flash-latest", aiKey: "", aiClaudeModel: "claude-haiku-5-5", aiClaudeKey: "" };
 const SETTING_FIELDS = [
   ["Organisation & approvals", [["orgName", "Organisation name on documents", "text"], ["fiscalYear", "Fiscal year", "text"], ["escalationHours", "Escalate a waiting request after (hours)", "number"],
     ["directPurchaseLimit", "Direct-purchase limit (PKR) — above this, quotations + purchase committee are required", "number"], ["assetThreshold", "Record as an asset from (PKR per item)", "number"],
     ["actingApprover", "Acting approver when the President is away", "acting"]]],
   ["Taxes (%)", [["gst", "GST", "pct"], ["whtGoodsFiler", "WHT goods — filer", "pct"], ["whtGoodsNonFiler", "WHT goods — non-filer", "pct"], ["whtServicesFiler", "WHT services — filer", "pct"], ["whtServicesNonFiler", "WHT services — non-filer", "pct"]]],
-  ["Alkhidmat AI — the assistant in every portal (unlimited messages)", [["aiModel", "Gemini model", "text"], ["aiKey", "Google Gemini key (aistudio.google.com/apikey) — kept on the server, never shown to staff. Leave empty to keep the saved one.", "secret"]]],
+  ["Alkhidmat AI — the assistant in every portal (unlimited messages)", [["aiProvider", "AI provider — the one every portal uses", "ai"], ["aiClaudeModel", "Claude model (when Claude is chosen)", "claudemodel"],
+    ["aiClaudeKey", "Claude API key (console.anthropic.com → API keys; needs credit) — kept on the server, never shown to staff. Leave empty to keep the saved one.", "secret"],
+    ["aiModel", "Gemini model (picked automatically when Google retires one — no need to change)", "text"], ["aiKey", "Google Gemini key (aistudio.google.com/apikey) — kept on the server, never shown to staff. Leave empty to keep the saved one.", "secret"]]],
 ];
 /* the shared settings record: read fresh and change only the given keys, so two sections never overwrite each other */
 async function saveGlobal(patch, logText) {
@@ -881,11 +883,12 @@ function settingsGeneral() {
     try { const r = await q(sb.from("portal_rows").select("data").eq("collection", "settings").eq("id", "global").maybeSingle()); cur = (r && r.data) || {}; }
     catch (e) { box.replaceChildren(el("div", { class: "notice bad", text: "Settings could not be loaded." })); return fail(e, "Settings could not be loaded"); }
     let aiStatus = null; try { aiStatus = await q(sb.rpc("core_ai_status")); } catch (e) { }
-    const v = { ...SETTING_DEFAULTS, ...cur, aiKey: aiStatus && aiStatus.key_set ? "set" : "" }, inputs = {};
+    const v = { ...SETTING_DEFAULTS, ...cur, aiKey: aiStatus && (aiStatus.gemini_set ?? aiStatus.key_set) ? "set" : "", aiClaudeKey: aiStatus && aiStatus.claude_set ? "set" : "" }, inputs = {};
     const field = ([k, label, type]) => {
       let i;
       if (type === "acting") { i = el("select", { class: "input" }, el("option", { value: "", text: "Nobody (President only)" }), ORG_ROLES.filter(r => !["staff", "hod"].includes(r[0])).map(([r, t]) => el("option", { value: r, text: t }))); i.value = v[k] || ""; }
-      else if (type === "ai") { i = el("select", { class: "input" }, el("option", { value: "builtin", text: "Built-in (free, offline)" }), el("option", { value: "gemini", text: "Google Gemini (needs a key)" })); i.value = v[k] || "builtin"; }
+      else if (type === "ai") { i = el("select", { class: "input" }, el("option", { value: "claude", text: "Claude by Anthropic (paid per question)" }), el("option", { value: "gemini", text: "Google Gemini (free tier)" })); i.value = v[k] === "claude" ? "claude" : "gemini"; }
+      else if (type === "claudemodel") { i = el("select", { class: "input" }, [["claude-haiku-5-5", "Claude Haiku 5.5 — fast, lowest cost (recommended)"], ["claude-sonnet-5-5", "Claude Sonnet 5.5 — stronger answers"], ["claude-opus-5-5", "Claude Opus 5.5 — most capable, highest cost"]].map(([m, t]) => el("option", { value: m, text: t }))); i.value = ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5"].includes(v[k]) ? v[k] : "claude-haiku-5-5"; }
       else if (type === "pct") i = el("input", { class: "input", type: "number", step: "0.5", min: "0", max: "100", value: String(Math.round(Number(v[k] || 0) * 1000) / 10) });
       else if (type === "number") i = el("input", { class: "input", type: "number", min: "0", value: String(v[k] ?? "") });
       else if (type === "secret") i = el("input", { class: "input", type: "password", autocomplete: "off", placeholder: v[k] ? "•••••• saved" : "not set" });
@@ -902,16 +905,21 @@ function settingsGeneral() {
         if (k === "orgName" && val.length < 3) return toast("Enter the organisation name", true);
         if (JSON.stringify(next[k]) !== JSON.stringify(val)) { changed.push(k); next[k] = val; }
       }
-      /* the Gemini key never goes into the shared settings record: it is kept where no browser can read it */
-      const keyI = inputs.aiKey && inputs.aiKey[0], newKey = keyI ? keyI.value.replace(/\s+/g, "") : "";
-      const ci = changed.indexOf("aiKey"); if (ci >= 0) changed.splice(ci, 1);
-      if (newKey) { try { await q(sb.rpc("core_set_ai_key", { p_key: newKey })); keyI.value = ""; keyI.placeholder = "•••••• saved"; toast("AI key saved on the server"); } catch (e) { e = e || {}; e.userMessage = "The AI key was not saved: " + (e.code === "PGRST202" ? "the database is not up to date — run AKF-PORTALS.cmd → 2 Publish changes" : (e.message || "the server did not answer — check the internet connection and try again")) + (e.code ? ` [${e.code}]` : ""); return fail(e, "The AI key was not saved"); }
-        testAI(); }
-      if (!changed.length) return newKey ? null : toast("Nothing changed");
+      /* the AI keys never go into the shared settings record: each is kept on the server, where no browser can read it */
+      ["aiKey", "aiClaudeKey"].forEach(k => { const ci = changed.indexOf(k); if (ci >= 0) changed.splice(ci, 1); });
+      let newKey = "";
+      for (const [k, provider, label] of [["aiClaudeKey", "claude", "Claude"], ["aiKey", "gemini", "Gemini"]]) {
+        const keyI = inputs[k] && inputs[k][0], key = keyI ? keyI.value.replace(/\s+/g, "") : ""; if (!key) continue; newKey = key;
+        try { await q(sb.rpc("core_set_ai_key", { p_key: key, p_provider: provider })); keyI.value = ""; keyI.placeholder = "•••••• saved"; toast(label + " key saved on the server"); } catch (e) { e = e || {}; e.userMessage = `The ${label} key was not saved: ` + (e.code === "PGRST202" ? "the database is not up to date — run AKF-PORTALS.cmd → 2 Publish changes" : (e.message || "the server did not answer — check the internet connection and try again")) + (e.code ? ` [${e.code}]` : ""); return fail(e, `The ${label} key was not saved`); }
+      }
+      /* after a new key or a new AI choice, check straight away that the assistant answers */
+      const aiChanged = !!newKey || changed.some(k => ["aiProvider", "aiModel", "aiClaudeModel"].includes(k));
+      if (!changed.length) return newKey ? testAI() : toast("Nothing changed");
       save.disabled = true;
       try {
-        cur = await saveGlobal(Object.fromEntries(changed.map(k => [k, next[k]])), changed.map(k => k === "aiKey" ? "aiKey: (new key)" : `${k}: ${next[k]}`).join(" · "));
+        cur = await saveGlobal(Object.fromEntries(changed.map(k => [k, next[k]])), changed.map(k => `${k}: ${next[k]}`).join(" · "));
         toast("Settings saved — every portal uses them now");
+        if (aiChanged) testAI();
       } catch (e) { fail(e, "Settings were not saved"); }
       save.disabled = false;
     } });
@@ -927,7 +935,7 @@ async function testAI() {
   try {
     const { data, error } = await sb.functions.invoke("ai-chat", { body: { portal: "Khidmat Hub (main page)", question: "Reply with the single word OK.", history: [], context: "" } });
     if (error) { let b = {}; try { b = await error.context.json(); } catch (x) { } return toast("Alkhidmat AI is not working yet: " + (b.error || "the AI service could not be reached") + (b.ref ? ` (ref ${b.ref})` : ""), true); }
-    toast(data && data.answer ? "Alkhidmat AI is working ✓ — every portal can use it now" : "Alkhidmat AI answered, but with an empty reply. Try again in a minute.", !(data && data.answer));
+    toast(data && data.answer ? "Alkhidmat AI is working ✓ (model " + (data.model || "Gemini") + ") — every portal can use it now" : "Alkhidmat AI answered, but with an empty reply. Try again in a minute.", !(data && data.answer));
   } catch (e) { fail(e, "The AI test could not run"); }
 }
 
