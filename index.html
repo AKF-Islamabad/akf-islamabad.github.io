@@ -6,7 +6,7 @@
 <title>Alkhidmat Islamabad Portals</title>
 <meta name="description" content="One sign-in for every Alkhidmat Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-1nPdKLPAYbjUN8io91Dd6cWCrd6Lp2cg0vSIMKQZhBo='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-H0oYY7SALCYfT1F0Nx0O43Ji/CMGRUJ/pmG6FYSZZ+4='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -435,7 +435,7 @@ function render() {
 const ORG = "Alkhidmat Foundation Islamabad", HUB = "Khidmat Hub", HUB_LINE = "Serving humanity, together";
 const logoImg = cls => el("img", { class: cls || "logo", src: document.getElementById("logo-src").src, alt: "Alkhidmat logo", width: 46, height: 46 });
 function brand() {
-  return el("div", { class: "brand" }, logoImg(),
+  return el("div", { class: "brand" }, el("a", { href: "./", title: "All portals", "aria-label": "All portals", style: "display:block;line-height:0;flex:none" }, logoImg()),
     el("div", {}, el("b", { class: "org", text: ORG }), el("span", { class: "hub" }, HUB, el("i", { text: "· " + HUB_LINE }))));
 }
 /* ---------- loading overlay (same as Donor Management): shows only after 160 ms, so quick steps never flash ---------- */
@@ -539,7 +539,7 @@ function home() {
 
 function tiles() {
   if (!S.portals.length) return el("div", { class: "card empty" }, el("h3", { text: "No portals yet" }), el("p", { text: "The Super Admin has not given you access to any portal. Ask them to add you." }));
-  return stagger(el("div", { class: "tiles" }, S.portals.map(p => tileMotion(el("a", { class: "card tile", href: safeHref(p.url), target: "_blank", rel: "noopener", style: `--accent:${/^#[0-9a-f]{6}$/i.test(p.color) ? p.color : "#0B51A7"}` },
+  return stagger(el("div", { class: "tiles" }, S.portals.map(p => tileMotion(el("a", { class: "card tile", href: safeHref(p.url), style: `--accent:${/^#[0-9a-f]{6}$/i.test(p.color) ? p.color : "#0B51A7"}` },
     el("span", { class: "spot", "aria-hidden": "true" }), el("span", { class: "edge", "aria-hidden": "true" }),
     el("div", { class: "ic", style: `background:${/^#[0-9a-f]{6}$/i.test(p.color) ? p.color : "#0B51A7"}` }, icon(p.icon, 22)),
     el("div", {}, el("h3", { text: p.name }), el("p", { text: p.description })),

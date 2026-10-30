@@ -161,6 +161,7 @@ svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-widt
   background:linear-gradient(180deg,var(--brand-800) 0%,var(--brand-900) 60%,var(--brand-950) 100%);transition:transform .25s ease}
 .side-head{display:flex;align-items:center;gap:12px;padding:18px 18px 16px;border-bottom:1px solid rgba(255,255,255,.09)}
 .side-head img{width:46px;height:46px;border-radius:12px;box-shadow:0 6px 16px rgba(0,0,0,.3)}
+.side-logo{display:block;flex:none;line-height:0;border-radius:13px}.side-logo:focus-visible{outline:3px solid #fff;outline-offset:2px}
 .side-head b{display:block;color:#fff;font-size:15px;line-height:1.2}
 .side-head span{font-size:11.5px;opacity:.7}
 .nav{flex:1;overflow-y:auto;padding:12px 10px}
@@ -1111,7 +1112,7 @@ html.side-pinned .side-pin{background:#fff;color:#0B3D91}
 <div id="app" class="hidden">
   <div class="side-overlay" id="side-overlay" data-act="menu-close"></div>
   <aside class="sidebar" id="sidebar" aria-label="Main navigation">
-    <div class="side-head"><img data-logo alt="Alkhidmat Islamabad logo"><div><b>Alkhidmat Foundation Islamabad</b><span>Khidmat Hub · Donor Management</span></div><button type="button" class="side-pin" data-act="side-pin" id="side-pin" aria-pressed="false" title="Keep the menu open" aria-label="Keep the menu open"><span data-icon="pin"></span></button></div>
+    <div class="side-head"><a class="side-logo" href="../" title="All portals (main page)" aria-label="All portals (main page)"><img data-logo alt="Alkhidmat Islamabad logo"></a><div><b>Alkhidmat Foundation Islamabad</b><span>Khidmat Hub · Donor Management</span></div><button type="button" class="side-pin" data-act="side-pin" id="side-pin" aria-pressed="false" title="Keep the menu open" aria-label="Keep the menu open"><span data-icon="pin"></span></button></div>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot">
       <button class="me" data-act="nav" data-view="account" aria-label="My account"><span class="avatar" id="me-av"></span><span><b id="me-name"></b><span id="me-role"></span></span></button>
