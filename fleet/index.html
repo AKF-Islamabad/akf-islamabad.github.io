@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-fleet.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-5GD9VsLw7swu9TvCT9MFIUaMu6OQxOA3wQ1jGTTPn2Y='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-k9gr9ATzM0G1IZC0HpsCm47xMj2AAFgBsGHJtDpYOeg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -2564,7 +2564,7 @@ async function erpBoot() {
   erpSubscribe();
   /* Alkhidmat AI — every portal has it; it gets only figures, never names, phone numbers or CNIC */
   if (window.AKF_ASSISTANT) AKF_ASSISTANT({ sb: SB, portal: ERP_NAME, user: String(PQ.u.n).split(' ')[0], context: erpAiContext,
-    hints: ['What needs my attention today?', 'How many vehicles are available now?', 'Explain the approval steps of a vehicle request', 'How much fuel did we use this month?', 'Write a WhatsApp message asking a driver for his ETA'] });
+    hints: ['What needs my attention today?', 'How many vehicles are available now?', 'Explain the approval steps of a vehicle request', 'How much fuel did we use this month?', 'How do I request a vehicle?'] });
   erpAudit('LOGIN', PQ.u.e, 'Opened ' + ERP_NAME);
 }
 erpBoot().catch(e => { console.error(e); hideLoader(); fatal('The portal could not start', 'Please reload the page (ref ' + errRef() + ').'); });

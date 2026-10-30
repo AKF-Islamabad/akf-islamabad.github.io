@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-assistance.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-CHtRHelKTwh0JploMro6xhnMXREgt9RcSYYjJhXoQVo='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-sykCnbQAkCWA6+wuMXSFOpjHLfId6GiAvrCCFjOWzII='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -2375,7 +2375,7 @@ async function boot() {
   checkOverdue(); setInterval(checkOverdue, 10 * 60 * 1000);
   /* Alkhidmat AI — every portal has it; it gets only figures, never names, phone numbers or CNIC */
   if (window.AKF_ASSISTANT) AKF_ASSISTANT({ sb: SB, portal: NAME, user: String(ME.name).split(" ")[0], context: aiContext,
-    hints: ["What needs my attention today?", "How many cases are past their time limit?", "Explain the approval steps of an application", "How much was disbursed this month?", "Write a polite SMS asking an applicant to bring a missing document"] });
+    hints: ["What needs my attention today?", "How many cases are past their time limit?", "Explain the approval steps of an application", "How much was disbursed this month?", "How do I register a new application?"] });
   audit("LOGIN", ME.email, "Opened " + NAME);
 }
 boot().catch(e => { console.error(e); hideLoader(); fatal("The portal could not start", "Please reload the page (ref " + errRef() + ")."); });

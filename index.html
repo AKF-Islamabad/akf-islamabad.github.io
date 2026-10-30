@@ -6,7 +6,7 @@
 <title>Alkhidmat Islamabad Portals</title>
 <meta name="description" content="One sign-in for every Alkhidmat Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-ERDUHOl3em1FdCnXHNV8CCKDzEzB2PU5HCPYfCptuPI='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-1nPdKLPAYbjUN8io91Dd6cWCrd6Lp2cg0vSIMKQZhBo='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -390,7 +390,7 @@ async function loadMe() {
       context: () => JSON.stringify({ today: new Date().toISOString().slice(0, 10), page: "Main page: sign-in and the list of portals", isSuperAdmin: !!S.me.is_super,
         myPortals: S.portals.map(p => ({ name: p.name, what: p.description, myAccess: ROLE_LABEL[p.role] || p.role })),
         superAdminTabs: S.me.is_super ? ["People & access (add people, tick tabs and actions per portal)", "Portals & departments", "Settings (one place for every portal)", "Activity & usage"] : [] }),
-      hints: ["Which portal should I use for a purchase?", "How do I give someone access?", "Write a short e-mail to staff about the new portal", "Explain Zakat in simple words"],
+      hints: ["What can I do in each portal?", "Which portal should I use for a purchase?", "How do I give someone access?", "What is waiting for my approval?"],
       onSetup: S.me.is_super ? () => { S.tab = "settings"; S.setArea = "general"; render(); if (!S.admin) loadAdmin(); setTimeout(() => { const k = document.querySelector("input[type=password], #ai-key"); if (k) { k.scrollIntoView({ block: "center", behavior: "smooth" }); k.focus(); } }, 400); } : null });
     if (S.me.is_super && S.tab !== "portals") loadAdmin();
   } catch (e) { S.view = "error"; render(); fail(e, "Could not load your account"); }

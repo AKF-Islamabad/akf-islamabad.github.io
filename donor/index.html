@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-+C8LWWCw/9lX8LvpujnkIAO3Y5dXh6qFCS0UQUZwf0g='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-rtmY1yylCsGeoVdjfullmY+q1f79CosG/0qDdug8DlA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -5891,7 +5891,7 @@ async function erpBoot() {
   erpSubscribe();
   /* Alkhidmat AI — every portal has it; it gets only figures, never donor names, CNIC or phone numbers */
   if (window.AKF_ASSISTANT) AKF_ASSISTANT({ sb: erpSb, portal: PORTAL_TITLE, user: ME.name.split(' ')[0], context: erpAiContext,
-    hints: ['What needs my attention today?', 'How much did we collect this month?', 'Explain how a receipt gets verified', 'Write a thank-you message for a Zakat donor', 'What is the difference between Zakat and Sadaqah?'] });
+    hints: ['What needs my attention today?', 'How much did we collect this month?', 'Explain how a receipt gets verified', 'How do I record an in-kind donation?'] });
   await audit('LOGIN', ME.email, 'Opened Donor Management'); await persist();
   await erpReconcile();
 }

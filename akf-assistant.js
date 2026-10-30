@@ -75,12 +75,12 @@
     o = o || {};
     if (document.querySelector(".kai-fab")) return;
     const st = document.createElement("style"); st.textContent = CSS; document.head.append(st);
-    const portal = o.portal || "Alkhidmat Islamabad portals", hints = o.hints || ["What can you help me with?", "Write a thank-you message for a donor", "Explain Zakat eligibility"];
+    const portal = o.portal || "Alkhidmat Islamabad portals", hints = o.hints || ["What can I do in this portal?", "What needs my attention?", "Explain the approval steps"];
     const history = [];   // this tab only, never saved
     const fab = el("button", "kai-fab"); fab.type = "button"; fab.setAttribute("aria-label", "Open Alkhidmat AI assistant"); fab.append(svg("spark"), el("span", "", "Ask Alkhidmat AI"));
     let panel = null, log, input, sendBtn, chips, busy = false;
     const add = (who, text, cls) => { const m = el("div", "kai-msg " + (cls || (who === "me" ? "me" : "bot"))); if (who === "me") m.textContent = text; else m.append(format(text)); log.append(m); log.scrollTop = log.scrollHeight; return m; };
-    const welcome = () => add("bot", `Assalam o Alaikum${o.user ? " " + o.user : ""}! I'm **Alkhidmat AI**, your assistant in ${portal}. Ask me anything: about your work here, or any other question. There is no limit on messages.`);
+    const welcome = () => add("bot", `Assalam o Alaikum${o.user ? " " + o.user : ""}! I'm **Alkhidmat AI**, your assistant in ${portal}. Ask me anything about the ERP portals: what a tab is for, how to do a task, who approves what, or what is waiting for you.`);
     async function ask(text) {
       const q = String(text || input.value).trim(); if (!q || busy) return;
       input.value = ""; input.style.height = "46px"; if (chips) chips.hidden = true; add("me", q); busy = true; sendBtn.disabled = true;
@@ -89,7 +89,7 @@
       try {
         if (!o.sb || !o.sb.functions) throw { code: "offline" };
         let ctx = ""; try { ctx = typeof o.context === "function" ? String(o.context() || "") : String(o.context || ""); } catch (e) { ctx = ""; }
-        const { data, error } = await o.sb.functions.invoke("ai-chat", { body: { portal, question: q, history: history.slice(-24), context: ctx.slice(0, 30000) } });
+        const { data, error } = await o.sb.functions.invoke("ai-chat", { body: { portal, question: q, history: history.slice(-10), context: ctx.slice(0, 10000) } });
         if (error) { let b = {}; try { b = await error.context.json(); } catch (e) { } throw { code: b.code || "", message: b.error || "", ref: b.ref || "" }; }
         answer = (data && data.answer) || "";
       } catch (e) {
@@ -110,7 +110,7 @@
       if (panel) { panel.hidden = false; fab.hidden = true; input.focus(); return; }
       panel = el("section", "kai-panel"); panel.setAttribute("role", "dialog"); panel.setAttribute("aria-label", "Alkhidmat AI assistant");
       const head = el("div", "kai-head"), ic = el("span", "ic"); ic.append(svg("spark"));
-      const t = el("div", "t"); t.append(el("b", "", "Alkhidmat AI"), el("small", "", `${portal} · unlimited messages · answers anything`));
+      const t = el("div", "t"); t.append(el("b", "", "Alkhidmat AI"), el("small", "", `${portal} · help with the ERP portals`));
       const clear = el("button"); clear.type = "button"; clear.title = "New chat"; clear.setAttribute("aria-label", "Start a new chat"); clear.append(svg("undo"));
       const close = el("button"); close.type = "button"; close.title = "Close"; close.setAttribute("aria-label", "Close the assistant"); close.append(svg("x"));
       head.append(ic, t, clear, close);
