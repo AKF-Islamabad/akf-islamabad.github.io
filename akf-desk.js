@@ -100,17 +100,21 @@
   /* ---------- the sticky note ---------- */
   const CSS = `
 .akd{position:fixed;left:16px;bottom:16px;z-index:7990;width:min(320px,calc(100vw - 32px));font:13px/1.4 Manrope,"Segoe UI",system-ui,sans-serif;color:#3B3208}
-.akd-card{background:#FFF6BF;border:1px solid #EAD97A;border-radius:14px;box-shadow:0 14px 34px -14px rgba(60,50,0,.45);overflow:hidden;transform:rotate(-.6deg)}
-.akd-head{display:flex;align-items:center;gap:6px;padding:9px 10px 7px 12px;background:#FCEB8C;cursor:pointer;user-select:none}
+.akd-card{background:var(--n1);border:1px solid var(--n3);border-radius:14px;box-shadow:0 14px 34px -14px rgba(60,50,0,.45);overflow:hidden;transform:rotate(-.6deg)}
+.akd-head{display:flex;align-items:center;gap:6px;padding:9px 10px 7px 12px;background:var(--n2);cursor:grab;user-select:none;touch-action:none}
+.akd.drag .akd-head{cursor:grabbing} .akd.drag .akd-card{transform:none;box-shadow:0 22px 44px -14px rgba(0,0,0,.45)}
 .akd-head b{flex:1;font-size:13.5px} .akd-head button{border:0;background:rgba(255,255,255,.55);border-radius:8px;width:28px;height:26px;cursor:pointer;font-size:14px;color:#5B4B00}
 .akd-head button:focus-visible,.akd a:focus-visible,.akd-bell:focus-visible{outline:2px solid #0B51A7;outline-offset:1px}
 .akd-body{max-height:min(46vh,380px);overflow:auto;padding:4px 12px 10px}
 .akd h4{margin:10px 0 4px;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:#7A6400;display:flex;justify-content:space-between}
-.akd ul{list-style:none;margin:0;padding:0} .akd li{padding:4px 0;border-bottom:1px dashed #E8D77C}
+.akd ul{list-style:none;margin:0;padding:0} .akd li{padding:4px 0;border-bottom:1px dashed var(--n3)}
 .akd li a{color:inherit;text-decoration:none;display:block} .akd li a:hover{text-decoration:underline}
 .akd .akd-due{font-size:11px;color:#8A7A2A} .akd .akd-late{color:#C0392B;font-weight:700}
 .akd .akd-none{color:#8A7A2A;font-size:12px;padding:2px 0}
-.akd-foot{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 12px;border-top:1px solid #EAD97A;background:#FFF1A6}
+.akd-foot{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 12px;border-top:1px solid var(--n3);background:var(--n2)}
+.akd-cols{display:flex;gap:6px;align-items:center;padding:8px 0 2px;font-size:11.5px;color:#7A6400}
+.akd-cols button{width:20px;height:20px;border-radius:50%;border:1px solid rgba(0,0,0,.18);cursor:pointer;padding:0}
+.akd-cols button.on{outline:2px solid #3B3208;outline-offset:1px}
 .akd-foot a{color:#0B51A7;font-weight:700;text-decoration:none}
 .akd-bell{border:1px solid #D9C35A;background:#fff;border-radius:99px;padding:4px 10px;cursor:pointer;font-family:inherit;font-weight:600;font-size:12px;color:#3B3208}
 .akd-bell.on{background:#DDF5E3;border-color:#8CCB9E}
@@ -118,6 +122,33 @@
 @media (max-width:720px){.akd{bottom:78px;left:10px}}
 @media print{.akd{display:none}}`;
   let root = null, data = null, folded = matchMedia("(max-width: 720px)").matches;   // phones: a small pinned button, tap to open
+  // note colours [paper, header, lines]; the choice and the place on screen are remembered on this device
+  const PAL = { yellow: ["#FFF6BF", "#FCEB8C", "#EAD97A"], green: ["#E3F6E8", "#C2EACF", "#9FD8B1"], blue: ["#E3EEFF", "#C9DDFF", "#9DBDF0"],
+                pink: ["#FDE6EE", "#F9C9DA", "#EBA1BB"], purple: ["#EFE8FF", "#DCCEFF", "#BBA6F0"], white: ["#FFFFFF", "#EEF1F6", "#D5DBE6"] };
+  let color = PAL[store.get("akf-note-color", "yellow")] ? store.get("akf-note-color", "yellow") : "yellow";
+  let pos = store.get("akf-note-pos", null), moved = false;                // { x, y } from the top-left corner, or null = the corner
+  function place() {                                                       // keep the whole header on screen, also after the window shrinks
+    if (!root) return;
+    if (!pos) { root.style.left = root.style.top = root.style.bottom = ""; return; }
+    const w = root.offsetWidth, h = root.querySelector(".akd-head") ? root.querySelector(".akd-head").offsetHeight : 40;
+    const x = Math.max(4, Math.min(pos.x, innerWidth - w - 4)), y = Math.max(4, Math.min(pos.y, innerHeight - h - 4));
+    root.style.left = x + "px"; root.style.top = y + "px"; root.style.bottom = "auto";
+  }
+  addEventListener("resize", place);
+  function drag(head) {
+    head.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0 || e.target.closest("button")) return;
+      const r = root.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top, x0 = e.clientX, y0 = e.clientY;
+      moved = false; head.setPointerCapture(e.pointerId);
+      const mv = (ev) => {
+        if (!moved && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 5) return;   // a short tap still opens / folds the note
+        moved = true; root.classList.add("drag"); pos = { x: ev.clientX - dx, y: ev.clientY - dy }; place();
+      };
+      const up = () => { head.removeEventListener("pointermove", mv); root.classList.remove("drag"); if (moved) store.set("akf-note-pos", pos); };
+      head.addEventListener("pointermove", mv); head.addEventListener("pointerup", up, { once: true }); head.addEventListener("pointercancel", up, { once: true });
+    });
+    head.addEventListener("dblclick", () => { pos = null; store.set("akf-note-pos", null); place(); });   // back to the corner
+  }
   const today = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const fmt = (d) => { if (!d) return ""; const t = new Date(d + "T12:00:00"); return isNaN(t) ? d : t.toLocaleDateString(undefined, { day: "numeric", month: "short" }); };
@@ -147,12 +178,17 @@
       root = el("aside", "akd"); root.setAttribute("aria-label", "My sticky note"); document.body.appendChild(root);
     }
     root.classList.toggle("min", folded);
+    PAL[color].forEach((c, i) => root.style.setProperty("--n" + (i + 1), c));
     const card = el("div", "akd-card");
-    const head = el("div", "akd-head"); head.title = folded ? "Open my note" : "Fold the note";
+    const head = el("div", "akd-head"); head.title = (folded ? "Open my note" : "Fold the note") + " · drag to move · double-click to put it back in the corner";
     const open = data ? data.plan.length + data.todo.length + data.assigned.length : 0;
     head.append(el("b", "", folded ? `📌 My note · ${open}` : "📌 My note"));
     const tog = el("button", "", folded ? "▴" : "▾"); tog.type = "button"; tog.setAttribute("aria-label", folded ? "Open my note" : "Fold my note");
-    head.append(tog); head.onclick = () => { folded = !folded; paint(); };
+    // keyboard: arrow keys on the fold button move the note
+    tog.onkeydown = (e) => { const d = { ArrowLeft: [-24, 0], ArrowRight: [24, 0], ArrowUp: [0, -24], ArrowDown: [0, 24] }[e.key]; if (!d) return; e.preventDefault();
+      const r = root.getBoundingClientRect(); pos = { x: r.left + d[0], y: r.top + d[1] }; place(); store.set("akf-note-pos", pos); };
+    head.append(tog); head.onclick = () => { if (moved) { moved = false; return; } folded = !folded; paint(); };
+    drag(head);
     const body = el("div", "akd-body");
     if (!data) body.append(el("div", "akd-none", "Loading…"));
     else if (!data.pid) body.append(el("div", "akd-none", "Your tasks appear here once you are added to Tasks & Events."));
@@ -161,10 +197,15 @@
       body.append(section("My to-do", data.todo, "No to-dos. Add them in Tasks → To-Do & Notes."));
       body.append(section("Assigned to me", data.assigned, "No open tasks from others."));
     }
+    const cols = el("div", "akd-cols"); cols.append(el("span", "", "Colour"));
+    Object.keys(PAL).forEach((k) => { const b = el("button", color === k ? "on" : ""); b.type = "button"; b.style.background = PAL[k][1];
+      b.setAttribute("aria-label", k + " note"); b.setAttribute("aria-pressed", String(color === k));
+      b.onclick = () => { color = k; store.set("akf-note-color", k); paint(); }; cols.append(b); });
+    body.append(cols);
     const foot = el("div", "akd-foot"); const go = el("a", "", "Open Tasks →"); go.href = BASE + "tasks/"; foot.append(go);
     const bl = bellLabel();
     if (bl) { const b = el("button", "akd-bell" + (bl[1] ? " on" : ""), bl[0]); b.type = "button"; b.onclick = (e) => { e.stopPropagation(); bl[1] ? sb.functions.invoke("push", { body: { action: "test" } }).then(ding) : turnOn(); }; b.title = bl[1] ? "Send a test notification" : "Get notifications on this device"; foot.append(b); }
-    card.append(head, body, foot); root.replaceChildren(card);
+    card.append(head, body, foot); root.replaceChildren(card); place();
   }
 
   async function load() {
