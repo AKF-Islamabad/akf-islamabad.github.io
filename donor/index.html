@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Foundation Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-siwLfQqyyHOFPNXprGVuyZdxkQd0dk885YdDhiQN6cU='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-ggEr7O0DPmjDGdLDeJ7qeXcQnIVUjDPEJMW6avS0LfI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -2964,10 +2964,20 @@ function queueMessage(type, ref) {
   return m;
 }
 async function serverDeliver(m, file) {
-  const url = S.settings.serverUrl; if (!/^https:\/\//i.test(url || '')) return 'receipt server not configured';
   if (!m.to.email) return 'no e-mail address';
   let pdfBase64;
   if (file) { const b = new Uint8Array(await file.arrayBuffer()); let s = ''; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); pdfBase64 = btoa(s); }
+  /* in the ERP: the ERP's own e-mail service (Edge Function "send-email"), as "Alkhidmat Foundation Islamabad".
+     It reads the saved message and the donor's address from the database, so save first. */
+  if (ERP && erpSb) {
+    await persist();
+    try {
+      const { data, error } = await erpSb.functions.invoke('send-email', { body: { kind: 'donor', id: m.id, filename: file ? file.name : undefined, pdfBase64 } });
+      if (error) { let b = {}; try { b = await error.context.json(); } catch (x) { } return b.error || 'the e-mail service did not answer'; }
+      return data && data.success ? 'sent' : (data && data.error) || 'not sent';
+    } catch (e) { return 'the e-mail service could not be reached'; }
+  }
+  const url = S.settings.serverUrl; if (!/^https:\/\//i.test(url || '')) return 'receipt server not configured';
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 20000);
   try {
     const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit', referrerPolicy: 'no-referrer', signal: ctl.signal,
@@ -3015,7 +3025,7 @@ async function sendMessage(id, channel) {
   } else if (channel === 'server') {
     const r = await serverDeliver(m, file);
     if (r !== 'sent') { m.log.push({ at: new Date().toISOString(), by: ME.email, channel: 'Server', note: 'Failed: ' + r }); await audit('MESSAGE_FAILED', m.id, r); await persist(); toast('Automatic e-mail failed: ' + r, 'error'); return; }
-    await markSent(m, 'Receipt server (e-mail)', file ? 'PDF attached' : '');
+    await markSent(m, (ERP ? 'Alkhidmat e-mail' : 'Receipt server (e-mail)'), file ? 'PDF attached' : '');
   } else if (channel === 'manual') {
     await markSent(m, 'Marked sent manually');
   }
@@ -3025,7 +3035,7 @@ async function sendMessage(id, channel) {
 const canShareFile = f => { try { return !!(navigator.canShare && navigator.share && navigator.canShare({ files: [f] })); } catch { return false; } };
 function openSendDialog(id) {
   const m = S.messages.find(x => x.id === id); if (!m) return;
-  const c = msgContext(m), srv = S.settings.serverUrl && m.to.email;
+  const c = msgContext(m), srv = (ERP || S.settings.serverUrl) && m.to.email;
   const ch = (donorById(m.donorId) || {}).channel || '';
   openModal({
     title: { ack: 'Send acknowledgement to donor', thanks: 'Send thank-you & official receipt', reminder: 'Send installment reminder', correction: 'Send corrected receipt to donor' }[m.type], size: 'lg',
@@ -3040,7 +3050,7 @@ function openSendDialog(id) {
         <button class="send-opt" data-act="msg-send" data-id="${esc(m.id)}" data-ch="share">${ic('upload')}<b>Share${m.type !== 'reminder' ? ' with PDF' : ''}</b><span>WhatsApp, Gmail, Outlook…</span></button>
         ${m.to.phone ? `<button class="send-opt" data-act="msg-send" data-id="${esc(m.id)}" data-ch="sms">${ic('msg')}<b>SMS</b><span>${esc(m.to.phone)}</span></button>` : ''}
         ${m.to.email ? `<button class="send-opt" data-act="msg-send" data-id="${esc(m.id)}" data-ch="email">${ic('send')}<b>E-mail</b><span>${esc(m.to.email)}</span></button>` : ''}
-        ${srv ? `<button class="send-opt" data-act="msg-send" data-id="${esc(m.id)}" data-ch="server">${ic('zap')}<b>Auto e-mail</b><span>via receipt server</span></button>` : ''}
+        ${srv ? `<button class="send-opt" data-act="msg-send" data-id="${esc(m.id)}" data-ch="server">${ic('zap')}<b>${ERP ? 'Alkhidmat e-mail' : 'Auto e-mail'}</b><span>${ERP ? 'sent now' + (m.type !== 'reminder' ? ', PDF attached' : '') : 'via receipt server'}</span></button>` : ''}
       </div>
       ${m.log.length ? `<h4 class="sec-title">History</h4><ul class="mini-log">${m.log.map(l => `<li>${fmtDT(l.at)} · ${esc(l.channel)} · ${esc(l.by)}${l.note ? ' · ' + esc(l.note) : ''}</li>`).join('')}</ul>` : ''}`,
     foot: `${m.status === 'Queued' ? `<button class="btn btn-ghost left" data-act="msg-send" data-id="${esc(m.id)}" data-ch="manual">${ic('check')}Mark as sent</button>` : ''}<button class="btn btn-secondary" data-act="modal-close">${m.status === 'Queued' ? 'Send later (keep in outbox)' : 'Close'}</button>`
@@ -3525,7 +3535,7 @@ function bindNewReceipt() {
       await persist();
       f.dataset.dirty = '';
       UI.newDone = { donationId: x ? x.id : '', pledgeId: pledge && plan ? pledge.id : (pledge ? pledge.id : ''), ackId: ack ? ack.id : '', newDonor: !donor, donorId: dn.id };
-      if (ack && S.settings.autoServer && S.settings.serverUrl && ack.to.email) { const r = await serverDeliver(ack, await receiptPDF(x)); if (r === 'sent') await markSent(ack, 'Receipt server (e-mail)', 'automatic, PDF attached'); }
+      if (ack && S.settings.autoServer && S.settings.serverUrl && ack.to.email) { const r = await serverDeliver(ack, await receiptPDF(x)); if (r === 'sent') await markSent(ack, (ERP ? 'Alkhidmat e-mail' : 'Receipt server (e-mail)'), 'automatic, PDF attached'); }
       buildChrome(); render(); window.scrollTo({ top: 0 });
       toast(x ? `Saved · ${x.receipt} is pending ${isInKind(x) ? 'receipt in store' : 'Finance verification'}` : `Pledge ${pledge.id} saved`, 'success');
     } catch (err) { console.error(err); toast('Could not save: ' + (err.message || err), 'error'); }
@@ -3605,9 +3615,9 @@ async function finishVerification(x) {
   await audit('RECEIPT_ISSUED', x.receipt, 'Official receipt issued on verification');
   await persist();
   closeModal(); buildChrome(); render();
-  if (S.settings.autoServer && S.settings.serverUrl && m.to.email) {
+  if ((ERP || (S.settings.autoServer && S.settings.serverUrl)) && m.to.email) {   // ERP: the thank-you e-mail on verification is automatic
     const res = await serverDeliver(m, await receiptPDF(x));
-    if (res === 'sent') { await markSent(m, 'Receipt server (e-mail)', 'automatic on verification'); toast(`${x.receipt} verified. Thank-you e-mail with receipt sent automatically.`, 'success'); buildChrome(); render(); return; }
+    if (res === 'sent') { await markSent(m, (ERP ? 'Alkhidmat e-mail' : 'Receipt server (e-mail)'), 'automatic on verification'); toast(`${x.receipt} verified. Thank-you e-mail with receipt sent automatically.`, 'success'); buildChrome(); render(); return; }
     toast('Automatic e-mail failed: ' + res + '. Send it manually.', 'warn');
   }
   toast(`${x.receipt} verified.${can('messages') ? '' : ' RMD will send the thank-you with the receipt.'}`, 'success', 6000);
