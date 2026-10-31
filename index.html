@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PXpqPDYU31KZkgHrOWx1Bbb5sDSHiOOpUajHKia+0Jc='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-We0TSl1ELXAOFS2NfNSAUatkGSTbZxnClzKebtKs5mw='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -1150,12 +1150,12 @@ function settingsGeneral() {
       for (const [k, provider, label] of [["resendKey", "resend", "Resend"], ["brevoKey", "brevo", "Brevo"]]) {
         const keyI = inputs[k] && inputs[k][0], key = keyI ? keyI.value.replace(/\s+/g, "") : ""; if (!key) continue;
         try { await q(sb.rpc("core_set_email_key", { p_key: key, p_provider: provider })); keyI.value = ""; keyI.placeholder = "•••••• saved"; newMailKey = true; toast(label + " key saved on the server"); }
-        catch (e) { e = e || {}; e.userMessage = `The ${label} key was not saved: ` + (e.code === "PGRST202" ? "the database is not up to date — run AKF-PORTALS.cmd → 2 Publish changes" : (e.message || "the server did not answer")) + (e.code ? ` [${e.code}]` : ""); return fail(e, `The ${label} key was not saved`); }
+        catch (e) { e = e || {}; e.userMessage = `The ${label} key was not saved: ` + (e.code === "PGRST202" ? "the database is not up to date — run AKF-PORTALS.cmd → 2 Publish changes" : (e.message || "the server did not answer")) + (e.code ? ` [${e.code}]` : ""); fail(e, `The ${label} key was not saved`); keyI.value = ""; continue; }   // a refused key must not stop the other settings from saving
       }
       let newKey = "";
       for (const [k, provider, label] of [["aiClaudeKey", "claude", "Claude"], ["aiKey", "gemini", "Gemini"]]) {
         const keyI = inputs[k] && inputs[k][0], key = keyI ? keyI.value.replace(/\s+/g, "") : ""; if (!key) continue; newKey = key;
-        try { await q(sb.rpc("core_set_ai_key", { p_key: key, p_provider: provider })); keyI.value = ""; keyI.placeholder = "•••••• saved"; toast(label + " key saved on the server"); } catch (e) { e = e || {}; e.userMessage = `The ${label} key was not saved: ` + (e.code === "PGRST202" ? "the database is not up to date — run AKF-PORTALS.cmd → 2 Publish changes" : (e.message || "the server did not answer — check the internet connection and try again")) + (e.code ? ` [${e.code}]` : ""); return fail(e, `The ${label} key was not saved`); }
+        try { await q(sb.rpc("core_set_ai_key", { p_key: key, p_provider: provider })); keyI.value = ""; keyI.placeholder = "•••••• saved"; toast(label + " key saved on the server"); } catch (e) { e = e || {}; e.userMessage = `The ${label} key was not saved: ` + (e.code === "PGRST202" ? "the database is not up to date — run AKF-PORTALS.cmd → 2 Publish changes" : (e.message || "the server did not answer — check the internet connection and try again")) + (e.code ? ` [${e.code}]` : ""); fail(e, `The ${label} key was not saved`); keyI.value = ""; continue; }   // a refused key must not stop the other settings from saving
       }
       /* after a new key or a new AI choice, check straight away that the assistant answers */
       const aiChanged = !!newKey || changed.some(k => ["aiProvider", "aiModel", "aiClaudeModel"].includes(k));
