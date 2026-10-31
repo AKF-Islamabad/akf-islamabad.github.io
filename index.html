@@ -3,14 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Alkhidmat Islamabad Portals</title>
+<title>Jazba · Alkhidmat Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-H0oYY7SALCYfT1F0Nx0O43Ji/CMGRUJ/pmG6FYSZZ+4='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-5/xGvzypJq5NOzgUftDuT4RNKAzWlF2ikQC3aFHg3ro='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <link rel="stylesheet" href="fonts/manrope.css">
+<link rel="stylesheet" href="jazba.css">
 <style>
 :root{
   --brand:#0B2E8A; --brand-2:#0B51A7; --brand-3:#1E6FD9; --gold:#C9A227;
@@ -93,22 +94,23 @@ dialog::backdrop{background:rgba(10,16,32,.55)}
    AURORA — the same design as Donor Management (and every portal)
    ===================================================================== */
 :root{
-  --brand:#0B3D91; --brand-2:#0B51A7; --brand-3:#1A66CC; --teal:#19C2AE;
-  --bg:#F3F6FB; --card:#FFFFFF; --ink:#0B1B33; --muted:#3A4B66; --faint:#6B7A93; --line:#E3E9F2; --soft:#EDF2F9;
-  --grad-brand:linear-gradient(135deg,#1A66CC 0%,#0B51A7 45%,#06368A 100%);
-  --grad-hero:linear-gradient(120deg,#0B51A7 0%,#0A3F95 40%,#062E73 100%);
-  --grad-teal:linear-gradient(135deg,#19C2AE,#0E8F84);
-  --shadow:0 2px 6px rgba(15,35,70,.04),0 10px 28px -12px rgba(15,35,70,.14);
-  --shadow-lg:0 24px 60px -20px rgba(8,30,70,.35),0 8px 20px -8px rgba(8,30,70,.12);
-  --ring:0 0 0 4px rgba(26,102,204,.16); --r:18px;
-  --ease:cubic-bezier(.22,1,.36,1); --spring:cubic-bezier(.34,1.56,.64,1);
+  /* Jazba: every hub colour points at the shared Jazba UI tokens (jazba.css), the alkhidmat.org palette */
+  --brand:var(--jz-brand); --brand-2:var(--jz-brand); --brand-3:var(--jz-bright); --navy:var(--jz-navy); --accent:var(--jz-accent);
+  --gold:var(--jz-accent); --teal:var(--jz-accent); --bad:var(--jz-red); --bad-bg:var(--jz-red-soft); --ok:var(--jz-green); --ok-bg:var(--jz-green-soft);
+  --bg:var(--jz-bg); --card:var(--jz-card); --ink:var(--jz-ink); --muted:var(--jz-muted); --faint:var(--jz-faint); --line:var(--jz-line); --soft:var(--jz-card-2);
+  --grad-brand:linear-gradient(135deg,#0A74C9 0%,#0060AE 45%,#003C73 100%);
+  --grad-hero:var(--jz-grad-hero);
+  --grad-teal:linear-gradient(135deg,var(--jz-accent-2),var(--jz-accent));
+  --shadow:0 2px 6px rgba(4,37,68,.04),0 10px 28px -12px rgba(4,37,68,.14);
+  --shadow-lg:0 24px 60px -20px rgba(4,37,68,.35),0 8px 20px -8px rgba(4,37,68,.12);
+  --ring:0 0 0 4px rgba(0,96,174,.18); --r:14px;
+  --ease:var(--jz-ease); --spring:cubic-bezier(.34,1.56,.64,1);
 }
-:root[data-theme="dark"]{ --ink:#E8EEF8; --muted:#B8C5D9; --faint:#8797AF; --bg:#0A111F; --card:#101A2C; --soft:#1A2842; --line:#22314C; --brand-2:#5B9BEA; --brand-3:#8DB3E6 }
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --ink:#E8EEF8; --muted:#B8C5D9; --faint:#8797AF; --bg:#0A111F; --card:#101A2C; --soft:#1A2842; --line:#22314C; --brand-2:#5B9BEA; --brand-3:#8DB3E6 } }
+:root[data-theme="dark"]{ --brand:var(--jz-bright); --brand-2:var(--jz-bright); --brand-3:var(--jz-bright); --bg:var(--jz-bg); --card:var(--jz-card); --ink:var(--jz-ink); --muted:var(--jz-muted); --faint:var(--jz-faint); --line:var(--jz-line); --soft:var(--jz-card-2); --ok:#62D394; --ok-bg:var(--jz-green-soft); --bad:#FF8C80; --bad-bg:var(--jz-red-soft) }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --brand:var(--jz-bright); --brand-2:var(--jz-bright); --brand-3:var(--jz-bright); --bg:var(--jz-bg); --card:var(--jz-card); --ink:var(--jz-ink); --muted:var(--jz-muted); --faint:var(--jz-faint); --line:var(--jz-line); --soft:var(--jz-card-2); --ok:#62D394; --ok-bg:var(--jz-green-soft); --bad:#FF8C80; --bad-bg:var(--jz-red-soft) } }
 html,body{overflow-x:clip}   /* a card tilting on hover must never make the page scroll sideways */
-body{font:15px/1.5 "Segoe UI Variable Text","Segoe UI",Inter,system-ui,-apple-system,Roboto,Arial,sans-serif;letter-spacing:-.003em}
-h1,h2,h3{font-family:"Segoe UI Variable Display","Segoe UI",Inter,system-ui,sans-serif}
-::selection{background:rgba(26,102,204,.18)}
+body{font:15px/1.5 var(--jz-font);letter-spacing:-.003em}
+::selection{background:rgba(0,96,174,.18)}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}}
 @keyframes pop{from{opacity:0;transform:scale(.94) translateY(8px)}}
 @keyframes shine{0%{transform:translateX(-120%) skewX(-20deg)}100%{transform:translateX(220%) skewX(-20deg)}}
@@ -117,7 +119,7 @@ h1,h2,h3{font-family:"Segoe UI Variable Display","Segoe UI",Inter,system-ui,sans
 @keyframes gradText{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
 .enter > *{animation:rise .55s var(--ease) both;animation-delay:calc(var(--i,0) * 60ms)}
 
-/* brand: logo + full name + the Khidmat Hub line */
+/* brand: logo + full name + the Jazba line */
 .brand{gap:12px}
 .brand .logo{width:46px;height:46px;border-radius:13px;box-shadow:0 6px 18px rgba(6,46,115,.28);transition:transform .4s var(--spring);flex:none;background:#fff}
 .brand:hover .logo{transform:rotate(-4deg) scale(1.05)}
@@ -244,6 +246,64 @@ dialog::backdrop{background:rgba(6,20,45,.45);backdrop-filter:blur(6px)}
 .auth .card{border-radius:24px;box-shadow:var(--shadow-lg);animation:pop .5s var(--spring) both}
 .auth .card .brand .logo{width:52px;height:52px}
 @media (max-width:900px){ .auth{grid-template-columns:1fr} .auth-brand{display:none} }
+/* ---------- Jazba sign-in ---------- */
+.auth-brand{background:var(--jz-navy-2);padding:40px 48px}
+.auth-brand::before{background:radial-gradient(40% 40% at 20% 30%,#0A74C9 0,transparent 70%),radial-gradient(35% 35% at 80% 20%,#003C73 0,transparent 70%),radial-gradient(45% 45% at 70% 85%,#0060AE 0,transparent 70%),radial-gradient(30% 30% at 15% 90%,rgba(245,147,35,.28) 0,transparent 70%);filter:blur(20px);animation:aurora 18s ease-in-out infinite alternate}
+.auth-org{display:flex;align-items:center;gap:12px}
+.auth-org .big-logo{width:48px;height:48px;border-radius:12px;animation:none;box-shadow:0 0 0 2px rgba(245,147,35,.6)}
+.auth-org b{display:block;font-size:15px}
+.auth-org small{display:block;color:var(--jz-accent-2);font-weight:800;letter-spacing:.12em;font-size:11px}
+.auth-pitch{margin:auto 0;max-width:500px}
+.auth-pitch h1{font-size:40px;line-height:1.12;letter-spacing:-.03em;margin:0 0 14px}
+.auth-pitch h1 em{font-style:normal;background:linear-gradient(90deg,#FFC27A,var(--jz-accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+.auth-pitch .tagline{opacity:1;color:rgba(255,255,255,.85);font-size:15px;margin:0 0 22px}
+.auth-pitch .tagline b{color:var(--jz-accent-2)}
+.auth-pills{display:flex;flex-wrap:wrap;gap:8px}
+.auth-main{background:var(--bg)}
+.auth .card{max-width:400px;border-radius:20px}
+.auth .card h1{font-size:26px}
+.auth .ctl{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:12px;background:var(--card);transition:border-color .15s,box-shadow .15s}
+.auth .ctl:focus-within{border-color:var(--jz-brand);box-shadow:var(--ring)}
+.auth .ctl[hidden]{display:none}
+.auth .ctl>svg{margin-left:12px;color:var(--faint);flex:none}
+.auth .ctl .input{border:0;box-shadow:none;background:none;flex:1;min-width:0}
+.auth .ctl .input:focus{outline:none;box-shadow:none}
+.auth .ctl .suffix{color:var(--faint);font-weight:600;font-size:13px;padding-right:12px;white-space:nowrap}
+.auth .ctl .eye{border:0;background:none;color:var(--faint);padding:8px 12px;cursor:pointer}
+.auth .ctl .eye:hover{color:var(--ink)}
+.auth .ctl.err{border-color:var(--jz-red);box-shadow:0 0 0 4px var(--jz-red-soft);animation:jzShake .35s}
+@keyframes jzShake{20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+.auth .f-row{display:flex;justify-content:space-between;align-items:center}
+.auth div.f{display:grid;gap:6px;font-size:14px;font-weight:600}
+.auth .fieldnote{display:flex;gap:6px;align-items:center;font-size:12px;font-weight:700;margin-top:6px}
+.auth .fieldnote.caps{color:var(--jz-amber)}
+.auth .fieldnote[hidden]{display:none}
+.auth .go{width:100%;justify-content:center;padding:13px;border-radius:12px;gap:10px;background:var(--jz-brand)}
+.auth .go .spin{display:none;width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .7s linear infinite}
+.auth .go.busy .spin{display:block}
+.auth .go.ok{background:var(--jz-green)}
+.auth-trust{display:grid;gap:10px;border-top:1px solid var(--line);padding-top:14px}
+.auth-trust .trust{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--muted)}
+.auth-trust .trust i{width:30px;height:30px;border-radius:9px;background:var(--jz-brand-soft);color:var(--jz-brand);display:grid;place-items:center;flex:none}
+@media (max-width:900px){
+  .auth-brand{display:flex;padding:22px 20px 26px;gap:18px}
+  .auth-pitch{margin:0}.auth-pitch h1{font-size:26px}.auth-pitch .tagline{font-size:14px;margin-bottom:14px}
+  .auth-brand .foot{display:none}
+  .auth-main{place-items:start center;padding:24px 16px 40px}
+}
+@media (prefers-reduced-motion: reduce){ .auth-brand::before,.auth .ctl.err,.auth .go .spin{animation:none} }
+/* ---------- Jazba shell on the hub ---------- */
+.jz-main>main{padding-top:20px;padding-bottom:40px}
+.jz-top .grow{flex:1}
+.kai-fab{display:none!important}   /* the hub opens Alkhidmat AI from the Ctrl+K palette; the script still loads (§9) */
+/* Jazba tiles: 3D icon in the portal's colour, no pastel circles, gentle tilt */
+.tile::after{display:none}
+.tile .ic.jz-icon3d{width:52px;height:52px;border-radius:14px;animation:jzBob 4.2s ease-in-out infinite;animation-delay:calc(var(--i,0) * -1.4s)}
+.tile .ic.jz-icon3d::after{content:"";position:absolute;inset:auto;top:-50%;left:-80%;width:45%;height:200%;border-radius:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);animation:jzSweep 5.5s ease-in-out infinite;animation-delay:calc(var(--i,0) * 1.4s)}
+.tile:hover .ic.jz-icon3d{animation:none;transform:perspective(260px) rotateX(14deg) rotateY(-16deg) translateY(-3px) scale(1.08)}
+.tile:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));box-shadow:0 18px 36px -18px color-mix(in srgb,var(--accent) 55%,transparent)}
+@media (prefers-reduced-motion: reduce){ .tile .ic.jz-icon3d,.tile .ic.jz-icon3d::after{animation:none!important} }
+@media (max-width:820px){ .jz-main>main{padding-bottom:104px} .jz-top .who .t{display:none} .jz-top .jz-kbd{display:none} }
 
 /* Settings: one place for every portal */
 .set-nav{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
@@ -320,6 +380,8 @@ const ICONS = {
   sheet: "M4 3h16v18H4zM4 9h16M4 15h16M10 3v18", helping: "M11 12h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 14M7 18l1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.8-2.9l-4.2 3.9M2 13l6 6", heart: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z", users: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8",
   logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9", moon: "M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z", arrow: "M7 17L17 7M8 7h9v9",
   shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z", cart: "M6 6h15l-1.5 9h-12zM6 6L5 3H2M9 20a1 1 0 1 0 0-.1M18 20a1 1 0 1 0 0-.1", settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z", plus: "M12 5v14M5 12h14", search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3",
+  eye: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", lock: "M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4", user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0",
+  home: "M3 11l9-8 9 8M5 10v10h14V10", caps: "M12 4l8 9h-5v7H9v-7H4z", spark: "M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z", chart: "M4 19V9M10 19V5M16 19v-7M22 19H2",
 };
 function icon(name, size = 20) {
   const ns = "http://www.w3.org/2000/svg", s = document.createElementNS(ns, "svg");
@@ -385,7 +447,7 @@ async function loadMe() {
     S.portals = await q(sb.rpc("core_my_portals"));
     S.view = "home"; render();
     /* Alkhidmat AI on the main page too (every page has it); it knows which portals this person has, nothing personal */
-    if (window.AKF_ASSISTANT) AKF_ASSISTANT({ sb, portal: "Khidmat Hub (main page)", user: S.me.full_name.split(" ")[0],
+    if (window.AKF_ASSISTANT) AKF_ASSISTANT({ sb, portal: "Jazba (main page)", user: S.me.full_name.split(" ")[0],
       context: () => JSON.stringify({ today: new Date().toISOString().slice(0, 10), page: "Main page: sign-in and the list of portals", isSuperAdmin: !!S.me.is_super,
         myPortals: S.portals.map(p => ({ name: p.name, what: p.description, myAccess: ROLE_LABEL[p.role] || p.role })),
         superAdminTabs: S.me.is_super ? ["People & access (add people, tick tabs and actions per portal)", "Portals & departments", "Settings (one place for every portal)", "Activity & usage"] : [] }),
@@ -427,11 +489,75 @@ function render() {
   if (v === "setpw") return app.append(setPassword());
   if (v === "noaccess") return app.append(authCard("No access yet", [el("p", { text: "Your login works, but you have no active portal account. Ask the Super Admin to add you." }), el("button", { class: "btn ghost", onclick: () => sb.auth.signOut(), text: "Sign out" })]));
   if (v === "error") return app.append(authCard("Something went wrong", [el("p", { text: "Your account could not be loaded. Check the internet connection." }), el("button", { class: "btn", onclick: () => location.reload(), text: "Try again" })]));
-  app.append(topBar(), home());
+  app.append(shell(home()));
+}
+
+/* ---------- Jazba shell: sidebar rail (opens on hover/focus/tap), top bar, phone bottom bar ---------- */
+const portalColor = p => /^#[0-9a-f]{6}$/i.test((p && p.color) || "") ? p.color : "#0060AE";
+function shell(main) { return el("div", { class: "jz-app" }, sideNav(), el("div", { class: "jz-main" }, topBar(), main), bottomNav()); }
+function sideNav() {
+  const go = k => () => { S.tab = k; render(); if (k !== "portals" && !S.admin) loadAdmin(); };
+  const link = (ic, t, k) => el("button", { class: "jz-rail-link" + (S.tab === k ? " on" : ""), type: "button", title: t, "aria-current": S.tab === k ? "page" : null, onclick: go(k) }, icon(ic, 20), el("span", { class: "jz-rail-text", text: t }));
+  return el("nav", { class: "jz-rail", "aria-label": "Main", tabindex: "0" },   // tabindex: a tap opens it on touch screens, a tap outside closes it
+    el("a", { class: "jz-rail-logo", href: "./", title: "Today" }, logoImg(""), el("span", { class: "jz-rail-text" }, el("b", { text: "Alkhidmat Islamabad" }), el("small", { text: HUB.toUpperCase() }))),
+    link("home", "Today", "portals"),
+    S.portals.length ? el("div", { class: "jz-rail-h", text: "Portals" }) : null,
+    S.portals.map(p => el("a", { class: "jz-rail-link", href: safeHref(p.url), title: p.name }, el("span", { class: "jz-rail-dot", style: `background:${portalColor(p)}` }), el("span", { class: "jz-rail-text", text: p.name }))),
+    S.me.is_super && [el("div", { class: "jz-rail-h", text: "Admin" }), link("users", "People & access", "people"), link("grid", "Portals & departments", "setup"), link("settings", "Settings", "settings"), link("chart", "Activity & usage", "activity")],
+    el("div", { class: "jz-rail-foot" }, el("b", { text: HUB_LINE }), "Every approval here reaches a family faster."));
+}
+/* ---------- search palette (Ctrl/Cmd+K): portals, admin pages and Alkhidmat AI (no record search: spec decision) ---------- */
+function openPalette() {
+  if (!S.me || S.view !== "home" || document.querySelector(".jz-scrim")) return;   // never on sign-in, set-password or no-access screens
+  const back = document.activeElement;
+  const items = S.portals.map(p => ({ g: "Portals", t: p.name, ic: () => el("span", { class: "jz-rail-dot", style: `background:${portalColor(p)}` }), go: () => { location.href = safeHref(p.url); } }))
+    .concat(S.me.is_super && [["people", "People & access", "users"], ["setup", "Portals & departments", "grid"], ["settings", "Settings", "settings"], ["activity", "Activity & usage", "chart"]]
+      .map(([k, t, i]) => ({ g: "Admin", t, ic: () => icon(i, 18), go: () => { S.tab = k; render(); if (!S.admin) loadAdmin(); } })) || []);
+  const askAI = q => () => {   // the assistant stays loaded on every page (SECURITY-PROTOCOL §9); its floating button is hidden here
+    const fab = document.querySelector(".kai-fab"); if (!fab) return toast("Alkhidmat AI is still loading. Try again in a moment.");
+    fab.click();
+    const box = document.querySelector(".kai-in textarea"); if (box && q) { box.value = q; box.focus(); }
+  };
+  const input = el("input", { type: "text", placeholder: "Search portals and pages, or ask a question…", "aria-label": "Search or ask", autocomplete: "off" });
+  const list = el("div", { class: "jz-palette-list", role: "listbox" });
+  let shown = [], sel = 0;
+  const close = () => { scrim.remove(); removeEventListener("keydown", keys, true); if (back && back.focus) back.focus(); };
+  const pick = it => { close(); it.go(); };
+  function draw() {
+    const q = input.value.trim();
+    shown = items.filter(it => !q || it.t.toLowerCase().includes(q.toLowerCase()))
+      .concat([{ g: "Ask Alkhidmat AI", t: q ? `Ask: "${q}"` : "Ask Alkhidmat AI a question", ai: true, ic: () => icon("spark", 18), go: askAI(q) }]);
+    sel = Math.min(sel, shown.length - 1);
+    let g = null; list.replaceChildren();
+    shown.forEach((it, i) => {
+      if (it.g !== g) { g = it.g; list.append(el("div", { class: "jz-palette-grp", text: g })); }
+      list.append(el("button", { type: "button", role: "option", tabindex: "-1", class: "jz-palette-opt" + (it.ai ? " ai" : "") + (i === sel ? " sel" : ""), "aria-selected": i === sel ? "true" : "false", onclick: () => pick(it) }, it.ic(), el("span", { text: it.t })));
+    });
+  }
+  function keys(e) {
+    if (e.key === "Escape") { e.preventDefault(); close(); }
+    else if (e.key === "Tab") { e.preventDefault(); input.focus(); }   // keep focus inside the dialog
+    else if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); sel = (sel + (e.key === "ArrowDown" ? 1 : -1) + shown.length) % shown.length; draw(); }
+    else if (e.key === "Enter" && shown[sel]) { e.preventDefault(); pick(shown[sel]); }
+  }
+  input.addEventListener("input", () => { sel = 0; draw(); });
+  const scrim = el("div", { class: "jz-scrim", role: "dialog", "aria-modal": "true", "aria-label": "Search or ask Alkhidmat AI", onclick: e => { if (e.target === scrim) close(); } }, el("div", { class: "jz-palette" }, input, list));
+  document.body.append(scrim); addEventListener("keydown", keys, true); draw(); input.focus();
+}
+addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && (e.key || "").toLowerCase() === "k" && S.view === "home") { e.preventDefault(); openPalette(); } });
+// touch screens: a tap outside the open rail closes it (iPad Safari keeps focus/hover otherwise)
+document.addEventListener("pointerdown", e => { const r = document.querySelector(".jz-rail"); if (r && !r.contains(e.target) && r.contains(document.activeElement)) document.activeElement.blur(); });
+function bottomNav() {
+  const b = (ic, t, fn, on) => el("button", { type: "button", class: on ? "on" : "", onclick: fn }, icon(ic, 20), t);
+  return el("nav", { class: "jz-bottom", "aria-label": "Phone navigation" },
+    b("home", "Today", () => { S.tab = "portals"; render(); }, S.tab === "portals"),
+    b("grid", "Portals", () => { const t = document.querySelector(".tiles"); if (t) t.scrollIntoView({ behavior: "smooth" }); }),
+    b("search", "Search & AI", () => window.openPalette && openPalette()),
+    b("logout", "Sign out", async () => { await sb.auth.signOut({ scope: "global" }); }));
 }
 
 /* ---------- brand: the same on every page and every portal ---------- */
-const ORG = "Alkhidmat Foundation Islamabad", HUB = "Khidmat Hub", HUB_LINE = "Serving humanity, together";
+const ORG = "Alkhidmat Foundation Islamabad", HUB = "Jazba", HUB_LINE = "Powered by the passion to serve";
 const logoImg = cls => el("img", { class: cls || "logo", src: document.getElementById("logo-src").src, alt: "Alkhidmat logo", width: 46, height: 46 });
 function brand() {
   return el("div", { class: "brand" }, el("a", { href: "./", title: "All portals", "aria-label": "All portals", style: "display:block;line-height:0;flex:none" }, logoImg()),
@@ -454,39 +580,60 @@ function hideLoader() { loaderN = Math.max(0, loaderN - 1); if (loaderN) return;
 function stagger(node) { [...node.children].forEach((c, i) => c.style.setProperty("--i", Math.min(i, 10))); node.classList.add("enter"); return node; }
 
 function authCard(title, body) {
-  const feat = (ic, b, t) => el("li", {}, el("span", { class: "ic" }, icon(ic, 18)), el("span", {}, el("b", { text: b }), el("br"), el("span", { style: "opacity:.8", text: t })));
+  const trust = (ic, t) => el("div", { class: "trust" }, el("i", {}, icon(ic, 16)), el("span", { text: t }));
   return el("div", { class: "auth" },
     el("aside", { class: "auth-brand", "aria-hidden": "true" },
-      el("div", {}, logoImg("big-logo"), el("h1", { text: ORG }), el("div", { class: "hubline", text: HUB }), el("p", { class: "tagline", text: "One sign-in for every service we run: procurement, store, donors, tasks and events. " + HUB_LINE + "." }),
-        el("ul", {}, feat("shield", "One secure sign-in", "Every portal you are given opens with the same account."), feat("users", "Right access for each person", "Each tab and action is ticked by the Super Admin and checked by the database."), feat("heart", "Built for khidmat", "Less paperwork, faster help for the families we serve."))),
+      el("div", { class: "auth-org" }, logoImg("big-logo"), el("div", {}, el("b", { text: ORG }), el("small", { text: HUB.toUpperCase() }))),
+      el("div", { class: "auth-pitch" },
+        el("h1", {}, "One place for every act of ", el("em", { text: "khidmat" }), "."),
+        el("p", { class: "tagline" }, el("b", { text: HUB }), " — " + HUB_LINE.toLowerCase() + ". Procurement, store, donors, tasks, fleet and assistance in one secure place."),
+        el("div", { class: "auth-pills" }, ["Procurement", "Store", "Donors", "Tasks & Events", "Fleet", "Assistance"].map(t => el("span", { class: "jz-pill", text: t })))),
       el("div", { class: "foot", text: `© ${new Date().getFullYear()} ${ORG} · Authorised staff only` })),
-    el("div", { class: "auth-main" }, el("div", { class: "card" }, brand(), el("h1", { text: title }), body)));
+    el("div", { class: "auth-main" }, el("div", { class: "card" }, el("h1", { text: title }), body,
+      el("div", { class: "auth-trust" }, trust("lock", "One secure sign-in opens every portal you're given."), trust("shield", "Each tab and action is approved by the Super Admin.")))));
 }
 
 function signIn() {
   let mode = "in";
-  const email = el("input", { class: "input", type: "text", autocomplete: "username", required: true, maxlength: 254, autocapitalize: "none", spellcheck: "false" });
-  const pw = el("input", { class: "input", type: "password", autocomplete: "current-password", required: true, maxlength: 128 });
+  const email = el("input", { class: "input", type: "text", autocomplete: "username", required: true, maxlength: 254, autocapitalize: "none", spellcheck: "false", placeholder: "your.name" });
+  const pw = el("input", { class: "input", id: "pw-in", type: "password", autocomplete: "current-password", required: true, maxlength: 128 });
   const msg = el("div");
-  const btn = el("button", { class: "btn", type: "submit", text: "Sign in" });
-  const pwField = el("label", { class: "f" }, "Password", pw);
-  const swap = el("button", { class: "linkbtn", type: "button", text: "Forgot your password?" });
-  swap.addEventListener("click", () => { mode = mode === "in" ? "reset" : "in"; pwField.hidden = mode === "reset"; pw.required = mode === "in"; btn.textContent = mode === "in" ? "Sign in" : "Send reset link"; swap.textContent = mode === "in" ? "Forgot your password?" : "Back to sign in"; msg.replaceChildren(); });
-  const form = el("form", { class: "grid", style: "display:grid;gap:14px" }, el("label", { class: "f" }, "Work e-mail or username", email), pwField, msg, btn, el("div", { class: "row small muted" }, swap));
+  const lbl = el("span", { text: "Sign in" });
+  const btn = el("button", { class: "btn go", type: "submit" }, el("span", { class: "spin", "aria-hidden": "true" }), lbl);
+  // username box: shows the work domain faintly until an @ is typed (loginEmail adds it the same way)
+  const suffix = CFG && CFG.emailDomain ? el("span", { class: "suffix", text: "@" + CFG.emailDomain }) : null;
+  email.addEventListener("input", () => { if (suffix) suffix.hidden = email.value.includes("@"); clearErr(); });
+  const eye = el("button", { class: "eye", type: "button", "aria-label": "Show password" }, icon("eye", 18));
+  eye.addEventListener("click", () => { const show = pw.type === "password"; pw.type = show ? "text" : "password"; eye.setAttribute("aria-label", show ? "Hide password" : "Show password"); pw.focus(); });
+  const caps = el("div", { class: "fieldnote caps", hidden: true }, icon("caps", 14), "Caps Lock is on");
+  const capsCheck = e => { caps.hidden = !(e.getModifierState && e.getModifierState("CapsLock")); };
+  pw.addEventListener("keydown", capsCheck); pw.addEventListener("keyup", capsCheck); pw.addEventListener("input", () => clearErr());
+  const userBox = el("div", { class: "ctl" }, icon("user", 18), email, suffix || "");
+  const pwBox = el("div", { class: "ctl" }, icon("lock", 18), pw, eye);
+  const swap = el("button", { class: "linkbtn", type: "button", text: "Forgot?" });
+  const pwField = el("div", { class: "f" }, el("div", { class: "f-row" }, el("label", { for: "pw-in", text: "Password" }), swap), pwBox, caps);
+  const shake = box => { box.classList.remove("err"); void box.offsetWidth; box.classList.add("err"); };
+  function clearErr() { userBox.classList.remove("err"); pwBox.classList.remove("err"); }
+  swap.addEventListener("click", () => { mode = mode === "in" ? "reset" : "in"; pwBox.hidden = mode === "reset"; caps.hidden = true; pw.required = mode === "in"; lbl.textContent = mode === "in" ? "Sign in" : "Send reset link"; swap.textContent = mode === "in" ? "Forgot?" : "Back to sign in"; msg.replaceChildren(); email.focus(); });
+  const form = el("form", { class: "grid", novalidate: true, style: "display:grid;gap:14px" }, el("label", { class: "f" }, "Work e-mail or username", userBox), pwField, msg, btn);
   form.addEventListener("submit", async ev => {
-    ev.preventDefault(); btn.disabled = true; msg.replaceChildren();
+    ev.preventDefault(); msg.replaceChildren(); clearErr();
+    const missing = [[email, userBox], ...(mode === "in" ? [[pw, pwBox]] : [])].filter(([i]) => !i.value.trim());
+    if (missing.length) { missing.forEach(([, b]) => shake(b)); missing[0][0].focus(); return msg.append(el("div", { class: "notice bad", text: mode === "in" ? "Enter your username and password." : "Enter your username." })); }
+    btn.disabled = true; btn.classList.add("busy"); lbl.textContent = mode === "in" ? "Signing in…" : "Sending…";
     try {
       if (mode === "reset") {
         await sb.auth.resetPasswordForEmail(loginEmail(email.value), { redirectTo: location.origin + location.pathname });
         msg.append(el("div", { class: "notice ok", text: "If this e-mail has an account, a reset link is on its way. Check your inbox." }));   // same answer either way: no account fishing
       } else {
         const { error } = await sb.auth.signInWithPassword({ email: loginEmail(email.value), password: pw.value });
-        if (error) msg.append(el("div", { class: "notice bad", text: /rate|too many/i.test(error.message) ? "Too many attempts. Wait a few minutes and try again." : "E-mail or password is incorrect." }));
+        if (error) { shake(pwBox); msg.append(el("div", { class: "notice bad", text: /rate|too many/i.test(error.message) ? "Too many attempts. Wait a few minutes and try again." : "E-mail or password is incorrect." })); }
+        else { btn.classList.add("ok"); lbl.textContent = "Welcome, opening " + HUB + "…"; btn.classList.remove("busy"); return; }   // the auth listener renders the home page
       }
     } catch (e) { fail(e, "Could not sign in"); }
-    btn.disabled = false;
+    btn.disabled = false; btn.classList.remove("busy"); lbl.textContent = mode === "in" ? "Sign in" : "Send reset link";
   });
-  return authCard("Sign in", [el("p", { text: "One sign-in opens every portal you have access to." }), form]);
+  return authCard("Welcome back", [el("p", { text: "Sign in to open your portals." }), form]);
 }
 
 function setPassword() {
@@ -511,17 +658,17 @@ function setPassword() {
 
 function topBar() {
   const theme = el("button", { class: "iconbtn", title: "Light / dark", "aria-label": "Switch light or dark theme", onclick: () => { const r = document.documentElement, d = r.getAttribute("data-theme") === "dark" || (!r.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches); r.setAttribute("data-theme", d ? "light" : "dark"); try { localStorage.setItem("akf-theme", d ? "light" : "dark"); } catch (e) {} } }, icon("moon", 18));
-  return el("header", { class: "top" }, el("div", { class: "wrap" },
-    brand(),
+  theme.className = "jz-iconbtn";
+  return el("header", { class: "jz-top" },
+    el("button", { class: "jz-search", type: "button", "aria-label": "Search or ask Alkhidmat AI", onclick: () => window.openPalette && openPalette() }, icon("search", 18), el("span", { text: "Search portals and pages… or ask Alkhidmat AI" }), el("kbd", { class: "jz-kbd", text: "Ctrl K" })),
     el("div", { class: "grow" }),
     el("div", { class: "who" }, el("div", { class: "t", style: "text-align:right" }, el("b", { text: S.me.full_name }), el("span", { text: S.me.is_super ? "Super Admin" : (S.me.designation || S.me.email) })), el("div", { class: "avatar", text: initials(S.me.full_name) })),
     theme,
-    el("button", { class: "iconbtn", title: "Sign out of every portal", "aria-label": "Sign out", onclick: async () => { await sb.auth.signOut({ scope: "global" }); } }, icon("logout", 18))));
+    el("button", { class: "jz-iconbtn", title: "Sign out of every portal", "aria-label": "Sign out", onclick: async () => { await sb.auth.signOut({ scope: "global" }); } }, icon("logout", 18)));
 }
 
 function home() {
   const hour = new Date().getHours(), greet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const tabs = S.me.is_super ? [["portals", "My portals"], ["people", "People & access"], ["setup", "Portals & departments"], ["settings", "Settings"], ["activity", "Activity & usage"]] : [];
   const n = S.portals.length;
   return el("main", { class: "wrap" },
     el("div", { class: "hero enter" }, el("div", { class: "b2" }),
@@ -532,15 +679,15 @@ function home() {
         el("div", {}, el("b", { text: String(n) }), el("span", { text: n === 1 ? "portal for you" : "portals for you" })),
         el("div", {}, el("b", { text: S.me.is_super ? "Super Admin" : (S.me.designation || "Staff") }), el("span", { text: "signed in as" })),
         el("div", {}, el("b", { text: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) }), el("span", { text: "today" })))),
-    tabs.length ? el("nav", { class: "tabs", "aria-label": "Sections" }, tabs.map(([k, t]) => el("button", { class: S.tab === k ? "on" : "", text: t, onclick: () => { S.tab = k; render(); if (k !== "portals" && !S.admin) loadAdmin(); } }))) : el("div", { style: "height:18px" }),
+    el("div", { style: "height:18px" }),
     S.tab === "portals" || !S.me.is_super ? tiles() : !S.admin ? el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })) : S.tab === "people" ? people() : S.tab === "setup" ? setup() : S.tab === "settings" ? settings() : activity());
 }
 
 function tiles() {
   if (!S.portals.length) return el("div", { class: "card empty" }, el("h3", { text: "No portals yet" }), el("p", { text: "The Super Admin has not given you access to any portal. Ask them to add you." }));
-  return stagger(el("div", { class: "tiles" }, S.portals.map(p => tileMotion(el("a", { class: "card tile", href: safeHref(p.url), style: `--accent:${/^#[0-9a-f]{6}$/i.test(p.color) ? p.color : "#0B51A7"}` },
+  return stagger(el("div", { class: "tiles" }, S.portals.map((p, i) => tileMotion(el("a", { class: "card tile jz-lift", href: safeHref(p.url), style: `--accent:${portalColor(p)};--i:${Math.min(i, 10)}` },
     el("span", { class: "spot", "aria-hidden": "true" }), el("span", { class: "edge", "aria-hidden": "true" }),
-    el("div", { class: "ic", style: `background:${/^#[0-9a-f]{6}$/i.test(p.color) ? p.color : "#0B51A7"}` }, icon(p.icon, 22)),
+    el("div", { class: "ic jz-icon3d", style: `background:${portalColor(p)}` }, icon(p.icon, 24)),
     el("div", {}, el("h3", { text: p.name }), el("p", { text: p.description })),
     el("div", { class: "foot" }, el("span", { class: "tag brand", text: ROLE_LABEL[p.role] || p.role }), el("span", { class: "row" }, "Open", icon("arrow", 16))))))));
 }
@@ -554,7 +701,7 @@ function tileMotion(a) {
     raf = requestAnimationFrame(() => {
       const r = a.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
       a.style.setProperty("--mx", (x * 100).toFixed(1) + "%"); a.style.setProperty("--my", (y * 100).toFixed(1) + "%");
-      a.style.setProperty("--ry", ((x - .5) * 8).toFixed(2) + "deg"); a.style.setProperty("--rx", ((.5 - y) * 8).toFixed(2) + "deg");
+      a.style.setProperty("--ry", ((x - .5) * 4).toFixed(2) + "deg"); a.style.setProperty("--rx", ((.5 - y) * 4).toFixed(2) + "deg");
     });
   });
   a.addEventListener("pointerleave", () => { cancelAnimationFrame(raf); a.style.setProperty("--rx", "0deg"); a.style.setProperty("--ry", "0deg"); });
@@ -932,7 +1079,7 @@ function settingsGeneral() {
 async function testAI() {
   toast("Testing Alkhidmat AI…");
   try {
-    const { data, error } = await sb.functions.invoke("ai-chat", { body: { portal: "Khidmat Hub (main page)", question: "Reply with the single word OK.", history: [], context: "" } });
+    const { data, error } = await sb.functions.invoke("ai-chat", { body: { portal: "Jazba (main page)", question: "Reply with the single word OK.", history: [], context: "" } });
     if (error) { let b = {}; try { b = await error.context.json(); } catch (x) { } return toast("Alkhidmat AI is not working yet: " + (b.error || "the AI service could not be reached") + (b.ref ? ` (ref ${b.ref})` : ""), true); }
     toast(data && data.answer ? "Alkhidmat AI is working ✓ (model " + (data.model || "Gemini") + ") — every portal can use it now" : "Alkhidmat AI answered, but with an empty reply. Try again in a minute.", !(data && data.answer));
   } catch (e) { fail(e, "The AI test could not run"); }

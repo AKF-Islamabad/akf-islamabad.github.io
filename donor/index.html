@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-krET+qwQR/ztrwVU0HLpxnpj/oumDmDkGR2hAguZ52g='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-cEchdkMkTQV56ZTHLEWUfxyYi2b3unpwHHr54ihi73I='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -1118,7 +1118,7 @@ html.side-pinned .side-pin{background:#fff;color:#0B3D91}
 <div id="app" class="hidden">
   <div class="side-overlay" id="side-overlay" data-act="menu-close"></div>
   <aside class="sidebar" id="sidebar" aria-label="Main navigation">
-    <div class="side-head"><a class="side-logo" href="../" title="All portals (main page)" aria-label="All portals (main page)"><img data-logo alt="Alkhidmat Islamabad logo"></a><div><b>Alkhidmat Foundation Islamabad</b><span>Khidmat Hub · Donor Management</span></div><button type="button" class="side-pin" data-act="side-pin" id="side-pin" aria-pressed="false" title="Keep the menu open" aria-label="Keep the menu open"><span data-icon="pin"></span></button></div>
+    <div class="side-head"><a class="side-logo" href="../" title="All portals (main page)" aria-label="All portals (main page)"><img data-logo alt="Alkhidmat Islamabad logo"></a><div><b>Alkhidmat Foundation Islamabad</b><span>Jazba · Donor Management</span></div><button type="button" class="side-pin" data-act="side-pin" id="side-pin" aria-pressed="false" title="Keep the menu open" aria-label="Keep the menu open"><span data-icon="pin"></span></button></div>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot">
       <button class="me" data-act="nav" data-view="account" aria-label="My account"><span class="avatar" id="me-av"></span><span><b id="me-name"></b><span id="me-role"></span></span></button>
@@ -5898,7 +5898,7 @@ async function erpBoot() {
   try { ctx = await AKF_GATE('donor'); }
   catch (e) { hideLoader(); return; }                 // the gate has already shown "no access" or gone to the main page
   erpSb = ctx.sb; GRID = {};
-  if (ctx.portalName) { PORTAL_TITLE = ctx.portalName; const sp = $('.side-head > div > span'); if (sp) sp.textContent = 'Khidmat Hub · ' + PORTAL_TITLE; }
+  if (ctx.portalName) { PORTAL_TITLE = ctx.portalName; const sp = $('.side-head > div > span'); if (sp) sp.textContent = 'Jazba · ' + PORTAL_TITLE; }
   (ctx.tabs || []).forEach(t => { GRID[t.tab_key] = t.actions || []; });
   const p = ctx.profile;
   try {

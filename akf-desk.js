@@ -14,6 +14,8 @@
   if (window.AKF_NOTIFY) return;
   const SCRIPT = document.currentScript && document.currentScript.src;
   const BASE = new URL(".", SCRIPT || location.href).href;          // the main site folder (/ live, /portal-staging/ staging)
+  // Jazba UI (the official design system) on every page, existing and future, even before sign-in
+  if (!document.querySelector('link[href$="jazba.css"]')) { const jz = document.createElement("link"); jz.rel = "stylesheet"; jz.href = BASE + "jazba.css"; document.head.append(jz); }
   const cfg = window.AKF_SUPABASE;
   if (!cfg || !window.supabase || !cfg.url) { window.AKF_NOTIFY = function () {}; return; }
   // the page's own client refreshes the sign-in; this one only reads it (same storage key as akf-gate.js)
