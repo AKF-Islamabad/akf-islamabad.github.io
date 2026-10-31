@@ -107,3 +107,52 @@ html[data-jz-family="app"] .rail .st.done .pt{background:#15803D;border-color:#1
 html[data-jz-family="app"] .rail .st.now .pt{border-color:#B45309;box-shadow:0 0 0 4px rgba(180,83,9,.18);animation:jzPulse 1.6s infinite}
 html[data-jz-family="app"] .rail .st.now.bad .pt{border-color:#DC0505;box-shadow:0 0 0 4px rgba(220,5,5,.16)}
 @keyframes jzPulse{50%{box-shadow:0 0 0 7px rgba(180,83,9,.06)}}
+
+/* ---------- layer 2: Donor / Fleet / Assistance — the shared design kit dressed as Jazba blocks ---------- */
+/* hero banner = jz-hero */
+html[data-jz-family="kit"] .hero{border-radius:16px;background:linear-gradient(120deg,#042544 0%,#003C73 45%,#0060AE 100%);border:1px solid rgba(245,147,35,.4);box-shadow:0 24px 48px -28px rgba(4,37,68,.55)}
+html[data-jz-family="kit"] .hero .blob, html[data-jz-family="kit"] .main::before{display:none}
+html[data-jz-family="kit"] .hero .hs b{color:#FFB25B}
+html[data-jz-family="kit"] .hero .btn-white{color:#003C73}
+/* KPI tiles = jz-kpi with an animated 3D icon */
+html[data-jz-family="kit"] .kpi{--kc:#0A74C9;border-radius:14px;border-top:3px solid var(--kc);background:linear-gradient(160deg,color-mix(in srgb,var(--kc) 10%,var(--surface)),var(--surface) 70%)}
+html[data-jz-family="kit"] .kpis > :nth-child(2){--kc:#421E76}
+html[data-jz-family="kit"] .kpis > :nth-child(3){--kc:#B45309}
+html[data-jz-family="kit"] .kpis > :nth-child(4){--kc:#15803D}
+html[data-jz-family="kit"] .kpi.warn{--kc:#B45309}
+html[data-jz-family="kit"] .kpi.bad{--kc:#DC0505}
+html[data-jz-family="kit"] .k-ic{border-radius:12px;background:linear-gradient(135deg,color-mix(in srgb,var(--kc) 70%,#fff),var(--kc))!important;color:#fff;box-shadow:inset 0 2px 0 rgba(255,255,255,.38),inset 0 -4px 0 rgba(0,0,0,.18),0 8px 16px -6px rgba(4,37,68,.35);animation:jzBob 4.2s ease-in-out infinite;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+html[data-jz-family="kit"] .kpis > :nth-child(2) .k-ic{animation-delay:-1.4s}
+html[data-jz-family="kit"] .kpis > :nth-child(3) .k-ic{animation-delay:-2.8s}
+html[data-jz-family="kit"] .kpi:hover .k-ic{animation:none;transform:perspective(260px) rotateX(14deg) rotateY(-16deg) translateY(-3px) scale(1.08)}
+/* cards = jz-card with the portal-colour bar on section titles */
+html[data-jz-family="kit"] .card, html[data-jz-family="kit"] .kpi{box-shadow:0 1px 2px rgba(4,37,68,.05),0 10px 28px -14px rgba(0,60,115,.22)}
+html[data-jz-family="kit"] .card{border-radius:14px}
+html[data-jz-family="kit"] .card-h h3::before{content:"";display:inline-block;width:4px;height:16px;border-radius:2px;background:var(--jz-pc,#0060AE);margin-right:8px;vertical-align:-2px}
+html[data-jz-family="kit"] .page-head h2{letter-spacing:-.02em}
+/* tables = jz-list rows */
+html[data-jz-family="kit"] .tbl-wrap{border-radius:12px}
+html[data-jz-family="kit"] .tbl tr:hover td{background:#E6F0FA}
+html[data-jz-family="kit"] .tbl tr.click:hover td:first-child{box-shadow:inset 3px 0 0 var(--jz-pc,#0060AE)}
+/* tabs, pill radios, pager */
+html[data-jz-family="kit"] .tab.on{color:#0060AE}
+html[data-jz-family="kit"] .tab.on::after{background:#F59323}
+html[data-jz-family="kit"] .seg-radio input:checked + span, html[data-jz-family="kit"] .pager button.on{background:#0060AE;color:#fff;border-color:#0060AE}
+/* buttons and fields */
+html[data-jz-family="kit"] .btn{border-radius:10px}
+html[data-jz-family="kit"] .btn-primary{background:#0060AE;box-shadow:0 6px 14px -8px rgba(0,96,174,.8)}
+html[data-jz-family="kit"] .btn-primary:hover{background:#004F90}
+html[data-jz-family="kit"] .input, html[data-jz-family="kit"] .select, html[data-jz-family="kit"] .textarea{border-radius:10px}
+html[data-jz-family="kit"] .input:focus, html[data-jz-family="kit"] .select:focus, html[data-jz-family="kit"] .textarea:focus{border-color:#0060AE;box-shadow:0 0 0 4px rgba(0,96,174,.16)}
+/* record pop-ups open as a panel from the right (desktop); small dialogs stay centred */
+@media (min-width:721px){
+  html[data-jz-family="kit"] .layer.open:has(> .modal:not(.sm)){display:flex;justify-content:flex-end;align-items:stretch;padding:0}
+  html[data-jz-family="kit"] .layer.open > .modal:not(.sm){height:100vh;max-height:100vh;width:min(640px,100vw);border-radius:0;border-width:0 0 0 1px;animation:jzPanelIn .35s cubic-bezier(.2,.8,.2,1)}
+}
+/* messages, empty states */
+html[data-jz-family="kit"] .toast{border-left:4px solid #F59323}
+html[data-jz-family="kit"] .empty .e-ic{border-radius:12px;background:#E6F0FA;color:#0060AE}
+/* approval step pills: done = green, current = amber pulse, problem = red */
+html[data-jz-family="kit"] .ds.ok{background:#E7F6EC;color:#15803D}
+html[data-jz-family="kit"] .ds.now{background:#FEF3E2;color:#B45309}
+html[data-jz-family="kit"] .ds.bad{background:#FDE8E8;color:#DC0505}
