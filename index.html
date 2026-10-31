@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-N4PK9L85h/NTIIiRNabJRfayKIv/5H2RKI1bo4otmEA='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-ssNXT/RTAQSSgWCciub28vWiHP6AQ3SBeSlLBhQvuLA='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -501,9 +501,7 @@ function sideNav() {
   const link = (ic, t, k) => el("button", { class: "jz-rail-link" + (S.tab === k ? " on" : ""), type: "button", title: t, "aria-current": S.tab === k ? "page" : null, onclick: go(k) }, icon(ic, 20), el("span", { class: "jz-rail-text", text: t }));
   return el("nav", { class: "jz-rail", "aria-label": "Main", tabindex: "0" },   // tabindex: a tap opens it on touch screens, a tap outside closes it
     el("a", { class: "jz-rail-logo", href: "./", title: "Today" }, logoImg(""), el("span", { class: "jz-rail-text" }, el("b", { text: "Alkhidmat Foundation Islamabad" }), el("small", { text: HUB.toUpperCase() }))),
-    link("home", "Today", "portals"),
-    S.portals.length ? el("div", { class: "jz-rail-h", text: "Portals" }) : null,
-    S.portals.map(p => el("a", { class: "jz-rail-link", href: safeHref(p.url), title: p.name }, el("span", { class: "jz-rail-dot", style: `background:${portalColor(p)}` }), el("span", { class: "jz-rail-text", text: p.name }))),
+    link("home", "Today", "portals"),   // the portals are the cards on Today: listed once, not again here
     S.me.is_super && [el("div", { class: "jz-rail-h", text: "Admin" }), link("users", "People & access", "people"), link("grid", "Portals & departments", "setup"), link("settings", "Settings", "settings"), link("chart", "Activity & usage", "activity")],
     el("div", { class: "jz-rail-foot" }, el("b", { text: HUB_LINE }), "Every approval here reaches a family faster."));
 }
