@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en" data-desk="off" data-jz-page="hub">
+<html lang="en" data-jz-page="hub">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-ssNXT/RTAQSSgWCciub28vWiHP6AQ3SBeSlLBhQvuLA='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-b0fi6ifhqaoB3wZeBMgpbih6XLR/rdacwpafOLnfgLE='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -670,8 +670,9 @@ function topBar() {
 
 function home() {
   const waiting = S.today && S.today.counts ? S.today.counts.actions : null;
-  const greet = el("div", { class: "jz-greet" }, el("h1", { text: `Assalam-o-Alaikum, ${S.me.full_name.split(" ")[0]}` }),
-    el("p", { text: new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" }) + (waiting != null ? ` · You have ${waiting} thing${waiting === 1 ? "" : "s"} waiting on you` : "") }));
+  const hr = new Date().getHours(), part = hr < 12 ? "Good morning" : hr < 17 ? "Good afternoon" : "Good evening";
+  const greet = el("div", { class: "jz-greet" }, el("h1", { text: `Assalam-o-Alaikum, ${S.me.full_name}` }),
+    el("p", { text: `${part} · ` + new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" }) + (waiting != null ? ` · You have ${waiting} thing${waiting === 1 ? "" : "s"} waiting on you` : "") }));
   return el("main", { class: "wrap" },
     S.tab === "portals" || !S.me.is_super ? todayView(greet) :  !S.admin ? el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })) : S.tab === "people" ? people() : S.tab === "setup" ? setup() : S.tab === "settings" ? settings() : activity());
 }

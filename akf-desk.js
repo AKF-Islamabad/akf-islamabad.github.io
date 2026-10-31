@@ -18,9 +18,9 @@
   if (!document.querySelector('link[href$="jazba.css"]')) { const jz = document.createElement("link"); jz.rel = "stylesheet"; jz.href = BASE + "jazba.css"; document.head.append(jz); }
   // the Jazba look on every portal: maps the portal's own colour/font settings (never on the main page)
   if (document.documentElement.dataset.jzPage !== "hub" && !document.querySelector('link[href$="jazba-portals.css"]')) { const jp = document.createElement("link"); jp.rel = "stylesheet"; jp.href = BASE + "jazba-portals.css"; document.head.append(jp); }
-  // the same Jazba frame on every portal (Jazba Portal Standard): rail + Ctrl+K; My desk lives on Today, so no sticky note here
+  // the same Jazba frame on every portal (Jazba Portal Standard): top strip + menu + Ctrl+K; the sticky note shows on every page
   if (document.documentElement.dataset.jzPage !== "hub" && !window.JAZBA_SHELL) {
-    document.documentElement.dataset.jzShell = "on"; document.documentElement.dataset.desk = "off";
+    document.documentElement.dataset.jzShell = "on";
     const js = document.createElement("script"); js.src = BASE + "jazba-shell.js"; js.defer = true; document.head.append(js);
   }
   const cfg = window.AKF_SUPABASE;
@@ -140,6 +140,7 @@
 .akd-bell.on{background:#DDF5E3;border-color:#8CCB9E}
 .akd.min .akd-body,.akd.min .akd-foot{display:none} .akd.min{width:auto} .akd.min .akd-card{transform:none}
 @media (max-width:720px){.akd{bottom:78px;left:10px}}
+@media (min-width:821px){html[data-jz-page="hub"] .akd{left:96px}}   /* main page: clear of the left rail */
 @media print{.akd{display:none}}`;
   let root = null, data = null, folded = matchMedia("(max-width: 720px)").matches;   // phones: a small pinned button, tap to open
   // note colours [paper, header, lines]; the choice and the place on screen are remembered on this device
@@ -210,7 +211,7 @@
   }
   function paint() {
     if (!me) { if (root) root.remove(); root = null; return; }
-    if (document.documentElement.dataset.desk === "off") return;   // the main page shows My desk inside Today; bell and push keep running
+    if (document.documentElement.dataset.desk === "off") return;   // a page may opt out with data-desk="off"; bell and push keep running
     if (!root) {
       const st = el("style"); st.textContent = CSS; document.head.appendChild(st);
       root = el("aside", "akd"); root.setAttribute("aria-label", "My sticky note"); document.body.appendChild(root);
