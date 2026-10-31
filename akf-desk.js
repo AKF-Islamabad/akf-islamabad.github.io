@@ -18,6 +18,11 @@
   if (!document.querySelector('link[href$="jazba.css"]')) { const jz = document.createElement("link"); jz.rel = "stylesheet"; jz.href = BASE + "jazba.css"; document.head.append(jz); }
   // the Jazba look on every portal: maps the portal's own colour/font settings (never on the main page)
   if (document.documentElement.dataset.jzPage !== "hub" && !document.querySelector('link[href$="jazba-portals.css"]')) { const jp = document.createElement("link"); jp.rel = "stylesheet"; jp.href = BASE + "jazba-portals.css"; document.head.append(jp); }
+  // the same Jazba frame on every portal (Jazba Portal Standard): rail + Ctrl+K; My desk lives on Today, so no sticky note here
+  if (document.documentElement.dataset.jzPage !== "hub" && !window.JAZBA_SHELL) {
+    document.documentElement.dataset.jzShell = "on"; document.documentElement.dataset.desk = "off";
+    const js = document.createElement("script"); js.src = BASE + "jazba-shell.js"; js.defer = true; document.head.append(js);
+  }
   const cfg = window.AKF_SUPABASE;
   if (!cfg || !window.supabase || !cfg.url) { window.AKF_NOTIFY = function () {}; return; }
   // the page's own client refreshes the sign-in; this one only reads it (same storage key as akf-gate.js)
@@ -90,7 +95,8 @@
 
   // portals call this with their bell list: [{ key, title, body?, url?, pushed? }] — pushed: the server already sends it
   // for the main page's bell button (My desk's note is hidden there)
-  window.AKF_DESK = { turnOn: () => turnOn(), isOn: () => "Notification" in window && Notification.permission === "granted" };
+  window.AKF_DESK = { turnOn: () => turnOn(), isOn: () => "Notification" in window && Notification.permission === "granted",
+    portals: () => sb.rpc("core_my_portals").then(r => r.data || []) };   // for the Jazba rail on portals
   window.AKF_NOTIFY = function (items) {
     if (!me || !Array.isArray(items)) return;
     const k = "akf-seen-" + me.id; const seen = store.get(k, null); const first = seen === null; const s = seen || {};
