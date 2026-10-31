@@ -52,7 +52,7 @@ h1,h2,h3,h4,h5,h6,button,input,select,textarea{font-family:inherit}
   html[data-jz-shell="on"] .main{margin-left:0!important}
   html[data-jz-shell="on"] body{padding-left:0}
   /* the rail is hidden; ☰ in the top strip slides it out over the page, open with names */
-  html .jz-shell-rail.jz-rail{width:260px;box-sizing:border-box;transform:translateX(-105%);transition:transform .25s ease-out;z-index:9000;visibility:hidden}
+  html .jz-shell-rail.jz-rail{top:46px;height:calc(100vh - 46px);width:260px;box-sizing:border-box;transform:translateX(-105%);transition:transform .25s ease-out;z-index:9000;visibility:hidden}
   html.jz-rail-open .jz-shell-rail.jz-rail{transform:none;visibility:visible;box-shadow:16px 0 48px rgba(4,37,68,.35)}
   .jz-shell-rail .jz-rail-text,.jz-shell-rail .jz-rail-h,.jz-shell-rail .jz-rail-foot{opacity:1!important;pointer-events:auto!important}
   .jz-shell-rail .jz-rail-count{position:static!important;min-width:0!important;height:auto!important;padding:1px 7px!important;font-size:11px!important;line-height:inherit!important}

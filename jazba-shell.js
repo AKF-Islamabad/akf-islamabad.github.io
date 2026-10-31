@@ -25,18 +25,12 @@
   // the original is re-rendered often, so find it again by its label at click time
   const proxy = (label, list) => () => { const o = list().find(b => labelOf(b) === label); if (o) o.click(); };
 
-  let rail, mine, portalsBox, acct, strip, stripLinks, portals = [];
+  let rail, mine, acct, strip, stripLinks, portals = [];
   function build() {
     rail = el("nav", "jz-rail jz-shell-rail"); rail.setAttribute("aria-label", "Jazba"); rail.tabIndex = 0;
-    const logo = el("a", "jz-rail-logo"); logo.href = BASE; logo.title = "Today";
-    const img = el("img"); img.src = BASE + "icon.jpg"; img.alt = "Alkhidmat logo"; img.width = 44; img.height = 44;
-    const t = el("span", "jz-rail-text"); t.append(el("b", "", "Alkhidmat Foundation Islamabad"), el("small", "", "JAZBA"));
-    logo.append(img, t);
-    const today = el("a", "jz-rail-link"); today.href = BASE; today.title = "Today"; today.append(SVG(ICON.home), el("span", "jz-rail-text", "Today"));
-    const search = el("button", "jz-rail-link"); search.type = "button"; search.title = "Search (Ctrl K)"; search.append(SVG(ICON.search), el("span", "jz-rail-text", "Search & AI"));
-    search.addEventListener("click", openPalette);
-    portalsBox = el("div"); mine = el("div"); acct = el("div", "jz-shell-acct");
-    rail.append(logo, today, search, portalsBox, el("div", "jz-rail-h", "In this portal"), mine, acct);
+    mine = el("div"); acct = el("div", "jz-shell-acct");
+    // the portals, Today and Search live once, in the top strip; the ☰ menu holds only this portal's own pages
+    rail.append(el("div", "jz-rail-h", "In this portal"), mine, acct);
     // the rail is hidden so the portal uses the full width; every portal sits in a strip at the top, ☰ slides the rail out
     strip = el("div", "jz-topstrip"); strip.setAttribute("role", "navigation"); strip.setAttribute("aria-label", "All portals");
     const menu = el("button", "jz-ts-menu"); menu.type = "button"; menu.setAttribute("aria-label", "Menu: pages of this portal"); menu.setAttribute("aria-expanded", "false"); menu.title = "Menu";
@@ -50,7 +44,7 @@
     const setOpen = on => { document.documentElement.classList.toggle("jz-rail-open", on); menu.setAttribute("aria-expanded", String(on)); if (on) rail.focus(); };
     document.addEventListener("pointerdown", e => { if (!rail.contains(e.target) && !menu.contains(e.target)) setOpen(false); });
     addEventListener("keydown", e => { if (e.key === "Escape" && document.documentElement.classList.contains("jz-rail-open")) { setOpen(false); menu.focus(); } });
-    rail.addEventListener("click", e => { if (e.target.closest("a,button") && !e.target.closest(".jz-rail-logo")) setOpen(false); });
+    rail.addEventListener("click", e => { if (e.target.closest("a,button")) setOpen(false); });
   }
   function paintMine() {
     if (!mine) return;
@@ -71,16 +65,13 @@
       a.addEventListener("click", proxy(label, accountItems)); return a; }).filter(Boolean));
   }
   function paintPortals() {
-    portalsBox.replaceChildren(); stripLinks.replaceChildren(); if (!portals.length) return;
-    portalsBox.append(el("div", "jz-rail-h", "Portals"));
+    stripLinks.replaceChildren(); if (!portals.length) return;
     portals.forEach(p => { const href = safeLink(p.url); if (!href) return;
       const here = location.href.startsWith(href);
-      const a = el("a", "jz-rail-link" + (here ? " on" : "")); a.href = href; a.title = p.name;
       const dot = el("span", "jz-rail-dot"); dot.style.background = /^#[0-9a-f]{6}$/i.test(p.color || "") ? p.color : "#0060AE";
-      a.append(dot, el("span", "jz-rail-text", p.name)); portalsBox.append(a);
       if (here) document.documentElement.style.setProperty("--jz-pc", dot.style.background);
       const s = el("a", "jz-ts-link" + (here ? " on" : "")); s.href = href; s.title = p.name; if (here) s.setAttribute("aria-current", "page");
-      s.append(dot.cloneNode(), el("span", "", p.name)); stripLinks.append(s);
+      s.append(dot, el("span", "", p.name)); stripLinks.append(s);
     });
   }
 
