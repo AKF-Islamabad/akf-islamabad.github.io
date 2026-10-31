@@ -1,0 +1,46 @@
+/* =====================================================================
+   Jazba look for every portal: maps each portal's OWN colour, font and shape settings to the
+   official Jazba palette (alkhidmat.org). Loaded by akf-desk.js on portal pages only (never the main page).
+   Screens and workflows are untouched: only the variables the portals already use are given new values.
+   Two families of portal settings exist:
+     A) Procurement / Store / Tasks (erp/src/portal-app.html): --brand, --brand-2, --ice, --surface, --line, --ok, --bad…
+     B) Donor / Fleet / Assistance (fleet-assets/design.css family): --brand-950…50, --text, --success, --danger, --c1…
+   ===================================================================== */
+@import url("fonts/manrope.css");
+
+:root{
+  /* shared surfaces */
+  --bg:#F6F8FB; --surface:#FFFFFF; --surface-2:#F4F7FB;
+  /* A) Procurement / Store / Tasks */
+  --brand:#003C73; --brand-2:#0060AE; --brand-3:#0A74C9; --ice:#E6F0FA; --ice-2:#CFE2F5; --line:#E3E8EF; --line-2:#CBD6E3;
+  --ink:#0F1B2D; --ink-2:#4A5A70; --ink-3:#7C8BA0; --bad:#DC0505; --bad-bg:#FDE8E8; --info:#0060AE; --info-bg:#E6F0FA;
+  --grad:linear-gradient(135deg,#042544 0%,#003C73 45%,#0060AE 100%); --r:14px; --r-sm:10px;
+  --shadow:0 1px 2px rgba(4,37,68,.05),0 10px 28px -14px rgba(0,60,115,.22);
+  /* B) Donor / Fleet / Assistance */
+  --brand-950:#021A33; --brand-900:#042544; --brand-800:#003C73; --brand-700:#004F90; --brand-600:#0060AE; --brand-500:#0A74C9;
+  --brand-300:#8CC0EC; --brand-100:#E6F0FA; --brand-50:#F3F8FD;
+  --text:#0F1B2D; --text-2:#3B4A60; --border:#E3E8EF; --border-strong:#CBD6E3;
+  --danger:#DC0505; --danger-bg:#FDE8E8; --c1:#0060AE;
+  --teal:#F59323; --teal-50:#FEF3E2; --gold:#F59323; --violet:#421E76;
+  --grad-brand:linear-gradient(135deg,#0A74C9 0%,#0060AE 45%,#003C73 100%);
+  --grad-hero:linear-gradient(120deg,#042544 0%,#003C73 45%,#0060AE 100%);
+  --grad-teal:linear-gradient(135deg,#FFB25B,#F59323);
+  --focus:0 0 0 3px rgba(0,96,174,.32);
+}
+/* dark mode: same selectors as the portals use, so these win over their dark values */
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --brand:#003C73; --brand-2:#4FA3E8; --brand-3:#7DBBEE; --info:#7DBBEE; --bad:#FF8C80;
+  --bg:#0B1220; --surface:#111A2B; --surface-2:#162236; --line:#22314A; --line-2:#2E4060; --ink:#E6EDF7; --ink-2:#B4C2D6; --ink-3:#7E90AA;
+} }
+:root[data-theme="dark"]{
+  --brand:#003C73; --brand-2:#4FA3E8; --brand-3:#7DBBEE; --info:#7DBBEE; --bad:#FF8C80;
+  --bg:#0B1220; --surface:#111A2B; --surface-2:#162236; --line:#22314A; --line-2:#2E4060; --ink:#E6EDF7; --ink-2:#B4C2D6; --ink-3:#7E90AA;
+  --c1:#4FA3E8; --danger:#FF8C80; --teal:#FFB25B; --gold:#FFB25B; --violet:#B79CF0;
+}
+
+/* one font everywhere (self-hosted Manrope); code stays monospace */
+body{font-family:var(--jz-font,Manrope,system-ui,-apple-system,"Segoe UI",sans-serif)}
+h1,h2,h3,h4,h5,h6,button,input,select,textarea{font-family:inherit}
+
+/* calmer motion for people who ask for it, on every portal */
+@media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important} }
