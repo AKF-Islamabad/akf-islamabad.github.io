@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Alkhidmat Islamabad · Procurement</title>
+<title>Alkhidmat Foundation Islamabad · Procurement</title>
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-bODg8h4z6e4OZFLDqi7E84sBUlWYhMvz53xsfFVNoh4='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-SPLGsa7XiKEUI9TjT3AAJUKtxn+ZjQorpXu4A5GJxLA='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <!-- clickjacking guard: GitHub Pages cannot send X-Frame-Options, so the page stays hidden if another site frames it -->
@@ -5032,7 +5032,7 @@ function RfqSummary({rfq,state}){
 }
 
 /* ---------- Signatures ---------- */
-const DocHeader=({title,sub,id})=>html`<div class="doc-h"><img src=${LOGO} alt="Alkhidmat Islamabad"/><div class="grow"><h4>${title}</h4><div class="sub">${SETTINGS.orgName||"Alkhidmat Foundation Islamabad Region"} · ${sub}</div></div>${id&&html`<${Tag} tone="info"><span class="id">${id}</span></${Tag}>`}</div>`;
+const DocHeader=({title,sub,id})=>html`<div class="doc-h"><img src=${LOGO} alt="Alkhidmat Foundation Islamabad"/><div class="grow"><h4>${title}</h4><div class="sub">${SETTINGS.orgName||"Alkhidmat Foundation Islamabad Region"} · ${sub}</div></div>${id&&html`<${Tag} tone="info"><span class="id">${id}</span></${Tag}>`}</div>`;
 function SignBox({state,userId,name,designation,role,label,at}){
   const u=(userId&&state.users.find(x=>x.id===userId))||(name&&state.users.find(x=>x.name===name))||null;
   return html`<div class="signbox"><div class="sigimg">${u&&u.signature?html`<img src=${u.signature} alt=${"Signature of "+(u.name||name)}/>`:html`<span class="faint xs">${at?"(e-signed)":"signature"}</span>`}</div><b>${(u&&u.name)||name||" "}</b><span>${(u&&u.designation)||designation||(role&&ROLES[role]?ROLES[role].label:"")}</span><span class="xs faint">${label||""}${at?" · "+fmtD(at):""}</span></div>`;
@@ -5169,7 +5169,7 @@ function Login({users,onLogin,sbLogin}){
         <button type="button" class="link-btn only-mobile" onClick=${()=>setFlip(false)}>← Back to sign in</button>
       </div></div>
       <div class="toggle-box">
-        <div class="toggle-panel toggle-left"><img class="auth-logo" src=${LOGO} alt="Alkhidmat Islamabad"/><h2>Have your own account?</h2><p>Sign in with the username issued to you — every action is signed and timed under your name.</p><button class="toggle-btn" onClick=${()=>setFlip(false)}>Sign in</button></div>
+        <div class="toggle-panel toggle-left"><img class="auth-logo" src=${LOGO} alt="Alkhidmat Foundation Islamabad"/><h2>Have your own account?</h2><p>Sign in with the username issued to you — every action is signed and timed under your name.</p><button class="toggle-btn" onClick=${()=>setFlip(false)}>Sign in</button></div>
         <div class="toggle-panel toggle-right"><img class="auth-logo" src=${LOGO} alt="Alkhidmat Foundation Islamabad"/><h2>${portalName()}</h2><p>Request · verify · approve · buy · receive · issue — every step traceable, no bypass.</p><div class="mini-flow">${matrixChain("procurement").map((s,i)=>html`<span>${i+1}. ${s.label}</span>`)}</div><button class="toggle-btn" onClick=${()=>setFlip(true)}>${sbLogin?"About accounts":"Demo accounts"}</button></div>
       </div>
     </div></div>
@@ -6337,7 +6337,7 @@ function App(){
   const dqApp=useDonorQueue(!!(dqUser&&dqUser.active&&dqUser.role!=="hod"&&!READ_ONLY_ROLES.includes(dqUser.role)));
   const [grid,setGrid]=useState(null);
   useEffect(()=>{ if(!SB_MODE||!authUser){ PORTAL_GRID=null; setGrid(null); return; }
-    sb.from("core_modules").select("name").eq("key",PORTAL).maybeSingle().then(({data})=>{ if(data&&data.name){ PORTAL_NAME=data.name; document.title="Alkhidmat Islamabad · "+data.name; } },()=>{})
+    sb.from("core_modules").select("name").eq("key",PORTAL).maybeSingle().then(({data})=>{ if(data&&data.name){ PORTAL_NAME=data.name; document.title="Alkhidmat Foundation Islamabad · "+data.name; } },()=>{})
       .then(()=>sb.rpc("core_my_tabs",{p_module:PORTAL})).then(({data,error})=>{ const g=error?[]:(data||[]).map(t=>t.tab_key); PORTAL_GRID=g; setGrid(g); },()=>{ PORTAL_GRID=[]; setGrid([]); }); },[authUser&&authUser.id]);
   if(boot!=="ready"||!state) return html`<${BootScreen} status=${boot} err=${bootErr}/>`;
   SETTINGS=state.settings;
@@ -6464,7 +6464,7 @@ const BootScreen=({status,err})=>status==="loading"?html`<${BootLoader} text="Co
 const Toasts=({items})=>html`<div class="toasts" aria-live="polite">${items.map(t=>html`<div class=${"toast "+t.tone} key=${t.id}>${t.tone==="ok"?html`<${Icon} name="check"/>`:t.tone==="bad"?html`<${Icon} name="alert"/>`:html`<${Icon} name="shield"/>`}${t.msg}</div>`)}</div>`;
 
 /* =====================================================================
-   Tasks — the Alkhidmat Islamabad Task Planner, built into the portal.
+   Tasks — the Alkhidmat Foundation Islamabad Task Planner, built into the portal.
    Same rules as the planner file: stages 01–07, RM / HOD / Staff /
    President / GS rights, departments with codes and colours (editable by
    the Regional Manager), custom fields, dependencies, repeating tasks,
@@ -7846,7 +7846,7 @@ function VendorQuote({token}){
 }
 
 /* Any unexpected error is shown as a red message, so a failure is never silent ("button does nothing"). */
-const BUILD="2026-10-30 procurement";
+const BUILD="2026-10-31 procurement";
 (()=>{ let last=0; const show=m=>{ const msg=errRef(m,"Unexpected error"); if(Date.now()-last<1500) return; last=Date.now(); if(window.__toast) window.__toast(msg+" (build "+BUILD+")","bad"); };   /* no raw error text on screen: details stay in the console under the reference */
   window.addEventListener("error",e=>show(e.message||e.error)); window.addEventListener("unhandledrejection",e=>show((e.reason&&e.reason.message)||e.reason)); })();
 const vendorToken=(/#rfq=([0-9a-f]{16,})/i.exec(location.hash||"")||[])[1];

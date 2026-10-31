@@ -1,4 +1,4 @@
-/* Alkhidmat Islamabad — ONE Excel format for every portal (rule: SECURITY-PROTOCOL.md §10).
+/* Alkhidmat Foundation Islamabad — ONE Excel format for every portal (rule: SECURITY-PROTOCOL.md §10).
    Used by the Super Admin only, on the main page → Settings → Excel import & export, which picks the portal and sheets.
    Each portal describes its format in erp/site/excel-<key>.js: AKF_EXCEL_PORTALS[key] = { name, load(sb) → { sheets, save } }.
    The main page then opens the window with:

@@ -1,4 +1,4 @@
-/* Alkhidmat Islamabad — portal gate (shared by every portal).
+/* Alkhidmat Foundation Islamabad — portal gate (shared by every portal).
    Served once from the main site (https://akf-islamabad.github.io/akf-gate.js). Every portal loads it with
    <script src="../akf-gate.js"></script> (relative, so the same files work on staging) after
    config.js and supabase-js, then calls:

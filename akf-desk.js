@@ -1,4 +1,4 @@
-/* Alkhidmat Islamabad — "My desk": shown on the main page and in EVERY portal (existing and future).
+/* Alkhidmat Foundation Islamabad — "My desk": shown on the main page and in EVERY portal (existing and future).
    1. A sticky note that is on screen on every page: my plan for today (and anything overdue), my to-dos,
       and the tasks other people assigned to me — from Tasks & Events. It can be folded down; it opens again
       on the next page.

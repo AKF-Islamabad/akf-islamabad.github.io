@@ -1,4 +1,4 @@
-/* Alkhidmat Islamabad — main page → Excel import & export → "Fleet & Ambulances Management" (Super Admin only).
+/* Alkhidmat Foundation Islamabad — main page → Excel import & export → "Fleet & Ambulances Management" (Super Admin only).
    Registers the Fleet sheets for akf-excel.js (the one Excel format, SECURITY-PROTOCOL.md §10):
      Departments · Vehicles · Drivers · Service types · Fuel · Maintenance · Trips (old trip history)
    load(sb) reads the current records straight from public.fleet_rows (like the Fleet portal's ERP layer);

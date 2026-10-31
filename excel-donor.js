@@ -1,4 +1,4 @@
-/* Alkhidmat Islamabad — Donor Management in the one Excel format (akf-excel.js), for the main page.
+/* Alkhidmat Foundation Islamabad — Donor Management in the one Excel format (akf-excel.js), for the main page.
    The Super Admin picks "Donor Management" on the main page → Excel import & export; the main page calls
      const book = await AKF_EXCEL_PORTALS.donor.load(sb)      // sb: supabase client, signed in
    and hands book.sheets / book.save (and book.onExport, the audit line) to AKF_EXCEL.open.

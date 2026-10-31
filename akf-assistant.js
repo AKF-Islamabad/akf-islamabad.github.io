@@ -1,4 +1,4 @@
-/* Alkhidmat Islamabad — Alkhidmat AI: the AI assistant that EVERY portal must have (rule: SECURITY-PROTOCOL.md §9).
+/* Alkhidmat Foundation Islamabad — Alkhidmat AI: the AI assistant that EVERY portal must have (rule: SECURITY-PROTOCOL.md §9).
    Served once from the main site, like akf-gate.js. A portal loads it with
      <script src="../akf-assistant.js"></script>        (the main page: src="akf-assistant.js")
    and, after sign-in, starts it once:
@@ -76,7 +76,7 @@
     o = o || {};
     if (document.querySelector(".kai-fab")) return;
     const st = document.createElement("style"); st.textContent = CSS; document.head.append(st);
-    const portal = o.portal || "Alkhidmat Islamabad portals", hints = o.hints || ["What can I do in this portal?", "What needs my attention?", "Explain the approval steps"];
+    const portal = o.portal || "Alkhidmat Foundation Islamabad portals", hints = o.hints || ["What can I do in this portal?", "What needs my attention?", "Explain the approval steps"];
     const history = [];   // this tab only, never saved
     const fab = el("button", "kai-fab"); fab.type = "button"; fab.setAttribute("aria-label", "Open Alkhidmat AI assistant"); fab.append(svg("spark"), el("span", "", "Ask Alkhidmat AI"));
     let panel = null, log, input, sendBtn, chips, busy = false;

@@ -1,4 +1,4 @@
-/* Alkhidmat Islamabad — Procurement in the one Excel format (akf-excel.js), for the main page (Super Admin only).
+/* Alkhidmat Foundation Islamabad — Procurement in the one Excel format (akf-excel.js), for the main page (Super Admin only).
    The main page calls  const book = await AKF_EXCEL_PORTALS.procurement.load(sb)  and hands book.sheets / book.save to AKF_EXCEL.open.
    Sheets:
      Vendors       upload + download. Written exactly as the portal's A.saveVendor writes them: public.portal_rows,

@@ -1,4 +1,4 @@
-/* Alkhidmat Islamabad — APPROVAL MATRIX for every portal (one definition, used by the main page and every portal).
+/* Alkhidmat Foundation Islamabad — APPROVAL MATRIX for every portal (one definition, used by the main page and every portal).
    The Super Admin edits it on the main page → Settings → Approval matrix. It is saved in the shared settings record
    (portal_rows: collection "settings", id "global", key "approvalMatrix"); the database checks it on every step
    (erp/supabase/sql/005_approval_matrix.sql, erp/supabase/portals/donor.sql, fleet.sql and assistance.sql).

@@ -1,4 +1,4 @@
-/* Alkhidmat Islamabad — Store in the one Excel format (akf-excel.js), for the main page (Super Admin only).
+/* Alkhidmat Foundation Islamabad — Store in the one Excel format (akf-excel.js), for the main page (Super Admin only).
    The main page calls  const book = await AKF_EXCEL_PORTALS.store.load(sb)  and hands book.sheets / book.save to AKF_EXCEL.open.
    Everything is written to public.portal_rows exactly as the Store portal writes it (erp/src/portal-app.html):
      Stock items  a row with an Item code already in the portal = A.stockItemEdit (name, unit, category, condition, minimum,

@@ -1,4 +1,4 @@
-/* Alkhidmat Islamabad — Tasks & Events in the one Excel format (akf-excel.js), for the main page (Super Admin only).
+/* Alkhidmat Foundation Islamabad — Tasks & Events in the one Excel format (akf-excel.js), for the main page (Super Admin only).
    The main page calls  const book = await AKF_EXCEL_PORTALS.tasks.load(sb)  and hands book.sheets / book.save to AKF_EXCEL.open.
    Written to public.portal_rows exactly as the Tasks & Events portal writes them (erp/src/portal-app.html, makeTaskActions):
      Tasks   collection 'tasks', id = the task's random key, data = the task (v:2, id AK-NNN, stage "01".."07", activity …).

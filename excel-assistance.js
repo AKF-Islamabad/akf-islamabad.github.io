@@ -1,4 +1,4 @@
-/* Alkhidmat Islamabad — main page → Excel import & export → "Assistance Management" (Super Admin only).
+/* Alkhidmat Foundation Islamabad — main page → Excel import & export → "Assistance Management" (Super Admin only).
    Registers the Assistance sheets for akf-excel.js (the one Excel format, SECURITY-PROTOCOL.md §10):
      Departments (import + export) · Applications (download only) · Applicant details (download only)
    Applications are DOWNLOAD ONLY: an application is numbered, routed and signed step by step by the server

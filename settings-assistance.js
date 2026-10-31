@@ -1,4 +1,4 @@
-/* Alkhidmat Islamabad — main page → Settings → "Assistance Management" (Super Admin only).
+/* Alkhidmat Foundation Islamabad — main page → Settings → "Assistance Management" (Super Admin only).
    The Assistance portal has no settings page of its own (house rule: one Settings place). Its settings are kept in the
    portal's own table (public.assistance_rows, collection "config", id "settings") so that every Assistance user can
    read them; only the Super Admin may change them (checked by erp/supabase/portals/assistance.sql, which also checks

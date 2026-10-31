@@ -1,4 +1,4 @@
-/* Alkhidmat Islamabad — main page → Settings → "Fleet & Ambulances" (Super Admin only).
+/* Alkhidmat Foundation Islamabad — main page → Settings → "Fleet & Ambulances" (Super Admin only).
    The Fleet portal has no settings page of its own (house rule: one Settings place). Its settings are kept in the
    portal's own table (public.fleet_rows, collection "config", id "settings") so that drivers and other fleet-only
    staff can read them; only the Super Admin may change them (checked by erp/supabase/portals/fleet.sql).
