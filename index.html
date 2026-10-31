@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-desk="off">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Jazba · Alkhidmat Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-5/xGvzypJq5NOzgUftDuT4RNKAzWlF2ikQC3aFHg3ro='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-1kpIbfdhL2kBsDOxNXLRcciOXvgN2yS7fUbK4z/tOPw='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -381,7 +381,7 @@ const ICONS = {
   logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9", moon: "M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z", arrow: "M7 17L17 7M8 7h9v9",
   shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z", cart: "M6 6h15l-1.5 9h-12zM6 6L5 3H2M9 20a1 1 0 1 0 0-.1M18 20a1 1 0 1 0 0-.1", settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z", plus: "M12 5v14M5 12h14", search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3",
   eye: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", lock: "M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4", user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0",
-  home: "M3 11l9-8 9 8M5 10v10h14V10", caps: "M12 4l8 9h-5v7H9v-7H4z", spark: "M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z", chart: "M4 19V9M10 19V5M16 19v-7M22 19H2",
+  home: "M3 11l9-8 9 8M5 10v10h14V10", bell: "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0", caps: "M12 4l8 9h-5v7H9v-7H4z", spark: "M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z", chart: "M4 19V9M10 19V5M16 19v-7M22 19H2",
 };
 function icon(name, size = 20) {
   const ns = "http://www.w3.org/2000/svg", s = document.createElementNS(ns, "svg");
@@ -431,7 +431,7 @@ async function start() {
   sb = supabase.createClient(CFG.url, CFG.anonKey, { auth: { storageKey: "akf-portals-auth" } });   // shared by the main page and every new portal
   sb.auth.onAuthStateChange((ev, session) => {
     if (ev === "PASSWORD_RECOVERY") S.recovery = true;
-    if (ev === "SIGNED_OUT") { S.session = null; S.me = null; S.view = "signin"; render(); }
+    if (ev === "SIGNED_OUT") { clearTimeout(todayTimer); S.today = null; S.session = null; S.me = null; S.view = "signin"; render(); }
     else if (session && (!S.session || S.session.user.id !== session.user.id)) { S.session = session; loadMe(); }
   });
   const { data } = await sb.auth.getSession();
@@ -440,12 +440,13 @@ async function start() {
 }
 
 async function loadMe() {
+  S.today = null; S.todayErr = false; S.todayShown = false; S.counted = false;   // never show the previous person's day
   try {
     S.me = await q(sb.from("core_profiles").select("id,email,full_name,designation,dept,is_super,active,must_change_password").eq("id", S.session.user.id).maybeSingle());
     if (!S.me || !S.me.active) { S.view = "noaccess"; return render(); }
     if (S.recovery || S.me.must_change_password) { S.view = "setpw"; return render(); }
     S.portals = await q(sb.rpc("core_my_portals"));
-    S.view = "home"; render();
+    S.view = "home"; render(); loadToday();
     /* Alkhidmat AI on the main page too (every page has it); it knows which portals this person has, nothing personal */
     if (window.AKF_ASSISTANT) AKF_ASSISTANT({ sb, portal: "Jazba (main page)", user: S.me.full_name.split(" ")[0],
       context: () => JSON.stringify({ today: new Date().toISOString().slice(0, 10), page: "Main page: sign-in and the list of portals", isSuperAdmin: !!S.me.is_super,
@@ -663,24 +664,95 @@ function topBar() {
     el("button", { class: "jz-search", type: "button", "aria-label": "Search or ask Alkhidmat AI", onclick: () => window.openPalette && openPalette() }, icon("search", 18), el("span", { text: "Search portals and pages… or ask Alkhidmat AI" }), el("kbd", { class: "jz-kbd", text: "Ctrl K" })),
     el("div", { class: "grow" }),
     el("div", { class: "who" }, el("div", { class: "t", style: "text-align:right" }, el("b", { text: S.me.full_name }), el("span", { text: S.me.is_super ? "Super Admin" : (S.me.designation || S.me.email) })), el("div", { class: "avatar", text: initials(S.me.full_name) })),
+    (() => { const on = !!(window.AKF_DESK && AKF_DESK.isOn()); return el("button", { class: "jz-iconbtn" + (on ? " on" : ""), title: on ? "Notifications are on" : "Turn on notifications", "aria-label": on ? "Notifications are on" : "Turn on notifications",
+      onclick: async () => { if (!window.AKF_DESK) return toast("Notifications are still loading. Try again in a moment."); if (!AKF_DESK.isOn()) { await AKF_DESK.turnOn(); render(); } else toast("Notifications are on for this device"); } }, icon("bell", 18)); })(),
     theme,
     el("button", { class: "jz-iconbtn", title: "Sign out of every portal", "aria-label": "Sign out", onclick: async () => { await sb.auth.signOut({ scope: "global" }); } }, icon("logout", 18)));
 }
 
 function home() {
-  const hour = new Date().getHours(), greet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const n = S.portals.length;
+  const waiting = S.today && S.today.counts ? S.today.counts.actions : null;
+  const greet = el("div", { class: "jz-greet" }, el("h1", { text: `Assalam-o-Alaikum, ${S.me.full_name.split(" ")[0]}` }),
+    el("p", { text: new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" }) + (waiting != null ? ` · You have ${waiting} thing${waiting === 1 ? "" : "s"} waiting on you` : "") }));
   return el("main", { class: "wrap" },
-    el("div", { class: "hero enter" }, el("div", { class: "b2" }),
-      el("div", { class: "kicker", text: `${HUB} · ${ORG}` }),
-      el("h2", { text: `${greet}, ${S.me.full_name.split(" ")[0]}` }),
-      el("p", { text: n ? "Choose a portal. It opens in a new tab and you stay signed in." : "" }),
-      el("div", { class: "stats" },
-        el("div", {}, el("b", { text: String(n) }), el("span", { text: n === 1 ? "portal for you" : "portals for you" })),
-        el("div", {}, el("b", { text: S.me.is_super ? "Super Admin" : (S.me.designation || "Staff") }), el("span", { text: "signed in as" })),
-        el("div", {}, el("b", { text: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) }), el("span", { text: "today" })))),
-    el("div", { style: "height:18px" }),
-    S.tab === "portals" || !S.me.is_super ? tiles() : !S.admin ? el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })) : S.tab === "people" ? people() : S.tab === "setup" ? setup() : S.tab === "settings" ? settings() : activity());
+    S.tab === "portals" || !S.me.is_super ? todayView(greet) :  !S.admin ? el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })) : S.tab === "people" ? people() : S.tab === "setup" ? setup() : S.tab === "settings" ? settings() : activity());
+}
+
+/* ---------- Today: live data from core_my_today() (013_today.sql). The page still works without it. ---------- */
+let todayTimer = 0;
+async function loadToday() {
+  clearTimeout(todayTimer);
+  if (S.view !== "home" || !S.session) return;
+  if (document.hidden && S.today) { todayTimer = setTimeout(loadToday, 120000); return; }   // background tab: no fetch
+  const before = JSON.stringify([S.today, S.todayErr]);
+  try { S.today = await q(sb.rpc("core_my_today")); S.todayErr = false; }
+  catch (e) { S.todayErr = true; }
+  // repaint only when something changed and nobody is working inside the Today screen (keeps keyboard focus and scroll)
+  const busy = document.activeElement && document.activeElement.closest && document.activeElement.closest(".jz-today");
+  if (S.view === "home" && (S.tab === "portals" || !S.me.is_super) && JSON.stringify([S.today, S.todayErr]) !== before && !busy) render();
+  todayTimer = setTimeout(loadToday, 120000);
+}
+function todayView(greet) {
+  const T = S.today, kids = [greet];
+  if (S.todayErr || !T) kids.push(el("p", { class: "jz-note", text: S.todayErr ? "Live numbers unavailable right now. Your portals below still work." : "Loading your day…" }));
+  else kids.push(impactBanner(T.impact || {}), kpiCards(T.counts || {}), el("div", { class: "jz-grid2" }, actionList(T.actions || []), myTasks(T.tasks || [])));
+  kids.push(el("h2", { class: "jz-section", text: "Your portals" }), tiles());
+  const firstPaint = !S.todayShown && T; if (firstPaint) S.todayShown = true;
+  return firstPaint ? stagger(el("div", { class: "jz-today" }, kids)) : el("div", { class: "jz-today" }, kids);
+}
+/* numbers count up once, on the first paint (off with reduced motion) */
+function countUp(b, n) {
+  if (typeof n !== "number" || S.counted || matchMedia("(prefers-reduced-motion: reduce)").matches) return b;
+  const t0 = performance.now(), step = t => { const p = Math.min(1, (t - t0) / 900); b.textContent = String(Math.round(n * (1 - Math.pow(1 - p, 3)))); if (p < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step); return b;
+}
+function impactBanner(I) {
+  const h = I.avg_approval_hours, avg = h == null ? "—" : h >= 24 ? (h / 24).toFixed(1) + " days" : Math.round(h) + " h";
+  const stat = (v, t) => el("div", { class: "jz-stat" }, countUp(el("b", { text: String(v) }), v), el("span", { text: t }));
+  const box = el("section", { class: "jz-hero jz-impact", "aria-label": "Team impact this month" },
+    el("div", { class: "jz-impact-lead" }, el("small", { text: "This month, together" }), el("div", { text: "Your team's work is reaching families every day." })),
+    stat(I.families_month || 0, "families helped"), stat(I.approved_month || 0, "requests approved"), stat(avg, "avg. approval time"));
+  S.counted = true;
+  return box;
+}
+function kpiCards(C) {
+  const go = id => () => { const t = document.getElementById(id); if (t) t.scrollIntoView({ behavior: "smooth", block: "start" }); };
+  const card = (k, ic, n, label, note, target, i) => el("button", { type: "button", class: "jz-card jz-kpi jz-lift", style: `--k:var(${k});--i:${i}`, onclick: go(target) },
+    el("span", { class: "jz-icon3d", style: `background:var(${k})` }, icon(ic, 20)),
+    el("span", { class: "jz-kpi-t" }, el("b", { text: String(n || 0) }), el("span", { text: label }), note ? el("small", { text: note }) : null));
+  return el("div", { class: "jz-kpis" },
+    card("--jz-amber", "check", C.actions, "Waiting on you", C.late ? `${C.late} waiting more than 2 days` : "", "today-actions", 0),
+    card("--jz-green", "check", C.tasks_week, "My tasks this week", "", "today-tasks", 1),
+    card("--jz-bright", "sheet", C.my_open_requests, "Requests I started", "", "today-actions", 2));
+}
+const TODAY_ICON = { procurement: "cart", store: "box", assistance: "helping", fleet: "truck", donor: "heart" };
+const daysWaiting = s => { const d = Math.floor((Date.now() - new Date(s).getTime()) / 864e5); return isFinite(d) ? d : 0; };
+function actionList(A) {
+  const tab = S.todayTab || "all", portalOf = k => S.portals.find(p => p.key === k);
+  const show = A.filter(a => tab === "all" || (tab === "approve" ? a.kind !== "do" : a.kind === "do"));
+  const tabs = el("div", { class: "jz-tabs", role: "tablist" }, [["all", "All"], ["approve", "Approvals"], ["do", "To do"]].map(([k, t]) =>
+    el("button", { type: "button", role: "tab", "aria-selected": tab === k ? "true" : "false", class: tab === k ? "on" : "", text: t, onclick: () => { S.todayTab = k; render(); } })));
+  const rows = show.slice(0, 20).map(a => { const p = portalOf(a.portal), late = daysWaiting(a.since) > 2;
+    return el("div", { class: "jz-row jz-lift" },
+      el("span", { class: "jz-icon3d", style: `background:${portalColor(p || {})}` }, icon(TODAY_ICON[a.portal] || "grid", 18)),
+      el("div", { class: "jz-row-body" }, el("b", { text: a.title || a.ref }), el("small", { text: `${p ? p.name : a.portal} · ${a.sub || ""}` })),
+      late ? el("span", { class: "jz-tag late", text: `${daysWaiting(a.since)} days` }) : null,
+      a.amount ? el("span", { class: "jz-amt", text: "Rs " + Number(a.amount).toLocaleString("en-PK") }) : null,
+      p ? el("a", { class: "jz-btn", href: safeHref(p.url), text: "Open" }) : null); });
+  const rest = {}; show.slice(20).forEach(a => { const p = portalOf(a.portal), n = p ? p.name : a.portal; rest[n] = (rest[n] || 0) + 1; });
+  const more = Object.keys(rest).length ? el("p", { class: "jz-more", text: Object.entries(rest).map(([n, c]) => `+${c} more in ${n}`).join(" · ") }) : null;
+  return el("section", { class: "jz-card jz-list", id: "today-actions" },
+    el("div", { class: "jz-list-h" }, el("h2", { text: "Needs your action" }), tabs),
+    rows.length ? rows : el("div", { class: "jz-empty" }, el("b", { text: "All clear. JazakAllah khair!" }), "Nothing is waiting on you right now."), more);
+}
+function myTasks(T) {
+  const tp = S.portals.find(p => p.key === "tasks"), day = d => { const x = new Date(d); return isNaN(x) ? d : x.toLocaleDateString("en-GB", { day: "numeric", month: "short" }); };
+  return el("section", { class: "jz-card jz-list", id: "today-tasks" },
+    el("div", { class: "jz-list-h" }, el("h2", { text: "My tasks" }), tp ? el("a", { href: safeHref(tp.url), text: "Tasks & Events" }) : null),
+    T.length ? T.slice(0, 8).map(t => el("div", { class: "jz-row" },
+        el("div", { class: "jz-row-body" }, el("b", { text: t.title || t.id }), el("small", { text: `${t.kind === "todo" ? "To-do" : "Task"} · due ${day(t.due)}` })),
+        t.late ? el("span", { class: "jz-tag late", text: "Late" }) : null))
+      : el("div", { class: "jz-empty" }, el("b", { text: "Nothing due this week" }), tp ? "Enjoy the calm." : "No tasks in Tasks & Events."));
 }
 
 function tiles() {

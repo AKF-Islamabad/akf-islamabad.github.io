@@ -87,6 +87,8 @@
   }
 
   // portals call this with their bell list: [{ key, title, body?, url?, pushed? }] — pushed: the server already sends it
+  // for the main page's bell button (My desk's note is hidden there)
+  window.AKF_DESK = { turnOn: () => turnOn(), isOn: () => "Notification" in window && Notification.permission === "granted" };
   window.AKF_NOTIFY = function (items) {
     if (!me || !Array.isArray(items)) return;
     const k = "akf-seen-" + me.id; const seen = store.get(k, null); const first = seen === null; const s = seen || {};
@@ -200,6 +202,7 @@
   }
   function paint() {
     if (!me) { if (root) root.remove(); root = null; return; }
+    if (document.documentElement.dataset.desk === "off") return;   // the main page shows My desk inside Today; bell and push keep running
     if (!root) {
       const st = el("style"); st.textContent = CSS; document.head.appendChild(st);
       root = el("aside", "akd"); root.setAttribute("aria-label", "My sticky note"); document.body.appendChild(root);

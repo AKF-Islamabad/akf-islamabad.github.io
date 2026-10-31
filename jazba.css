@@ -122,3 +122,48 @@
 @media (prefers-reduced-motion:reduce){
   .jz-app *,.jz-app *::before,.jz-app *::after,.jz-scrim,.jz-palette,.jz-icon3d,.jz-icon3d::after,.jz-rail{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important;transition-duration:.01ms!important}
 }
+.jz-iconbtn.on{color:var(--jz-green);border-color:color-mix(in srgb,var(--jz-green) 40%,var(--jz-line))}
+
+/* ---------- Today screen ---------- */
+.jz-today{display:grid;gap:18px}
+.jz-greet h1{margin:0;font:800 26px/1.2 var(--jz-font);letter-spacing:-.02em;color:var(--jz-ink)}
+.jz-greet p{margin:4px 0 0;color:var(--jz-muted)}
+.jz-note{margin:0;padding:12px 16px;border-radius:12px;background:var(--jz-card-2);color:var(--jz-muted);font-weight:600}
+.jz-impact{display:flex;flex-wrap:wrap;gap:28px;align-items:center}
+.jz-impact-lead{flex:1 1 240px}
+.jz-impact-lead small{display:block;color:var(--jz-accent-2);font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:11px}
+.jz-impact-lead div{font-size:17px;font-weight:700;margin-top:2px}
+.jz-stat b{display:block;font-size:26px;font-weight:800;color:var(--jz-accent-2);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.jz-stat span{font-size:12px;opacity:.82}
+.jz-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.jz-kpi{display:flex;gap:14px;align-items:flex-start;padding:18px;text-align:left;cursor:pointer;font:inherit;color:var(--jz-ink);transition:transform .2s var(--jz-ease),border-color .2s}
+.jz-kpi:hover{transform:translateY(-2px)}
+.jz-kpi .jz-icon3d{width:42px;height:42px;flex:none}
+.jz-kpi-t b{display:block;font-size:28px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.jz-kpi-t span{display:block;color:var(--jz-muted);font-weight:600}
+.jz-kpi-t small{display:block;margin-top:6px;font-size:12px;color:var(--jz-amber);font-weight:700}
+.jz-grid2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:start}
+.jz-list{overflow:hidden}
+.jz-list-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;border-bottom:1px solid var(--jz-line)}
+.jz-list-h h2{margin:0;font:800 15px var(--jz-font);display:flex;align-items:center;gap:8px;color:var(--jz-ink)}
+.jz-list-h h2::before{content:"";width:4px;height:16px;border-radius:2px;background:var(--jz-brand)}
+.jz-list-h a{color:var(--jz-bright);font-weight:700;font-size:13px;text-decoration:none}
+.jz-tabs{display:flex;gap:4px;background:var(--jz-card-2);padding:3px;border-radius:9px}
+.jz-tabs button{border:0;background:none;padding:5px 10px;border-radius:7px;font:700 12px var(--jz-font);color:var(--jz-muted);cursor:pointer}
+.jz-tabs button.on{background:var(--jz-card);color:var(--jz-ink);box-shadow:var(--jz-shadow)}
+.jz-row{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--jz-line);transition:background .15s}
+.jz-row:last-child{border-bottom:0}
+.jz-row:hover{background:var(--jz-card-2)}
+.jz-row .jz-icon3d{width:36px;height:36px;flex:none;border-radius:10px}
+.jz-row-body{flex:1;min-width:0}
+.jz-row-body b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--jz-ink)}
+.jz-row-body small{display:block;color:var(--jz-muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jz-amt{font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--jz-ink)}
+.jz-tag{font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px;background:var(--jz-amber-soft);color:var(--jz-amber);white-space:nowrap}
+.jz-tag.late{background:var(--jz-red-soft);color:var(--jz-red)}
+.jz-empty{padding:28px 18px;text-align:center;color:var(--jz-muted)}
+.jz-empty b{display:block;color:var(--jz-accent);font-size:15px;margin-bottom:4px}
+.jz-more{margin:0;padding:10px 18px;font-size:12px;font-weight:700;color:var(--jz-muted);background:var(--jz-card-2)}
+.jz-section{margin:6px 0 -4px;font:800 15px var(--jz-font);color:var(--jz-ink)}
+@media (max-width:1000px){.jz-grid2{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:820px){.jz-kpis{grid-template-columns:1fr}.jz-amt{display:none}.jz-impact{gap:16px}.jz-impact-lead{flex-basis:100%}.jz-stat{flex:1}.jz-stat b{font-size:22px}}
