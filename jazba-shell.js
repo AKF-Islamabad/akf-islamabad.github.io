@@ -42,6 +42,8 @@
   }
   function paintMine() {
     if (!mine) return;
+    // which portal family is this? Procurement/Store/Tasks render inside .shell (layer-2 skin in jazba-portals.css)
+    if (!document.documentElement.dataset.jzFamily && document.querySelector(".shell")) document.documentElement.dataset.jzFamily = "app";
     mine.replaceChildren(...navItems().map(b => {
       const label = labelOf(b); if (!label) return null;
       const a = el("button", "jz-rail-link" + (b.classList.contains("active") ? " on" : "")); a.type = "button"; a.title = label;
