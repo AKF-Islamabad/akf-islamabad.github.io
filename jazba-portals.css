@@ -58,7 +58,6 @@ h1,h2,h3,h4,h5,h6,button,input,select,textarea{font-family:inherit}
   .jz-shell-rail .jz-rail-text,.jz-shell-rail .jz-rail-h,.jz-shell-rail .jz-rail-foot{opacity:1!important;pointer-events:auto!important}
   .jz-shell-rail .jz-rail-count{position:static!important;min-width:0!important;height:auto!important;padding:1px 7px!important;font-size:11px!important;line-height:inherit!important}
   html[data-jz-shell="on"] .side-toggle, html[data-jz-shell="on"] .menu-btn, html[data-jz-shell="on"] #menu-btn{display:none!important}
-  html[data-jz-shell="on"] .kai-fab, html[data-jz-shell="on"] .ai-fab{display:none!important}
   .jz-shell-rail{position:fixed;left:0;top:0;bottom:0;height:100vh}
 }
 @media (max-width:820px){ .jz-shell-rail{display:none!important} .jz-ts-menu{display:none!important} }

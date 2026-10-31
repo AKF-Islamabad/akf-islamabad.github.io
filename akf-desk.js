@@ -142,7 +142,7 @@
 @media (max-width:720px){.akd{bottom:78px;left:10px}}
 @media (min-width:821px){html[data-jz-page="hub"] .akd{left:96px}}   /* main page: clear of the left rail */
 @media print{.akd{display:none}}`;
-  let root = null, data = null, folded = matchMedia("(max-width: 720px)").matches;   // phones: a small pinned button, tap to open
+  let root = null, data = null, folded = true;   // hidden as a small pinned button until the person opens it
   // note colours [paper, header, lines]; the choice and the place on screen are remembered on this device
   const PAL = { yellow: ["#FFF6BF", "#FCEB8C", "#EAD97A"], green: ["#E3F6E8", "#C2EACF", "#9FD8B1"], blue: ["#E3EEFF", "#C9DDFF", "#9DBDF0"],
                 pink: ["#FDE6EE", "#F9C9DA", "#EBA1BB"], purple: ["#EFE8FF", "#DCCEFF", "#BBA6F0"], white: ["#FFFFFF", "#EEF1F6", "#D5DBE6"] };
