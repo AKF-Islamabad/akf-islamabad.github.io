@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-We0TSl1ELXAOFS2NfNSAUatkGSTbZxnClzKebtKs5mw='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-6Yy2Sgq9Vf/g+Z59HgOOrZ/J/M8TaWCx7VPMbB7oW2s='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -988,9 +988,8 @@ function emailUsage(st, v) {
 }
 /* the shared settings record: read fresh and change only the given keys, so two sections never overwrite each other */
 async function saveGlobal(patch, logText) {
-  const r = await q(sb.from("portal_rows").select("data").eq("collection", "settings").eq("id", "global").maybeSingle());
-  const next = { ...((r && r.data) || {}), ...patch };
-  await q(sb.from("portal_rows").upsert({ collection: "settings", id: "global", data: next }, { onConflict: "collection,id" }));
+  // the server merges only these keys and checks the ERP Super Admin flag (015_save_settings.sql)
+  const next = await q(sb.rpc("core_save_settings", { p_patch: patch }));
   try {   // record it in the portals' tracking log, in my own name
     const me = await q(sb.from("portal_rows").select("id").eq("collection", "users").eq("data->>email", S.me.email).maybeSingle());
     const id = "set-" + Date.now().toString(36);
