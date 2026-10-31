@@ -274,11 +274,36 @@
     paint();
   }
 
+  /* sign-out rules for every page: a sign-in lasts at most 10 hours, and at 6 PM (Pakistan time) every sign-in made
+     before 6 PM ends. Signing in again after 6 PM is allowed (10 hours from then). */
+  const HOUR = 36e5;
+  function expired(s, now) {
+    let t = 0;   // when THIS session signed in: the token's amr timestamp (per device), else the account's last sign-in
+    try { const c = JSON.parse(atob(s.access_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); t = (((c.amr || [])[0] || {}).timestamp || 0) * 1000; } catch (_) {}
+    t = t || Date.parse(s.user && s.user.last_sign_in_at) || 0; if (!t) return false;
+    const pk = new Date(now + 5 * HOUR), six = Date.UTC(pk.getUTCFullYear(), pk.getUTCMonth(), pk.getUTCDate(), 13);   // 18:00 PKT = 13:00 UTC
+    return now - t > 10 * HOUR || (now >= six && t < six);
+  }
+  let leaving = false;
+  async function signOutNow() {
+    if (leaving) return; leaving = true;
+    await sb.auth.signOut({ scope: "local" }).catch(() => {}); try { localStorage.removeItem("akf-portals-auth"); } catch (_) {}
+    if (document.visibilityState === "visible") alert("You have been signed out (sign-ins end at 6 PM and after 10 hours). Please sign in again.");
+    location.href = BASE;
+  }
+  async function checkExpiry() {
+    const { data: s } = await sb.auth.getSession().catch(() => ({ data: {} }));
+    if (s && s.session && expired(s.session, Date.now())) { signOutNow(); return true; }
+    return false;
+  }
+  setInterval(checkExpiry, 60000);   // also in background tabs, so 6 PM is on time
+
   let saved = false;
   async function tick() {
     const { data: s } = await sb.auth.getSession().catch(() => ({ data: {} }));
     const u = s && s.session && s.session.user;
     if (!u) { me = null; paint(); return; }
+    if (expired(s.session, Date.now())) { signOutNow(); return; }
     if (!me || me.id !== u.id) { me = { id: u.id, email: String(u.email || "").toLowerCase() }; data = null; paint(); }
     load().catch(() => {});
     if (!saved && canPush && Notification.permission === "granted") { saved = true; subscribe().catch(() => { saved = false; }); }
