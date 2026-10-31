@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-BiLwCefvjbV+pUXYuOZcmAmGYsgLAtSCVpXpGgIRFqY='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-em8aL5LzFXQjBvNFfshXOMxH8pjolkmQvAdhPE+CgsE='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -970,7 +970,7 @@ const SETTING_FIELDS = [
   ["E-mail — sent as “Alkhidmat Foundation Islamabad” (Resend first, Brevo when Resend is full or fails)", [
     ["emailFrom", "Sender address on your verified domain, e.g. no-reply@alkhidmatisb.org", "text"],
     ["resendKey", "Resend API key (resend.com → API Keys, starts with re_) — kept on the server. Leave empty to keep the saved one.", "secret"],
-    ["brevoKey", "Brevo API key (brevo.com → SMTP & API → API Keys, starts with xkeysib-) — kept on the server. Leave empty to keep the saved one.", "secret"],
+    ["brevoKey", "Brevo API key (brevo.com → SMTP & API → the “API Keys” tab, not the SMTP key) — kept on the server. Leave empty to keep the saved one.", "secret"],
     ["emailResendDay", "Resend limit per day (free plan: 100)", "number"], ["emailResendMonth", "Resend limit per month (free plan: 3000)", "number"],
     ["emailBrevoDay", "Brevo limit per day (free plan: 300)", "number"], ["emailBrevoMonth", "Brevo limit per month (0 = no monthly limit)", "number"]]],
 ];
