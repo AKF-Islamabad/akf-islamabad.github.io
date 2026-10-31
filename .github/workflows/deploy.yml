@@ -13,7 +13,7 @@ permissions:
   id-token: write
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false   # a publish starts two runs (push + the script's own); they must wait in line, not cancel each other
 jobs:
   deploy:
     runs-on: ubuntu-latest
