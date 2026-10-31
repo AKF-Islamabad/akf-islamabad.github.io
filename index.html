@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-em8aL5LzFXQjBvNFfshXOMxH8pjolkmQvAdhPE+CgsE='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PXpqPDYU31KZkgHrOWx1Bbb5sDSHiOOpUajHKia+0Jc='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -958,7 +958,7 @@ function setup() {
 /* ---------- Super Admin: the ONE Settings place for every portal (stored where the portals read it) ---------- */
 const SETTING_DEFAULTS = { orgName: "Alkhidmat Foundation Islamabad Region", fiscalYear: "2026-27", escalationHours: 48, directPurchaseLimit: 100000, assetThreshold: 50000, actingApprover: "",
   gst: 0.18, whtGoodsFiler: 0.04, whtGoodsNonFiler: 0.08, whtServicesFiler: 0.08, whtServicesNonFiler: 0.16, aiProvider: "gemini", aiModel: "gemini-flash-latest", aiKey: "", aiClaudeModel: "claude-haiku-5-5", aiClaudeKey: "",
-  emailFrom: "", emailResendDay: 100, emailResendMonth: 3000, emailBrevoDay: 300, emailBrevoMonth: 0, resendKey: "", brevoKey: "" };
+  emailFrom: "", emailBrevoLogin: "", emailResendDay: 100, emailResendMonth: 3000, emailBrevoDay: 300, emailBrevoMonth: 0, resendKey: "", brevoKey: "" };
 const SETTING_FIELDS = [
   ["Organisation & approvals", [["orgName", "Organisation name on documents", "text"], ["fiscalYear", "Fiscal year", "text"], ["escalationHours", "Escalate a waiting request after (hours)", "number"],
     ["directPurchaseLimit", "Direct-purchase limit (PKR) — above this, quotations + purchase committee are required", "number"], ["assetThreshold", "Record as an asset from (PKR per item)", "number"],
@@ -970,7 +970,8 @@ const SETTING_FIELDS = [
   ["E-mail — sent as “Alkhidmat Foundation Islamabad” (Resend first, Brevo when Resend is full or fails)", [
     ["emailFrom", "Sender address on your verified domain, e.g. no-reply@alkhidmatisb.org", "text"],
     ["resendKey", "Resend API key (resend.com → API Keys, starts with re_) — kept on the server. Leave empty to keep the saved one.", "secret"],
-    ["brevoKey", "Brevo API key (brevo.com → SMTP & API → the “API Keys” tab, not the SMTP key) — kept on the server. Leave empty to keep the saved one.", "secret"],
+    ["brevoKey", "Brevo key — the API key (xkeysib-…) or the SMTP key (xsmtpsib-…) from brevo.com → SMTP & API. Kept on the server. Leave empty to keep the saved one.", "secret"],
+    ["emailBrevoLogin", "Brevo SMTP login (only with the SMTP key): the “Login” shown on brevo.com → SMTP & API → SMTP, e.g. 9a1b2c001@smtp-brevo.com", "text"],
     ["emailResendDay", "Resend limit per day (free plan: 100)", "number"], ["emailResendMonth", "Resend limit per month (free plan: 3000)", "number"],
     ["emailBrevoDay", "Brevo limit per day (free plan: 300)", "number"], ["emailBrevoMonth", "Brevo limit per month (0 = no monthly limit)", "number"]]],
 ];
@@ -1139,6 +1140,7 @@ function settingsGeneral() {
         if (type === "secret" && !val) continue;
         if ((type === "number" || type === "pct") && (!isFinite(val) || val < 0)) return toast("Numbers must be zero or more", true);
         if (k === "orgName" && val.length < 3) return toast("Enter the organisation name", true);
+        if (k === "emailBrevoLogin" && val && !/^[^\s<>"',;]{3,120}$/.test(val)) return toast("Enter the Brevo SMTP login as shown in Brevo", true);
         if (k === "emailFrom" && val && !/^[^\s@<>"',;]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$/.test(val)) return toast("Enter a valid sender e-mail address", true);
         if (JSON.stringify(next[k]) !== JSON.stringify(val)) { changed.push(k); next[k] = val; }
       }
