@@ -41,7 +41,14 @@
     const find = el("button", "jz-ts-search"); find.type = "button"; find.title = "Search (Ctrl K)"; find.setAttribute("aria-label", "Search and ask Alkhidmat AI"); find.append(SVG(ICON.search)); find.addEventListener("click", openPalette);
     strip.append(menu, home, stripLinks, find);
     document.body.prepend(rail); document.body.prepend(strip);
-    const setOpen = on => { document.documentElement.classList.toggle("jz-rail-open", on); menu.setAttribute("aria-expanded", String(on)); if (on) rail.focus(); };
+    const setOpen = (on, focus = true) => { clearTimeout(hideT); document.documentElement.classList.toggle("jz-rail-open", on); menu.setAttribute("aria-expanded", String(on)); if (on && focus) rail.focus(); };
+    // auto open / hide with a mouse: point at ☰ or the left edge to open, move away to hide (touch and keyboard: ☰ click)
+    let hideT = 0;
+    if (matchMedia("(hover: hover)").matches) {
+      const edge = el("div", "jz-edge"); edge.setAttribute("aria-hidden", "true"); document.body.append(edge);
+      const show = () => setOpen(true, false), later = () => { clearTimeout(hideT); hideT = setTimeout(() => { if (rail.contains(document.activeElement)) document.activeElement.blur(); setOpen(false); }, 350); };
+      [menu, edge, rail].forEach(x => { x.addEventListener("pointerenter", x === rail ? () => clearTimeout(hideT) : show); x.addEventListener("pointerleave", later); });
+    }
     document.addEventListener("pointerdown", e => { if (!rail.contains(e.target) && !menu.contains(e.target)) setOpen(false); });
     addEventListener("keydown", e => { if (e.key === "Escape" && document.documentElement.classList.contains("jz-rail-open")) { setOpen(false); menu.focus(); } });
     rail.addEventListener("click", e => { if (e.target.closest("a,button")) setOpen(false); });
