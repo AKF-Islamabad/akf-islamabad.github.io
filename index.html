@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-6Yy2Sgq9Vf/g+Z59HgOOrZ/J/M8TaWCx7VPMbB7oW2s='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-lYxbqVdozAc8btbnIgQOlfJGYXPDSem0QG6dXh6zqLM='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -958,7 +958,7 @@ function setup() {
 /* ---------- Super Admin: the ONE Settings place for every portal (stored where the portals read it) ---------- */
 const SETTING_DEFAULTS = { orgName: "Alkhidmat Foundation Islamabad Region", fiscalYear: "2026-27", escalationHours: 48, directPurchaseLimit: 100000, assetThreshold: 50000, actingApprover: "",
   gst: 0.18, whtGoodsFiler: 0.04, whtGoodsNonFiler: 0.08, whtServicesFiler: 0.08, whtServicesNonFiler: 0.16, aiProvider: "gemini", aiModel: "gemini-flash-latest", aiKey: "", aiClaudeModel: "claude-haiku-5-5", aiClaudeKey: "",
-  emailFrom: "", emailBrevoLogin: "", emailResendDay: 100, emailResendMonth: 3000, emailBrevoDay: 300, emailBrevoMonth: 0, resendKey: "", brevoKey: "" };
+  emailFrom: "", emailBrevoLogin: "", emailResendDay: 100, emailResendMonth: 3000, emailBrevoDay: 300, emailBrevoMonth: 0, resendKey: "", brevoKey: "", emailGmail: "careers.akfi@gmail.com", gmailKey: "", emailGmailDay: 500, emailGmailMonth: 0 };
 const SETTING_FIELDS = [
   ["Organisation & approvals", [["orgName", "Organisation name on documents", "text"], ["fiscalYear", "Fiscal year", "text"], ["escalationHours", "Escalate a waiting request after (hours)", "number"],
     ["directPurchaseLimit", "Direct-purchase limit (PKR) — above this, quotations + purchase committee are required", "number"], ["assetThreshold", "Record as an asset from (PKR per item)", "number"],
@@ -967,13 +967,16 @@ const SETTING_FIELDS = [
   ["Alkhidmat AI — the assistant in every portal (unlimited messages)", [["aiProvider", "AI provider — the one every portal uses", "ai"], ["aiClaudeModel", "Claude model (when Claude is chosen)", "claudemodel"],
     ["aiClaudeKey", "Claude API key (console.anthropic.com → API keys; needs credit) — kept on the server, never shown to staff. Leave empty to keep the saved one.", "secret"],
     ["aiModel", "Gemini model (picked automatically when Google retires one — no need to change)", "text"], ["aiKey", "Google Gemini key (aistudio.google.com/apikey) — kept on the server, never shown to staff. Leave empty to keep the saved one.", "secret"]]],
-  ["E-mail — sent as “Alkhidmat Foundation Islamabad” (Resend first, Brevo when Resend is full or fails)", [
+  ["E-mail — sent as “Alkhidmat Foundation Islamabad” (Resend first, then Gmail, then Brevo — each one when the one before is full or fails)", [
     ["emailFrom", "Sender address on your verified domain, e.g. no-reply@alkhidmatisb.org", "text"],
     ["resendKey", "Resend API key (resend.com → API Keys, starts with re_) — kept on the server. Leave empty to keep the saved one.", "secret"],
     ["brevoKey", "Brevo key — the API key (xkeysib-…) or the SMTP key (xsmtpsib-…) from brevo.com → SMTP & API. Kept on the server. Leave empty to keep the saved one.", "secret"],
     ["emailBrevoLogin", "Brevo SMTP login (only with the SMTP key): the “Login” shown on brevo.com → SMTP & API → SMTP, e.g. 9a1b2c001@smtp-brevo.com", "text"],
     ["emailResendDay", "Resend limit per day (free plan: 100)", "number"], ["emailResendMonth", "Resend limit per month (free plan: 3000)", "number"],
-    ["emailBrevoDay", "Brevo limit per day (free plan: 300)", "number"], ["emailBrevoMonth", "Brevo limit per month (0 = no monthly limit)", "number"]]],
+    ["emailBrevoDay", "Brevo limit per day (free plan: 300)", "number"], ["emailBrevoMonth", "Brevo limit per month (0 = no monthly limit)", "number"],
+    ["emailGmail", "Gmail address that sends (works without a verified domain)", "text"],
+    ["gmailKey", "Gmail App Password — 16 letters (Google Account → Security → 2-Step Verification → App passwords), not the normal Gmail password. Kept on the server. Leave empty to keep the saved one.", "secret"],
+    ["emailGmailDay", "Gmail limit per day (free Gmail: 500)", "number"], ["emailGmailMonth", "Gmail limit per month (0 = no monthly limit)", "number"]]],
 ];
 /* Settings → E-mail: how much of each provider's free limit is used today and this month, and what is left */
 function emailUsage(st, v) {
@@ -983,6 +986,7 @@ function emailUsage(st, v) {
   return el("div", { class: "card", style: "padding:16px;display:grid;gap:8px" }, el("h3", { style: "margin:0;font-size:16px", text: "E-mail used and available" }),
     el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, el("th", { text: "Provider" }), el("th", { text: "Today (Pakistan time)" }), el("th", { text: "This month" }))),
       el("tbody", {}, row("Resend", st && st.resend_set, t.resend, Number(v.emailResendDay), m.resend, Number(v.emailResendMonth)),
+        row("Gmail", st && st.gmail_set, t.gmail, Number(v.emailGmailDay), m.gmail, Number(v.emailGmailMonth)),
         row("Brevo", st && st.brevo_set, t.brevo, Number(v.emailBrevoDay), m.brevo, Number(v.emailBrevoMonth)))),
     el("p", { class: "small muted", text: "Sent automatically: the thank-you with the official receipt when Finance verifies a donation. On demand: acknowledgements, reminders and corrected receipts (Donor Management → message → Alkhidmat e-mail)." }));
 }
@@ -1119,7 +1123,7 @@ function settingsGeneral() {
     let aiStatus = null, mailStatus = null; try { aiStatus = await q(sb.rpc("core_ai_status")); } catch (e) { }
     try { mailStatus = await q(sb.rpc("core_email_status")); } catch (e) { }
     const v = { ...SETTING_DEFAULTS, ...cur, aiKey: aiStatus && (aiStatus.gemini_set ?? aiStatus.key_set) ? "set" : "", aiClaudeKey: aiStatus && aiStatus.claude_set ? "set" : "",
-      resendKey: mailStatus && mailStatus.resend_set ? "set" : "", brevoKey: mailStatus && mailStatus.brevo_set ? "set" : "" }, inputs = {};
+      resendKey: mailStatus && mailStatus.resend_set ? "set" : "", brevoKey: mailStatus && mailStatus.brevo_set ? "set" : "", gmailKey: mailStatus && mailStatus.gmail_set ? "set" : "" }, inputs = {};
     const field = ([k, label, type]) => {
       let i;
       if (type === "acting") { i = el("select", { class: "input" }, el("option", { value: "", text: "Nobody (President only)" }), ORG_ROLES.filter(r => !["staff", "hod"].includes(r[0])).map(([r, t]) => el("option", { value: r, text: t }))); i.value = v[k] || ""; }
@@ -1140,13 +1144,14 @@ function settingsGeneral() {
         if ((type === "number" || type === "pct") && (!isFinite(val) || val < 0)) return toast("Numbers must be zero or more", true);
         if (k === "orgName" && val.length < 3) return toast("Enter the organisation name", true);
         if (k === "emailBrevoLogin" && val && !/^[^\s<>"',;]{3,120}$/.test(val)) return toast("Enter the Brevo SMTP login as shown in Brevo", true);
+        if (k === "emailGmail" && val && !/^[^\s@<>"',;]{1,64}@gmail\.com$/i.test(val)) return toast("Enter a Gmail address (…@gmail.com)", true);
         if (k === "emailFrom" && val && !/^[^\s@<>"',;]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$/.test(val)) return toast("Enter a valid sender e-mail address", true);
         if (JSON.stringify(next[k]) !== JSON.stringify(val)) { changed.push(k); next[k] = val; }
       }
       /* the AI keys never go into the shared settings record: each is kept on the server, where no browser can read it */
-      ["aiKey", "aiClaudeKey", "resendKey", "brevoKey"].forEach(k => { const ci = changed.indexOf(k); if (ci >= 0) changed.splice(ci, 1); });
+      ["aiKey", "aiClaudeKey", "resendKey", "brevoKey", "gmailKey"].forEach(k => { const ci = changed.indexOf(k); if (ci >= 0) changed.splice(ci, 1); });
       let newMailKey = false;
-      for (const [k, provider, label] of [["resendKey", "resend", "Resend"], ["brevoKey", "brevo", "Brevo"]]) {
+      for (const [k, provider, label] of [["resendKey", "resend", "Resend"], ["gmailKey", "gmail", "Gmail"], ["brevoKey", "brevo", "Brevo"]]) {
         const keyI = inputs[k] && inputs[k][0], key = keyI ? keyI.value.replace(/\s+/g, "") : ""; if (!key) continue;
         try { await q(sb.rpc("core_set_email_key", { p_key: key, p_provider: provider })); keyI.value = ""; keyI.placeholder = "•••••• saved"; newMailKey = true; toast(label + " key saved on the server"); }
         catch (e) { e = e || {}; e.userMessage = `The ${label} key was not saved: ` + (e.code === "PGRST202" ? "the database is not up to date — run AKF-PORTALS.cmd → 2 Publish changes" : (e.message || "the server did not answer")) + (e.code ? ` [${e.code}]` : ""); fail(e, `The ${label} key was not saved`); keyI.value = ""; continue; }   // a refused key must not stop the other settings from saving
@@ -1181,7 +1186,7 @@ async function testEmail() {
   try {
     const { data, error } = await sb.functions.invoke("send-email", { body: { kind: "test" } });
     if (error) { let b = {}; try { b = await error.context.json(); } catch (x) { } return toast("E-mail is not working yet: " + (b.error || "the e-mail service could not be reached"), true); }
-    toast(`Test e-mail sent via ${data.provider === "resend" ? "Resend" : "Brevo"} ✓ — check your inbox (and spam folder)`);
+    toast(`Test e-mail sent via ${({ resend: "Resend", gmail: "Gmail", brevo: "Brevo" })[data.provider] || data.provider} ✓ — check your inbox (and spam folder)`);
   } catch (e) { fail(e, "The e-mail test could not run"); }
 }
 /* asks the assistant one tiny question and says plainly whether it works (and if not, why) */
