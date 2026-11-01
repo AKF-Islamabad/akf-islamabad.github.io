@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-mpgpABgwLxjm9TUbKGwxAKHArg+w44iucXCy9UaYwGw='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-ACUyTbKsTAH+4rj2qKhuRdUcmEi8d6uJDAdna7culbI='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -347,7 +347,7 @@ textarea.input{line-height:1.45}
 <script src="settings-fleet.js"></script>
 <script src="settings-assistance.js"></script>
 <script src="akf-excel.js"></script>
-<script src="excel-procurement.js"></script><script src="excel-store.js"></script><script src="excel-tasks.js"></script><script src="excel-donor.js"></script><script src="excel-fleet.js"></script><script src="excel-assistance.js"></script>
+<script src="excel-procurement.js"></script><script src="excel-store.js"></script><script src="excel-tasks.js"></script><script src="excel-donor.js"></script><script src="excel-fleet.js"></script><script src="excel-assistance.js"></script><script src="excel-people.js"></script>
 <script>
 "use strict";
 /* ========== Alkhidmat Foundation Islamabad — main page (portal launcher + people & access) ==========
@@ -1034,11 +1034,14 @@ function settingsExcel() {
     if (!window.AKF_EXCEL) { box.replaceChildren(el("div", { class: "notice bad", text: "akf-excel.js did not load. Reload the page." })); return; }
     let mods = [];
     try { mods = await q(sb.from("core_modules").select("key,name,sort,enabled").order("sort")); } catch (e) { fail(e, "Portals could not be loaded"); }
-    const list = mods.filter(m => reg[m.key] && typeof reg[m.key].load === "function").map(m => ({ key: m.key, name: m.name || reg[m.key].name }));
+    // main-page formats (People & access) first, then one per portal
+    const list = Object.keys(reg).filter(k => reg[k].core && typeof reg[k].load === "function").map(k => ({ key: k, name: reg[k].name }))
+      .concat(mods.filter(m => reg[m.key] && !reg[m.key].core && typeof reg[m.key].load === "function").map(m => ({ key: m.key, name: m.name || reg[m.key].name })));
     Object.keys(reg).forEach(k => { if (!list.some(x => x.key === k) && !mods.length) list.push({ key: k, name: reg[k].name || k }); });
     if (!list.length) { box.replaceChildren(el("div", { class: "notice", text: "No portal has an Excel format yet." })); return; }
     let def = null;
-    const logExcel = (action, rows) => { sb.rpc("core_log_excel", { p_module: pick.value, p_action: action, p_rows: rows == null ? null : rows }).then(r => { if (r.error) fail(r.error, "Excel activity not logged"); }); };
+    const logExcel = (action, rows) => { if ((reg[pick.value] || {}).core) return;   // main-page formats log their own changes (admin-users, core_set_access)
+      sb.rpc("core_log_excel", { p_module: pick.value, p_action: action, p_rows: rows == null ? null : rows }).then(r => { if (r.error) fail(r.error, "Excel activity not logged"); }); };
     const pick = el("select", { class: "input", "aria-label": "Portal" }, list.map(m => el("option", { value: m.key, text: m.name })));
     const sheetsBox = el("div", { style: "display:grid;gap:8px" });
     const status = el("p", { class: "muted small" });
