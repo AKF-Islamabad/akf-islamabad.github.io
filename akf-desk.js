@@ -15,9 +15,9 @@
   const SCRIPT = document.currentScript && document.currentScript.src;
   const BASE = new URL(".", SCRIPT || location.href).href;          // the main site folder (/ live, /portal-staging/ staging)
   // Jazba UI (the official design system) on every page, existing and future, even before sign-in
-  if (!document.querySelector('link[href$="jazba.css"]')) { const jz = document.createElement("link"); jz.rel = "stylesheet"; jz.href = BASE + "jazba.css"; document.head.append(jz); }
+  if (!document.querySelector('link[href*="jazba.css"]')) { const jz = document.createElement("link"); jz.rel = "stylesheet"; jz.href = BASE + "jazba.css?v=3"; document.head.append(jz); }
   // the Jazba look on every portal: maps the portal's own colour/font settings (never on the main page)
-  if (document.documentElement.dataset.jzPage !== "hub" && !document.querySelector('link[href$="jazba-portals.css"]')) { const jp = document.createElement("link"); jp.rel = "stylesheet"; jp.href = BASE + "jazba-portals.css"; document.head.append(jp); }
+  if (document.documentElement.dataset.jzPage !== "hub" && !document.querySelector('link[href*="jazba-portals.css"]')) { const jp = document.createElement("link"); jp.rel = "stylesheet"; jp.href = BASE + "jazba-portals.css?v=3"; document.head.append(jp); }
   // the same Jazba frame on every portal (Jazba Portal Standard): top strip + menu + Ctrl+K; the sticky note shows on every page
   if (document.documentElement.dataset.jzPage !== "hub" && !window.JAZBA_SHELL) {
     document.documentElement.dataset.jzShell = "on";

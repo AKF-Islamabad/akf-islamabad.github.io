@@ -133,6 +133,7 @@ html[data-jz-family="kit"] .hero .hs b{color:#FFB25B}
 html[data-jz-family="kit"] .hero .btn-white{color:#003C73}
 /* KPI tiles = jz-kpi with an animated 3D icon */
 html[data-jz-family="kit"] .kpi{--kc:#0A74C9;border-radius:14px;border-top:3px solid var(--kc);background:linear-gradient(160deg,color-mix(in srgb,var(--kc) 10%,var(--surface)),var(--surface) 70%)}
+html[data-jz-family] .kpi.accent{--kc:#F59323;background:linear-gradient(140deg,#0A74C9,#003C73)}   /* the highlighted card keeps its dark blue: its text is white */
 html[data-jz-family="kit"] .kpis > :nth-child(2){--kc:#421E76}
 html[data-jz-family="kit"] .kpis > :nth-child(3){--kc:#B45309}
 html[data-jz-family="kit"] .kpis > :nth-child(4){--kc:#15803D}
