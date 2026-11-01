@@ -46,7 +46,8 @@
       { k: "dept", h: "Department", list: depts.filter(d => d.active !== false).map(d => d.name), note: "Leave empty for none" },
       { k: "role", h: "Approval role", list: ROLES.map(r => r[1]), note: "Decides which approval steps are theirs. Empty = Staff (new people) or keep (existing)" },
       { k: "active", h: "Active", type: "yesno", note: "No = cannot sign in. Empty = Yes for new people, keep for existing" },
-      ...mods.map(m => ({ k: "m_" + m.key, h: m.name + " — access", list: LEVELS, note: "Viewer sees, Staff adds and edits, Manager also approves, Admin can do everything. Empty = no change (new people: no access)" })),
+      // aka: a renamed portal still matches a "<key> — access" heading
+      ...mods.map(m => ({ k: "m_" + m.key, h: m.name + " — access", aka: [m.key + " access"], list: LEVELS, note: "Viewer sees, Staff adds and edits, Manager also approves, Admin can do everything. Empty = no change (new people: no access)" })),
     ];
     const sheet = {
       key: "people", name: "People & access",
