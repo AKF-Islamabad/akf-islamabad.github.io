@@ -60,7 +60,7 @@
     assistance: { steps: [
       S("submitted", "Registered", "Front Desk Officer", "front_desk", "fixed"),
       S("dept", "Reviewed by department", "Department Head", "hod", "fixed"),
-      S("director", "Reviewed by director", "Department Director", "director", "approval"),
+      S("director", "Reviewed by director", "Department Director", "director", "approval", { on: false }),   // off until the Super Admin switches it on
       S("rm", "Recommended", "Regional Manager", "regional_manager", "approval"),
       S("president", "Approved", "President", "president", "approval", { final: true }),
       S("exec", "Paid / items issued", "Finance / Store Officer", "finance", "fixed")] },

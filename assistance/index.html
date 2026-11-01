@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-assistance.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-gvc50QAhIoBOxybhaYTDXM9vKSjKXM5t3V3pcW4/WVM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-O5Sj3xMO2gmkx3UszTiZa8WNWoyqYh51WkkThm0Xg6M='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -2338,7 +2338,7 @@ function aiContext() {
       messagesToSend: A.apps.reduce((s, a) => s + (a.messages || []).filter(m => !m.sent).length, 0) },
     timeLimitsDays: SET.sla,
     rules: ["Front Desk registers the application with the signed paper form; the server gives the number (AF-ISB-YYYY-NNNN)",
-      "Department Head reviews, then the Department Director (the Head may skip the Director with a reason; a director marked unavailable is skipped)",
+      "Department Head reviews, then the Department Director only if the approval matrix switches that step on (the Head may skip the Director with a reason; a director marked unavailable is skipped)",
       "Regional Manager recommends (and an amount), President gives the final approval (and the amount)", "Finance pays the approved amount (cash, cheque, bank transfer, Easypaisa, JazzCash) or the Store Officer issues the items with a GIN",
       "Any approver may return a case to the Front Desk for correction (remarks required); Department Head, Director and President may reject (reason required)",
       "Nobody acts on a case they registered or on two different steps of the same case (maker-checker)", "There is no SMS service: messages to applicants are sent by staff and marked as sent",

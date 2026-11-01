@@ -12,7 +12,7 @@
   const ROLES = [["staff", "Staff"], ["hod", "HOD (Head of Department)"], ["finance", "Finance Department"], ["manager_hr", "Manager Admin & HR"],
     ["regional_manager", "Regional Manager"], ["president", "President"], ["gen_sec", "General Secretary (view only)"], ["admin_officer", "Admin Officer (procurement)"],
     ["store_officer", "Store Officer"], ["transport_officer", "Transport Officer (fleet)"], ["driver", "Driver (fleet)"],
-    ["front_desk", "Front Desk Officer (assistance)"], ["director", "Department Director (assistance)"]];
+    ["front_desk", "Front Desk Officer (assistance)"], ["director", "Department Director"]];
   const low = s => String(s == null ? "" : s).trim().toLowerCase();
   const domain = () => (window.AKF_SUPABASE && window.AKF_SUPABASE.emailDomain) || "";
   const loginOf = v => { v = low(v); return v && !v.includes("@") && domain() ? v + "@" + domain() : v; };
@@ -31,7 +31,7 @@
     const byEmail = new Map(people.map(p => [low(p.email), p]));
     const deptName = new Map(depts.map(d => [d.code, d.name])), deptCode = new Map();
     depts.forEach(d => { deptCode.set(low(d.name), d.code); deptCode.set(low(d.code), d.code); });
-    const roleLabel = new Map(ROLES), roleKey = new Map(); ROLES.forEach(([k, t]) => { roleKey.set(low(t), k); roleKey.set(k, k); });
+    const roleLabel = new Map(ROLES), roleKey = new Map(); ROLES.forEach(([k, t]) => { roleKey.set(low(t), k); roleKey.set(k, k); }); roleKey.set("department director (assistance)", "director");   // older sheets
     const level = (uid, mk) => { const a = acc.find(x => x.user_id === uid && x.module_key === mk); if (!a) return "No access";
       return a.preset === "custom" ? "" : (LEVELS.find(l => low(l) === a.preset) || ""); };   // custom ticks: blank = keep them
     /* the ticks a level gives on each tab of a portal (the same as the People & access page's preset buttons) */
