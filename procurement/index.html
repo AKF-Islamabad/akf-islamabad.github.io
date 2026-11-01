@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-SPLGsa7XiKEUI9TjT3AAJUKtxn+ZjQorpXu4A5GJxLA='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-S1uFO0hJIW2JWCCCQ51YT1SCBPqkNwRXCfAz0UbmQLA='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <!-- clickjacking guard: GitHub Pages cannot send X-Frame-Options, so the page stays hidden if another site frames it -->
@@ -6520,7 +6520,9 @@ const TPRI_TONE={Urgent:"bad",High:"warn",Medium:"info",Low:"neutral"};
 const TPRI_RANK={Urgent:0,High:1,Medium:2,Low:3};
 const TSTAGE_TONE={"01":"neutral","02":"info","03":"warn","04":"violet","05":"ok","06":"ok","07":"bad"};
 const TROLE_LABEL={RM:"Regional Manager",HOD:"Head of Department",MA:"Manager Admin",HR:"HR Manager",Staff:"Staff",President:"President",GS:"General Secretary"};
-const TREC={none:"Does not repeat",daily:"Daily",weekly:"Weekly",monthly:"Monthly"};
+/* how often a job-description duty comes round; each period start reminds the person (taskNotifications) */
+const T_FREQ=["Daily","Weekly","Monthly","Quarterly","Yearly","As needed"];
+const TREC={none:"Does not repeat",daily:"Daily",weekly:"Weekly",monthly:"Monthly",quarterly:"Quarterly",yearly:"Yearly"};
 /* ---------- events (as in the planner file) ---------- */
 /* ---------- events: the "Master Event / Program Checklist" form (D:\AKF-Isb\Forms), field for field ---------- */
 const EVENT_TYPES=["Seminar","Conference","Roundtable","Training","Meeting","Reception","Other"];
@@ -6752,7 +6754,7 @@ function makeTaskActions(commit,user,toast){
   /* a repeating task creates its next occurrence once, the first time it is done */
   const spawn=(d,t,u)=>{
     if(!t.recurring||t.recurring==="none"||t.spawnedNext) return null;
-    const next=t.recurring==="daily"?tAddDays(t.plannedDate,1):t.recurring==="weekly"?tAddDays(t.plannedDate,7):tAddMonths(t.plannedDate,1,t.repeatDay);
+    const next=t.recurring==="daily"?tAddDays(t.plannedDate,1):t.recurring==="weekly"?tAddDays(t.plannedDate,7):tAddMonths(t.plannedDate,{quarterly:3,yearly:12}[t.recurring]||1,t.repeatDay);
     const n={...JSON.parse(JSON.stringify(t)),key:newKey(),id:nextNo(d),stage:"01",plannedDate:next,startDate:"",timeLogged:0,timeLog:[],attachments:[],comments:[],activity:[],rating:null,ratedBy:"",completedAt:"",spawnedNext:false,repeatOf:t.id,eventId:null,checkItem:null,
       subtasks:(t.subtasks||[]).map(s=>({id:uid(),title:s.title,done:false})),createdAt:nowISO(),updatedAt:nowISO()};
     act(n,`created automatically as the next ${t.recurring} occurrence of ${t.id}`,u); d.tasks.unshift(n); t.spawnedNext=true; return n;
@@ -6895,7 +6897,7 @@ function makeTaskActions(commit,user,toast){
     /* ---- job description: the regular duties that make up a person's workload ---- */
     jdSave(userId,jd){
       return run((d,u)=>{ const p=d.users.find(x=>x.id===userId); if(!p) fail("Person not found."); if(!tCanEditJD(u,p)) fail("Only the Super Admin, the Regional Manager or this person's HOD / Manager Admin / HR can edit the job description.");
-        const duties=(jd.duties||[]).map(x=>({id:x.id||uid(),text:String(x.text||"").trim().slice(0,300),hours:Math.max(0,Math.min(60,Number(x.hours)||0)),freq:["Daily","Weekly","Monthly","As needed"].includes(x.freq)?x.freq:"Weekly"})).filter(x=>x.text);
+        const duties=(jd.duties||[]).map(x=>({id:x.id||uid(),text:String(x.text||"").trim().slice(0,300),hours:Math.max(0,Math.min(60,Number(x.hours)||0)),freq:T_FREQ.includes(x.freq)?x.freq:"Weekly"})).filter(x=>x.text);
         p.jd={title:String(jd.title||"").slice(0,120),hoursPerWeek:Math.max(0,Math.min(80,Number(jd.hoursPerWeek)||40)),duties,notes:String(jd.notes||"").slice(0,3000),updatedAt:nowISO(),updatedBy:u.name};
         audit(d,{id:"JD-"+(p.username||p.id),title:p.name,dept:tUDept(p)},u,"Job description updated"); },"Job description saved");
     },
@@ -6948,6 +6950,14 @@ function taskNotifications(state,user){
     (t.comments||[]).forEach(c=>{ if(c.uid===user.id||tTs(c.at)<=weekAgo) return; const m=(c.mentions||[]).includes(user.id)||(handle&&c.text.toLowerCase().includes("@"+handle));
       if(m||t.assigneeId===user.id||t.creatorId===user.id) out.push({tone:"info",icon:"msg",t:`${c.by} commented${m?" and mentioned you":""} · ${t.id}`,d:c.text.slice(0,90),at:c.at,task:t.key,key:"tcm|"+c.id}); });
   });
+  /* job-description duties: a reminder when each duty's period starts — weekly on Monday, monthly on the 1st, quarterly on
+     1 Jul / Oct / Jan / Apr, yearly on 1 July (the fiscal year). It stays in the bell for a few days, then the next period brings a new one. */
+  { const me=tUser(state,user.id)||user, t0=tToday(), d0=new Date(t0+"T12:00:00");
+    const start={Daily:t0,Weekly:tAddDays(t0,-((d0.getDay()+6)%7)),Monthly:t0.slice(0,8)+"01",
+      Quarterly:`${d0.getFullYear()}-${String(Math.floor(d0.getMonth()/3)*3+1).padStart(2,"0")}-01`,Yearly:`${d0.getMonth()>=6?d0.getFullYear():d0.getFullYear()-1}-07-01`};
+    const keep={Daily:0,Weekly:2,Monthly:6,Quarterly:6,Yearly:6};
+    ((me.jd||{}).duties||[]).forEach(du=>{ const st=start[du.freq]; if(!st||t0>tAddDays(st,keep[du.freq])) return;
+      out.push({tone:"info",icon:"brief",t:`${du.freq} duty: ${du.text}`,d:`From your job description · about ${du.hours}h a week`,at:st+"T08:00:00",taskView:"workload",key:"tjd|"+du.id+"|"+st}); }); }
   /* several tasks from the same person arrive as one notification */
   Object.entries(groups).forEach(([cid,list])=>{
     if(list.length===1){ const t=list[0]; const ev=tEventOf(state,t); out.push({tone:"info",icon:"user",t:`${tName(state,cid)} assigned you ${ev?"an event task":"a task"} (${t.priority}) · ${t.id}`,d:ev?`${t.title} · ${ev.title}`:t.title,at:t.createdAt,task:t.key,key:"tas|"+t.key}); return; }
@@ -7499,7 +7509,7 @@ function TJDModal({person,state,user,A,onClose}){
     <div class="grid2"><${Field} label="Job title (as in JD)"><input class="input" value=${jd.title} disabled=${!can} onInput=${e=>set("title",e.target.value)}/><//><${Field} label="Working hours per week"><input class="input" type="number" min="0" max="80" value=${jd.hoursPerWeek} disabled=${!can} onInput=${e=>set("hoursPerWeek",e.target.value)}/><//></div>
     <div class="tk-sec"><h4><${Icon} name="brief"/>Regular duties (workload as part of the JD)<span class="grow"/><span class="xs faint">${jd.duties.length} duties · ${dutyH}h / week</span></h4>
       <div class="tk-jd-h"><span>Duty / responsibility</span><span>How often</span><span>Hours / week</span><span/></div>
-      ${jd.duties.map((d,i)=>html`<div class="tk-jd"><input class="input" value=${d.text} disabled=${!can} placeholder="e.g. Maintain stock register" onInput=${e=>setDuty(i,"text",e.target.value)}/><select class="select" value=${d.freq||"Weekly"} disabled=${!can} onChange=${e=>setDuty(i,"freq",e.target.value)}>${["Daily","Weekly","Monthly","As needed"].map(f=>html`<option value=${f}>${f}</option>`)}</select><input class="input" type="number" min="0" max="60" step="0.5" value=${d.hours} disabled=${!can} onInput=${e=>setDuty(i,"hours",e.target.value)}/>${can?html`<button class="tk-x" aria-label="Remove duty" onClick=${()=>set("duties",jd.duties.filter((_,j)=>j!==i))}><${Icon} name="x"/></button>`:html`<span/>`}</div>`)}
+      ${jd.duties.map((d,i)=>html`<div class="tk-jd"><input class="input" value=${d.text} disabled=${!can} placeholder="e.g. Maintain stock register" onInput=${e=>setDuty(i,"text",e.target.value)}/><select class="select" value=${d.freq||"Weekly"} disabled=${!can} onChange=${e=>setDuty(i,"freq",e.target.value)}>${T_FREQ.map(f=>html`<option value=${f}>${f}</option>`)}</select><input class="input" type="number" min="0" max="60" step="0.5" value=${d.hours} disabled=${!can} onInput=${e=>setDuty(i,"hours",e.target.value)}/>${can?html`<button class="tk-x" aria-label="Remove duty" onClick=${()=>set("duties",jd.duties.filter((_,j)=>j!==i))}><${Icon} name="x"/></button>`:html`<span/>`}</div>`)}
       ${!jd.duties.length&&html`<div class="xs faint">No duties written yet.</div>`}
       ${can&&html`<button class="btn btn-ghost btn-sm" style="justify-self:start" onClick=${()=>set("duties",[...jd.duties,{id:uid(),text:"",freq:"Weekly",hours:2}])}><${Icon} name="plus"/>Add duty</button>`}</div>
     <${Field} label="Notes (scope, reporting line, KPIs)"><textarea class="textarea" value=${jd.notes} disabled=${!can} onInput=${e=>set("notes",e.target.value)}/><//>
@@ -7846,7 +7856,7 @@ function VendorQuote({token}){
 }
 
 /* Any unexpected error is shown as a red message, so a failure is never silent ("button does nothing"). */
-const BUILD="2026-10-31 procurement";
+const BUILD="2026-11-01 procurement";
 (()=>{ let last=0; const show=m=>{ const msg=errRef(m,"Unexpected error"); if(Date.now()-last<1500) return; last=Date.now(); if(window.__toast) window.__toast(msg+" (build "+BUILD+")","bad"); };   /* no raw error text on screen: details stay in the console under the reference */
   window.addEventListener("error",e=>show(e.message||e.error)); window.addEventListener("unhandledrejection",e=>show((e.reason&&e.reason.message)||e.reason)); })();
 const vendorToken=(/#rfq=([0-9a-f]{16,})/i.exec(location.hash||"")||[])[1];
