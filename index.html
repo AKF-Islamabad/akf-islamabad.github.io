@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-fRxL2mBajC+4zKV0kf5gEigGsKB4c8dVEtl5Vurvdac='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-eQlZK543NRV2ZadccCzGR3VbE7sqP+bwr218PbXVYZs='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -294,7 +294,16 @@ dialog::backdrop{background:rgba(6,20,45,.45);backdrop-filter:blur(6px)}
 }
 @media (prefers-reduced-motion: reduce){ .auth-brand::before,.auth .ctl.err,.auth .go .spin{animation:none} }
 /* ---------- Jazba shell on the hub ---------- */
-.jz-main>main{padding-top:20px;padding-bottom:40px}
+.jz-main>main{padding-top:14px;padding-bottom:112px}   /* room under the last cards: the AI button and the note float over the bottom edge */
+/* portal cards: "Open" is the action (a button), the access level is a quiet label; titles take two lines so the rows line up */
+.tile h3{min-height:2.5em;line-height:1.25}
+.tile .foot .tag,.tile:hover .foot .tag{background:none;padding:0;color:var(--muted);font-weight:600;font-size:12.5px;border-radius:0}
+.tile .foot .row{gap:6px;padding:8px 14px;border-radius:999px;background:var(--accent);color:#fff;font-weight:700}
+.tile:hover .foot .row{filter:brightness(1.08)}
+/* the month banner: slim and quiet while there is nothing to show yet */
+.jz-impact.quiet{padding:12px 20px}
+.jz-impact.quiet .jz-impact-lead div{font-size:15px}
+.jz-impact.quiet .jz-stat b{font-size:20px}
 .jz-top .grow{flex:1}
 /* Jazba tiles: 3D icon in the portal's colour, no pastel circles, gentle tilt */
 .tile::after{display:none}
@@ -745,7 +754,7 @@ function countUp(b, n) {
 function impactBanner(I) {
   const h = I.avg_approval_hours, avg = h == null ? "—" : h >= 24 ? (h / 24).toFixed(1) + " days" : Math.round(h) + " h";
   const stat = (v, t) => el("div", { class: "jz-stat" }, countUp(el("b", { text: String(v) }), v), el("span", { text: t }));
-  const box = el("section", { class: "jz-hero jz-impact", "aria-label": "Team impact this month" },
+  const box = el("section", { class: "jz-hero jz-impact" + (!I.families_month && !I.approved_month ? " quiet" : ""), "aria-label": "Team impact this month" },
     el("div", { class: "jz-impact-lead" }, el("small", { text: "This month, together" }), el("div", { text: "Your team's work is reaching families every day." })),
     stat(I.families_month || 0, "families helped"), stat(I.approved_month || 0, "requests approved"), stat(avg, "avg. approval time"));
   S.counted = true;
@@ -807,7 +816,7 @@ function tiles() {
     el("span", { class: "spot", "aria-hidden": "true" }), el("span", { class: "edge", "aria-hidden": "true" }),
     el("div", { class: "ic jz-icon3d", style: `background:${portalColor(p)}` }, icon(p.icon, 24)),
     el("div", {}, el("h3", { text: p.name }), el("p", { text: p.description })),
-    el("div", { class: "foot" }, el("span", { class: "tag brand", text: ROLE_LABEL[p.role] || p.role }), el("span", { class: "row" }, "Open", icon("arrow", 16))))))));
+    el("div", { class: "foot" }, el("span", { class: "tag brand", text: "Your access: " + (ROLE_LABEL[p.role] || p.role) }), el("span", { class: "row", "aria-hidden": "true" }, "Open", icon("arrow", 16))))))));
 }
 /* card follows the cursor: a gentle 3D tilt and a spotlight (mouse only; off with reduced motion) */
 function tileMotion(a) {
