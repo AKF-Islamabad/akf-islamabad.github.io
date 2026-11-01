@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-1BAmQ2vAfADDlufTIrZ8M91nGgohEZAYwL3K2j1EZ+M='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-fRxL2mBajC+4zKV0kf5gEigGsKB4c8dVEtl5Vurvdac='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -443,6 +443,11 @@ async function loadMe() {
     S.me = await q(sb.from("core_profiles").select("id,email,full_name,designation,dept,is_super,active,must_change_password").eq("id", S.session.user.id).maybeSingle());
     if (!S.me || !S.me.active) { S.view = "noaccess"; return render(); }
     if (S.recovery || S.me.must_change_password) { S.view = "setpw"; return render(); }
+    /* Super Admin: the second sign-in step (authenticator code) first; the database checks it too (016b_two_step.sql) */
+    if (S.me.is_super) {
+      const { data: aal, error } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (error || !aal || aal.currentLevel !== "aal2") { S.view = "mfa"; S.mfaNew = !aal || aal.nextLevel !== "aal2"; return render(); }
+    }
     S.portals = await q(sb.rpc("core_my_portals"));
     S.view = "home"; render(); loadToday();
     /* Alkhidmat AI on the main page too (every page has it); it knows which portals this person has, nothing personal */
@@ -486,6 +491,7 @@ function render() {
   if (v === "config") return app.append(authCard("Setup needed", [el("div", { class: "notice bad", text: S.configErr }), el("p", { class: "small", text: "The page will not start until config.js is correct. See ERP-SETUP-GUIDE.md." })]));
   if (v === "signin") return app.append(signIn());
   if (v === "setpw") return app.append(setPassword());
+  if (v === "mfa") return app.append(twoStep());
   if (v === "noaccess") return app.append(authCard("No access yet", [el("p", { text: "Your login works, but you have no active portal account. Ask the Super Admin to add you." }), el("button", { class: "btn ghost", onclick: () => sb.auth.signOut(), text: "Sign out" })]));
   if (v === "error") return app.append(authCard("Something went wrong", [el("p", { text: "Your account could not be loaded. Check the internet connection." }), el("button", { class: "btn", onclick: () => location.reload(), text: "Try again" })]));
   app.append(shell(home()));
@@ -633,14 +639,47 @@ function signIn() {
   return authCard("Welcome back", [el("p", { text: "Sign in to open your portals." }), form]);
 }
 
-function setPassword() {
-  const a = el("input", { class: "input", type: "password", autocomplete: "new-password", minlength: 10, maxlength: 128, required: true });
-  const b = el("input", { class: "input", type: "password", autocomplete: "new-password", minlength: 10, maxlength: 128, required: true });
-  const msg = el("div"), btn = el("button", { class: "btn", type: "submit", text: "Save password" });
-  const form = el("form", { style: "display:grid;gap:14px" }, el("label", { class: "f" }, "New password (at least 10 characters)", a), el("label", { class: "f" }, "Type it again", b), msg, btn);
+/* Super Admin second step: set up an authenticator app once (QR code), then a 6-digit code at every sign-in */
+function twoStep() {
+  const code = el("input", { class: "input", inputmode: "numeric", autocomplete: "one-time-code", maxlength: 6, pattern: "[0-9]{6}", placeholder: "123456", "aria-label": "6-digit code", style: "font-size:22px;letter-spacing:.3em;text-align:center" });
+  const msg = el("div"), btn = el("button", { class: "btn", type: "submit", text: "Confirm" }), qr = el("div", { style: "display:grid;gap:10px;justify-items:center" });
+  let factorId = null;
+  (async () => {
+    try {
+      const { data, error } = await sb.auth.mfa.listFactors(); if (error) throw error;
+      for (const f of (data.all || []).filter(f => f.status !== "verified")) await sb.auth.mfa.unenroll({ factorId: f.id });   // an unfinished set-up from before
+      if (!S.mfaNew && data.totp && data.totp.length) { factorId = data.totp[0].id; code.focus(); return; }
+      const r = await sb.auth.mfa.enroll({ factorType: "totp", friendlyName: "Jazba " + new Date().toISOString().slice(0, 10) }); if (r.error) throw r.error;
+      factorId = r.data.id;
+      qr.append(el("img", { src: r.data.totp.qr_code, alt: "QR code for the authenticator app", width: 200, height: 200, style: "background:#fff;border-radius:12px;padding:8px" }),
+        el("small", { class: "muted", text: "Or type this key in the app: " + r.data.totp.secret }));
+      code.focus();
+    } catch (e) { fail(e, "Two-step sign-in could not start"); }
+  })();
+  const form = el("form", { style: "display:grid;gap:14px" }, qr, el("label", { class: "f" }, "6-digit code from the app", code), msg, btn,
+    el("button", { class: "btn ghost", type: "button", text: "Sign out", onclick: () => sb.auth.signOut() }));
   form.addEventListener("submit", async ev => {
     ev.preventDefault(); msg.replaceChildren();
-    if (a.value.length < 10) return msg.append(el("div", { class: "notice bad", text: "Use at least 10 characters." }));
+    if (!/^[0-9]{6}$/.test(code.value.trim())) return msg.append(el("div", { class: "notice bad", text: "Type the 6 digits shown in the app." }));
+    if (!factorId) return msg.append(el("div", { class: "notice bad", text: "Still starting. Wait a second and try again." }));
+    btn.disabled = true;
+    const { error } = await sb.auth.mfa.challengeAndVerify({ factorId, code: code.value.trim() });
+    if (error) { btn.disabled = false; code.select(); return msg.append(el("div", { class: "notice bad", text: /rate|too many/i.test(error.message) ? "Too many tries. Wait a minute." : "That code is not right, or it has just changed. Type the new code." })); }
+    toast(S.mfaNew ? "Two-step sign-in is on" : "Signed in"); S.session = (await sb.auth.getSession()).data.session; await loadMe();
+  });
+  return authCard(S.mfaNew ? "Protect the Super Admin account" : "Enter your code", [el("p", { text: S.mfaNew
+    ? "The Super Admin needs a second step at sign-in. On your phone, open Google Authenticator or Microsoft Authenticator, tap +, and scan this code. Then type the 6 digits it shows."
+    : "Open your authenticator app and type the 6-digit code for Jazba." }), form]);
+}
+
+function setPassword() {
+  const a = el("input", { class: "input", type: "password", autocomplete: "new-password", minlength: 12, maxlength: 128, required: true });
+  const b = el("input", { class: "input", type: "password", autocomplete: "new-password", minlength: 12, maxlength: 128, required: true });
+  const msg = el("div"), btn = el("button", { class: "btn", type: "submit", text: "Save password" });
+  const form = el("form", { style: "display:grid;gap:14px" }, el("label", { class: "f" }, "New password (at least 12 characters, with a capital letter, a small letter and a number)", a), el("label", { class: "f" }, "Type it again", b), msg, btn);
+  form.addEventListener("submit", async ev => {
+    ev.preventDefault(); msg.replaceChildren();
+    if (a.value.length < 12 || !/[A-Z]/.test(a.value) || !/[a-z]/.test(a.value) || !/[0-9]/.test(a.value)) return msg.append(el("div", { class: "notice bad", text: "Use at least 12 characters, with a capital letter, a small letter and a number." }));
     if (a.value !== b.value) return msg.append(el("div", { class: "notice bad", text: "The two passwords are different." }));
     btn.disabled = true;
     try {
@@ -1581,9 +1620,26 @@ function usageMeter() {
 
 function activity() {
   const rows = S.admin.audit;
-  return el("section", { style: "padding-bottom:40px" }, usageMeter(), el("p", { class: "small muted", text: "The last 200 changes to people, access and portals. This record cannot be edited. Above 80% on a meter, archive old files or move to the Pro plan." }),
+  return el("section", { style: "padding-bottom:40px;display:grid;gap:16px" }, accessReview(), usageMeter(), el("p", { class: "small muted", text: "The last 200 changes to people, access and portals. This record cannot be edited. Above 80% on a meter, archive old files or move to the Pro plan." }),
     el("div", { class: "card tblwrap" }, el("table", {}, el("thead", {}, el("tr", {}, ["When", "Who", "What", "About"].map(t => el("th", { text: t })))),
       el("tbody", {}, rows.length ? rows.map(a => el("tr", {}, el("td", { class: "small", text: fmt(a.at) }), el("td", { class: "small", text: a.actor_email || "system" }), el("td", { text: a.action }), el("td", { class: "small muted", text: a.target }))) : el("tr", {}, el("td", { colspan: 4, class: "empty", text: "No activity yet." }))))));
+}
+
+/* access review (every 3 months): Super Admins and their two-step status, approvers, people not seen for 90 days */
+function accessReview() {
+  const box = el("div", { class: "card", style: "display:grid;gap:10px;padding:18px 20px" }, el("h3", { text: "Access review", style: "margin:0" }), el("div", { class: "spinner" }));
+  const day = d => d ? new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "never";
+  sb.rpc("core_access_review").then(({ data: r, error }) => {
+    if (error || !r) return box.replaceChildren(el("h3", { text: "Access review", style: "margin:0" }), el("p", { class: "small muted", text: "The review could not be loaded." }));
+    const list = (t, rows, f) => el("details", {}, el("summary", { text: `${t} (${rows.length})` }), rows.length ? el("ul", { class: "small", style: "margin:6px 0 0;padding-left:18px" }, rows.map(x => el("li", { text: f(x) }))) : el("p", { class: "small muted", text: "None." }));
+    box.replaceChildren(el("h3", { text: "Access review", style: "margin:0" }),
+      el("p", { class: "small muted", text: "Check this every 3 months: switch off anyone who has left or no longer needs their rights." }),
+      list("Super Admins", r.supers, x => `${x.name} · last sign-in ${day(x.lastSignIn)} · ${x.twoStep ? "two-step on" : "TWO-STEP NOT SET UP"}`),
+      list("Approvers", r.approvers, x => `${x.name} · ${(ORG_ROLES.find(o => o[0] === x.role) || [0, x.role])[1]} · last sign-in ${day(x.lastSignIn)}`),
+      list("Not signed in for 90 days", r.notSeen90, x => `${x.name} · last sign-in ${day(x.lastSignIn)}`),
+      el("p", { class: "small", text: `Still on a temporary password: ${r.tempPassword} · Switched off: ${r.switchedOff}` }));
+  });
+  return box;
 }
 
 try { const t = localStorage.getItem("akf-theme"); if (t) document.documentElement.setAttribute("data-theme", t); } catch (e) {}
