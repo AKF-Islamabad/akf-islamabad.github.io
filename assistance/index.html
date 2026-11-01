@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-assistance.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-O5Sj3xMO2gmkx3UszTiZa8WNWoyqYh51WkkThm0Xg6M='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-t5kEYnkVN4rG603o8TRaovL2aLN27ox6OujmmM2vN/w='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1284,6 +1284,7 @@ ol.as-stages b{font-weight:600;font-size:14px} ol.as-stages small{display:block;
 <script src="../akf-gate.js"></script>
 <script src="../akf-assistant.js"></script>   <!-- REQUIRED in every portal: Alkhidmat AI (SECURITY-PROTOCOL.md §9) -->
 <script src="../akf-matrix.js"></script>
+<script src="../akf-charts.js"></script>   <!-- Jazba charts: 3D, animated, clickable -->
 <script src="../akf-desk.js" defer></script>   <!-- REQUIRED in every portal: sticky note + notifications -->
 <script>
 /* =====================================================================================================
@@ -1566,7 +1567,10 @@ function widgetBody(id) {
   if (id === "pipeline") {
     const stages = ["dept", "director", "rm", "president", "exec", "returned"], other = apps.filter(a => isOpen(a) && !stages.includes(a.status));
     const rows = stages.map(s => [stageLabel({ type: "financial" }, s).replace("Finance – disbursement", "Finance / Store"), apps.filter(a => a.status === s)]).concat(other.length ? [["Other approvals", other]] : []);
-    const max = Math.max(1, ...rows.map(r => r[1].length));
+    const max = Math.max(1, ...rows.map(r => r[1].length)), keys = stages.concat(other.length ? ["other"] : []);
+    if (window.AKF_CHARTS) return card("Where applications are now", `<div class="as-cb">${AKF_CHARTS.bars({ id: "as-stage", empty: "No applications yet.",
+      items: rows.map(([l, list], i) => ({ key: keys[i], label: l, value: list.length, color: keys[i] === "returned" ? "#B45309" : "", note: list.filter(isLate).length ? list.filter(isLate).length + " past the time limit" : "" })) })}</div>`,
+      `<button class="btn btn-ghost btn-sm" type="button" data-nav="all">View all ${ic("right", "i-sm")}</button>`);
     return card("Where applications are now", `<div class="as-cb as-pipe">${rows.map(([l, list]) => { const n = list.length, lt = list.filter(isLate).length; return `<div class="as-pipe-row"><span>${esc(l)}</span><span class="bar"><i style="width:${n / max * 100}%"></i></span><b>${n}${lt ? `<small class="as-wait-late" title="past the time limit"> (${lt})</small>` : ""}</b></div>`; }).join("")}</div>`,
       `<button class="btn btn-ghost btn-sm" type="button" data-nav="all">View all ${ic("right", "i-sm")}</button>`);
   }
@@ -1586,7 +1590,8 @@ function widgetBody(id) {
     const rows = names.map(d => { const list = apps.filter(a => a.department === d);
       return { d, total: list.length, open: list.filter(isOpen).length, done: list.filter(a => a.status === "closed").length, rej: list.filter(a => a.status === "rejected").length,
         amount: list.filter(a => a.status === "closed" && a.type === "financial").reduce((s, a) => s + Number((a.execution || {}).amount || 0), 0) }; });
-    return card("By department <span class=\"small muted\">(cases you can see)</span>", `<div class="as-cb"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Department</th><th>Total</th><th>In progress</th><th>Completed</th><th>Rejected</th><th>Disbursed</th></tr></thead><tbody>${rows.map(x => `<tr><td class="t-name">${esc(x.d)}</td><td>${x.total}</td><td>${x.open}</td><td>${x.done}</td><td>${x.rej}</td><td>${esc(rs(x.amount))}</td></tr>`).join("")}</tbody></table></div></div>`);
+    const donut = window.AKF_CHARTS ? AKF_CHARTS.donut({ id: "as-dept", center: "applications", empty: "No applications yet.", items: rows.map(x => ({ key: x.d, label: x.d, value: x.total })) }) : "";
+    return card("By department <span class=\"small muted\">(cases you can see)</span>", `<div class="as-cb">${donut}<div class="tbl-wrap" style="margin-top:14px"><table class="tbl"><thead><tr><th>Department</th><th>Total</th><th>In progress</th><th>Completed</th><th>Rejected</th><th>Disbursed</th></tr></thead><tbody>${rows.map(x => `<tr><td class="t-name">${esc(x.d)}</td><td>${x.total}</td><td>${x.open}</td><td>${x.done}</td><td>${x.rej}</td><td>${esc(rs(x.amount))}</td></tr>`).join("")}</tbody></table></div></div>`);
   }
   if (id === "mynotes") {
     const list = myNotes().slice(0, 5);
@@ -2031,8 +2036,10 @@ function viewReports() {
   const by = s.byStatus || {}, keys = Object.keys(by).sort((x, y) => STATUS_KEYS.indexOf(x) - STATUS_KEYS.indexOf(y));
   return head("Reports", "Figures for the whole region: counts and amounts only, no names", `<div style="display:flex;gap:8px"><button class="btn btn-outline" type="button" data-act="reload-summary">${ic("undo", "i-sm")}Refresh</button>${can("reports", "export") ? `<button class="btn btn-outline" type="button" data-act="summary-csv">${ic("download", "i-sm")}Download CSV</button>` : ""}</div>`)
     + `<div class="kpis">${k("list", "Applications", s.total, s.registeredThisMonth + " registered this month", "accent")}${k("clock", "In progress", s.open, s.overdue + " past the time limit", s.overdue ? "warn" : "")}${k("check", "Completed this month", s.completedThisMonth, "Support delivered")}${k("wallet", "Disbursed this month", esc(rs(s.disbursedThisMonthPKR)), esc(rs(s.disbursedPKR)) + " in total")}</div>
-    <div class="as-widgets">${card("By stage", `<div class="as-cb as-pipe">${keys.map(st => `<div class="as-pipe-row"><span>${esc(stageLabel({ type: "financial", flow: [] }, st).replace("Finance – disbursement", "Finance / Store"))}</span><span class="bar"><i style="width:${by[st] / Math.max(1, ...Object.values(by)) * 100}%"></i></span><b>${by[st]}</b></div>`).join("") || '<span class="muted">No applications yet</span>'}</div>`)}
-    ${card("By type", `<div class="as-cb">${Object.entries(s.byType || {}).map(([t, n]) => `<p>${t === "inkind" ? "In-kind" : "Financial"}: <b>${n}</b></p>`).join("") || '<span class="muted">—</span>'}</div>`)}
+    <div class="as-widgets">${window.AKF_CHARTS ? card("By stage", `<div class="as-cb">${AKF_CHARTS.bars({ id: "as-stage", empty: "No applications yet.", items: keys.map(st => ({ key: STATUS_KEYS.includes(st) ? st : "other", label: stageLabel({ type: "financial", flow: [] }, st).replace("Finance – disbursement", "Finance / Store"), value: by[st] })) })}</div>`)
+      + card("By type", `<div class="as-cb">${AKF_CHARTS.donut({ id: "as-type", center: "applications", items: Object.entries(s.byType || {}).map(([t, n]) => ({ key: t, label: t === "inkind" ? "In-kind" : "Financial", value: n, color: t === "inkind" ? "#16A34A" : "#0A74C9" })) })}</div>`)
+      + `<section class="as-w-full">${card("Disbursed by department", `<div class="as-cb">${AKF_CHARTS.bars({ id: "as-dept", money: true, empty: "Nothing disbursed yet.", items: (s.byDepartment || []).map(x => ({ key: x.department, label: x.department, value: x.disbursedPKR, note: x.total + " applications" })) })}</div>`)}</section>` : ""}${window.AKF_CHARTS ? "" : card("By stage", `<div class="as-cb as-pipe">${keys.map(st => `<div class="as-pipe-row"><span>${esc(stageLabel({ type: "financial", flow: [] }, st).replace("Finance – disbursement", "Finance / Store"))}</span><span class="bar"><i style="width:${by[st] / Math.max(1, ...Object.values(by)) * 100}%"></i></span><b>${by[st]}</b></div>`).join("") || '<span class="muted">No applications yet</span>'}</div>`)}
+    ${window.AKF_CHARTS ? "" : card("By type", `<div class="as-cb">${Object.entries(s.byType || {}).map(([t, n]) => `<p>${t === "inkind" ? "In-kind" : "Financial"}: <b>${n}</b></p>`).join("") || '<span class="muted">—</span>'}</div>`)}
     <section class="as-w-full">${card("By department", `<div class="as-cb"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Department</th><th>Total</th><th>In progress</th><th>Completed</th><th>Rejected</th><th>Disbursed</th></tr></thead><tbody>${(s.byDepartment || []).map(x => `<tr><td class="t-name">${esc(x.department)}</td><td>${x.total}</td><td>${x.open}</td><td>${x.completed}</td><td>${x.rejected}</td><td>${esc(rs(x.disbursedPKR))}</td></tr>`).join("")}</tbody></table></div></div>`)}</section></div>`;
 }
 async function loadSummary() { try { A.summary = await rpc("assistance_summary", {}, "The figures could not be loaded"); } catch (e) { A.summary = { total: 0, open: 0, overdue: 0, byStatus: {}, byDepartment: [], byType: {}, disbursedPKR: 0, disbursedThisMonthPKR: 0, completedThisMonth: 0, registeredThisMonth: 0 }; toast(e.message, "error"); } if (V.view === "reports") render(); }
@@ -2180,6 +2187,11 @@ function moveNavInd() {
   const t = `translateY(${a.offsetTop}px)`, hh = a.offsetHeight + "px"; ind.style.opacity = "1"; ind.style.transform = t; ind.style.height = hh; moveNavInd.last = { t, h: hh };
 }
 /* in-page navigation: the view lives in history.state (no case numbers or names in the address bar) */
+/* Jazba charts: a click on a bar or slice opens All applications filtered to it */
+document.addEventListener("akf-chart-pick", e => {
+  const f = { "as-stage": "status", "as-dept": "dept", "as-type": "type" }[e.detail.chart]; if (!f || !can("applications")) return;
+  V.filter = { q: "", status: "", type: "", dept: "" }; V.filter[f] = e.detail.key; go("all");
+});
 function go(view, id, replace) {
   if (view === "case") V.from = V.view === "case" ? V.from : V.view;
   if (V.view === "new" && view !== "new") collectForm();

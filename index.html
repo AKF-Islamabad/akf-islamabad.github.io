@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-sWpjBm2UJoiTo0xb709qSWt5ISJ3zypmAjRlihm0yHc='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-1BAmQ2vAfADDlufTIrZ8M91nGgohEZAYwL3K2j1EZ+M='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -344,6 +344,7 @@ textarea.input{line-height:1.45}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o" crossorigin="anonymous"></script>
 <script src="akf-assistant.js"></script>
 <script src="akf-matrix.js"></script>
+<script src="akf-charts.js"></script>
 <script src="akf-desk.js" defer></script>   <!-- REQUIRED in every portal: sticky note + notifications -->
 <!-- settings-*.js, akf-excel.js and excel-*.js load when Settings is first opened (see loadSettingsJs) -->
 <script>
@@ -691,7 +692,7 @@ async function loadToday() {
 function todayView(greet) {
   const T = S.today, kids = [greet];
   if (S.todayErr || !T) kids.push(el("p", { class: "jz-note", text: S.todayErr ? "Live numbers unavailable right now. Your portals below still work." : "Loading your day…" }));
-  else kids.push(impactBanner(T.impact || {}), kpiCards(T.counts || {}), el("div", { class: "jz-grid2" }, actionList(T.actions || []), myTasks(T.tasks || [])));
+  else kids.push(impactBanner(T.impact || {}), kpiCards(T.counts || {}), waitingChart(T.actions || []), el("div", { class: "jz-grid2" }, actionList(T.actions || []), myTasks(T.tasks || [])));
   kids.push(el("h2", { class: "jz-section", text: "Your portals" }), tiles());
   const firstPaint = !S.todayShown && T; if (firstPaint) S.todayShown = true;
   return firstPaint ? stagger(el("div", { class: "jz-today" }, kids)) : el("div", { class: "jz-today" }, kids);
@@ -721,6 +722,16 @@ function kpiCards(C) {
     card("--jz-green", "check", C.tasks_week, "My tasks this week", "", "today-tasks", 1),
     card("--jz-bright", "sheet", C.my_open_requests, "Requests I started", "", "today-actions", 2));
 }
+/* Jazba chart: what is waiting on you, by portal; a click opens that portal (akf-charts.js) */
+function waitingChart(A) {
+  if (!window.AKF_CHARTS || !A.length) return null;
+  const n = {}; A.forEach(a => { n[a.portal] = (n[a.portal] || 0) + 1; });
+  const box = el("section", { class: "jz-card", style: "padding:18px 20px", "aria-label": "Waiting on you, by portal" }, el("h2", { text: "Waiting on you, by portal", style: "margin:0 0 12px;font-size:16px" }));
+  const chart = el("div"); chart.innerHTML = AKF_CHARTS.donut({ id: "today-portals", center: "waiting",
+    items: Object.keys(n).map(k => { const p = S.portals.find(x => x.key === k); return { key: k, label: p ? p.name : k, value: n[k], color: p ? portalColor(p) : "" }; }) });
+  box.append(chart); return box;
+}
+document.addEventListener("akf-chart-pick", e => { if (e.detail.chart !== "today-portals") return; const p = (S.portals || []).find(x => x.key === e.detail.key); if (p) location.href = safeHref(p.url); });
 const TODAY_ICON = { procurement: "cart", store: "box", assistance: "helping", fleet: "truck", donor: "heart" };
 const daysWaiting = s => { const d = Math.floor((Date.now() - new Date(s).getTime()) / 864e5); return isFinite(d) ? d : 0; };
 function actionList(A) {
