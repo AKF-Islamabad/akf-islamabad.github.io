@@ -137,7 +137,7 @@ body{font:15px/1.5 var(--jz-font);letter-spacing:-.003em}
 .iconbtn{border-radius:12px;width:40px;height:40px;transition:background .2s,color .2s,transform .2s var(--spring);background:var(--card)}
 .iconbtn:hover{transform:translateY(-1px);color:var(--brand-2)}
 main.wrap{position:relative;isolation:isolate}
-main.wrap::before{content:"";position:absolute;left:-10%;right:-10%;top:-120px;height:420px;z-index:-1;pointer-events:none;background:radial-gradient(40% 60% at 15% 30%,rgba(26,102,204,.10),transparent 70%),radial-gradient(35% 55% at 70% 10%,rgba(25,194,174,.10),transparent 70%),radial-gradient(30% 50% at 95% 50%,rgba(110,91,214,.07),transparent 70%);animation:aurora 18s ease-in-out infinite}
+/* (the soft glow behind the page was removed: it hid the real background from contrast checkers, WCAG 1.4.3) */
 
 /* hero banner */
 .hero{position:relative;overflow:hidden;margin-top:26px;padding:30px 32px;border-radius:24px;color:#fff;background:var(--grad-hero);box-shadow:0 30px 60px -30px rgba(6,46,115,.65)}
@@ -191,7 +191,8 @@ main.wrap::before{content:"";position:absolute;left:-10%;right:-10%;top:-120px;h
 .tile .ic::after{content:"";position:absolute;inset:0;border-radius:inherit;animation:halo 3.2s ease-out infinite;animation-delay:calc(var(--i,0) * .8s)}
 .tile:hover .ic{animation-play-state:paused;transform:translateY(-6px) rotate(-6deg) scale(1.1);box-shadow:0 16px 30px -10px var(--accent)}
 .tile::after{animation:orb 9s ease-in-out infinite;animation-delay:calc(var(--i,0) * -2.3s)}
-.tile::before{animation:sweep 7s var(--ease) infinite;animation-delay:calc(var(--i,0) * 1.4s + 1.5s);opacity:.7}
+.tile::before{display:none}   /* the white shine crosses the text only on hover, never on its own */
+.tile:hover::before{display:block}
 .tile:hover::before{animation:shine .9s var(--ease)}
 .tile .spot{position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .3s;
   background:radial-gradient(260px circle at var(--mx,50%) var(--my,50%),color-mix(in srgb,var(--accent) 14%,transparent),transparent 65%)}
