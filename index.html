@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-lYxbqVdozAc8btbnIgQOlfJGYXPDSem0QG6dXh6zqLM='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-mpgpABgwLxjm9TUbKGwxAKHArg+w44iucXCy9UaYwGw='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -1118,7 +1118,7 @@ function settingsGeneral() {
   const box = el("section", { style: "padding-bottom:40px;display:grid;gap:16px" }, el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })));
   (async () => {
     let cur = {};
-    try { const r = await q(sb.from("portal_rows").select("data").eq("collection", "settings").eq("id", "global").maybeSingle()); cur = (r && r.data) || {}; }
+    try { cur = (await q(sb.rpc("core_get_settings"))) || {}; }
     catch (e) { box.replaceChildren(el("div", { class: "notice bad", text: "Settings could not be loaded." })); return fail(e, "Settings could not be loaded"); }
     let aiStatus = null, mailStatus = null; try { aiStatus = await q(sb.rpc("core_ai_status")); } catch (e) { }
     try { mailStatus = await q(sb.rpc("core_email_status")); } catch (e) { }
@@ -1207,7 +1207,7 @@ function settingsMatrix() {
   const M = window.AKF_MATRIX, which = S.mxPortal || "procurement";
   (async () => {
     let raw;
-    try { const r = await q(sb.from("portal_rows").select("data").eq("collection", "settings").eq("id", "global").maybeSingle()); raw = (r && r.data) || {}; }
+    try { raw = (await q(sb.rpc("core_get_settings"))) || {}; }
     catch (e) { box.replaceChildren(el("div", { class: "notice bad", text: "The approval matrix could not be loaded." })); return fail(e, "The approval matrix could not be loaded"); }
     const mx = M.get(raw), part = JSON.parse(JSON.stringify(mx[which]));
     const sel = (opts, value, label) => { const s = el("select", { class: "input", "aria-label": label }, opts.map(([v, t]) => el("option", { value: v, text: t }))); s.value = value; return s; };
@@ -1290,8 +1290,7 @@ function settingsMatrix() {
       }
       saveBtn.disabled = true;
       try {
-        const r = await q(sb.from("portal_rows").select("data").eq("collection", "settings").eq("id", "global").maybeSingle());
-        const fresh = (r && r.data && r.data.approvalMatrix) || {};
+        const fresh = ((await q(sb.rpc("core_get_settings"))) || {}).approvalMatrix || {};
         const next = Object.assign({ v: 1 }, fresh, { [which]: part });
         await saveGlobal({ approvalMatrix: next }, `Approval matrix changed: ${MATRIX_PORTALS.find(p => p[0] === which)[1]}`);
         toast("Approval matrix saved. New requests follow it; requests already in progress keep the steps they started with.");
@@ -1320,12 +1319,10 @@ function settingsTasks() {
   (async () => {
     let depts, stages, counts = {};
     try {
-      const r = await q(sb.from("portal_rows").select("data").eq("collection", "settings").eq("id", "global").maybeSingle());
-      const d = (r && r.data) || {};
+      const d = (await q(sb.rpc("core_get_settings"))) || {};
       depts = JSON.parse(JSON.stringify(Array.isArray(d.taskDepts) && d.taskDepts.length ? d.taskDepts : TASK_DEPTS_DEFAULT));
       stages = JSON.parse(JSON.stringify(Array.isArray(d.taskStages) && d.taskStages.length ? d.taskStages : TASK_STAGES_DEFAULT));
-      const tasks = await q(sb.from("portal_rows").select("dept:data->>dept").eq("collection", "tasks").range(0, 9999));
-      (tasks || []).forEach(t => { counts[t.dept] = (counts[t.dept] || 0) + 1; });
+      counts = (await q(sb.rpc("core_task_dept_counts"))) || {};
     } catch (e) { box.replaceChildren(el("div", { class: "notice bad", text: "Task settings could not be loaded." })); return fail(e, "Task settings could not be loaded"); }
     const draw = () => {
       const deptRows = depts.map(d => {
