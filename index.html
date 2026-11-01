@@ -6,12 +6,13 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-BhVXOLqGMuTydAmDnDO7vLxkgBKQvLcIoBN2i5QwL04='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-sWpjBm2UJoiTo0xb709qSWt5ISJ3zypmAjRlihm0yHc='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <link rel="stylesheet" href="fonts/manrope.css">
 <link rel="stylesheet" href="jazba.css">
+<link rel="icon" href="icon.jpg">
 <style>
 :root{
   --brand:#0B2E8A; --brand-2:#0B51A7; --brand-3:#1E6FD9; --gold:#C9A227;
@@ -344,10 +345,7 @@ textarea.input{line-height:1.45}
 <script src="akf-assistant.js"></script>
 <script src="akf-matrix.js"></script>
 <script src="akf-desk.js" defer></script>   <!-- REQUIRED in every portal: sticky note + notifications -->
-<script src="settings-fleet.js"></script>
-<script src="settings-assistance.js"></script>
-<script src="akf-excel.js"></script>
-<script src="excel-procurement.js"></script><script src="excel-store.js"></script><script src="excel-tasks.js"></script><script src="excel-donor.js"></script><script src="excel-fleet.js"></script><script src="excel-assistance.js"></script><script src="excel-people.js"></script>
+<!-- settings-*.js, akf-excel.js and excel-*.js load when Settings is first opened (see loadSettingsJs) -->
 <script>
 "use strict";
 /* ========== Alkhidmat Foundation Islamabad — main page (portal launcher + people & access) ==========
@@ -1020,7 +1018,16 @@ const SETTING_AREAS = [["general", "All portals", "settings", "Organisation, app
 /* A portal brings its own settings panel as a file (e.g. settings-fleet.js) that registers itself in
    window.AKF_SETTINGS_PANELS = [{ key, title, icon, desc, render(box, api) }] — it still shows HERE, in the one Settings place. */
 const settingsApi = () => ({ sb, el, icon, toast, fail, q, showLoader, hideLoader, saveGlobal });
+/* Settings-only files (portal settings panels, Excel formats) load when Settings is first opened:
+   as plain <script> tags they were fetched one after another on every page load, for everyone */
+const SETTINGS_JS = ["settings-fleet.js", "settings-assistance.js", "akf-excel.js", "excel-procurement.js", "excel-store.js", "excel-tasks.js", "excel-donor.js", "excel-fleet.js", "excel-assistance.js", "excel-people.js"];
+let settingsJs = null, settingsJsReady = false;
+const loadSettingsJs = () => settingsJs || (settingsJs = Promise.all(SETTINGS_JS.map(src => new Promise((ok, no) => {
+  const s = document.createElement("script"); s.src = src; s.async = false; s.onload = ok; s.onerror = () => no(new Error(src + " did not load")); document.head.append(s); })))
+  .then(() => { settingsJsReady = true; }, e => { settingsJs = null; throw e; }));
 function settings() {
+  if (!settingsJsReady) { loadSettingsJs().then(() => render(), e => fail(e, "Settings could not be loaded. Reload the page"));
+    return el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })); }
   const panels = (window.AKF_SETTINGS_PANELS || []).filter(p => p && /^[a-z][a-z0-9_]{1,30}$/.test(p.key) && typeof p.render === "function");
   const areas = [...SETTING_AREAS.slice(0, 1), ["portals", "Portal names", "grid", "Name, description, icon and colour of every portal"], ...SETTING_AREAS.slice(1),
     ...panels.map(p => ["p:" + p.key, String(p.title || p.key).slice(0, 40), ICONS[p.icon] ? p.icon : "grid", String(p.desc || "").slice(0, 80)])];

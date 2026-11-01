@@ -36,7 +36,8 @@
   .jz-rail:hover:not(:focus-within) .jz-rail-text,.jz-rail:hover:not(:focus-within) .jz-rail-h,.jz-rail:hover:not(:focus-within) .jz-rail-foot{opacity:0;pointer-events:none}}   /* touch: only a tap (focus) opens it; sticky hover must not */
 .jz-rail-logo{display:flex;align-items:center;gap:10px;padding:4px 0 16px;color:#fff;text-decoration:none}
 .jz-rail-logo img,.jz-rail-mark{width:44px;height:44px;border-radius:12px;flex:none;object-fit:cover;background:#fff}
-.jz-rail-logo b{display:block;font-size:14px;white-space:nowrap}
+.jz-rail-logo .jz-rail-text{width:178px;flex:none}   /* fixed width: the name wraps to two lines instead of being cut off */
+.jz-rail-logo b{display:block;font-size:14px;line-height:1.2}
 .jz-rail-logo small{display:block;color:var(--jz-accent-2);font-size:11px;font-weight:800;letter-spacing:.1em;white-space:nowrap}
 .jz-rail-h{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45);padding:14px 12px 6px;white-space:nowrap}
 .jz-rail-link{position:relative;display:flex;align-items:center;gap:12px;width:100%;padding:9px 12px;border:0;border-radius:10px;background:none;color:rgba(255,255,255,.74);font:600 14px var(--jz-font);text-align:left;text-decoration:none;white-space:nowrap;cursor:pointer;transition:background .15s,color .15s}
