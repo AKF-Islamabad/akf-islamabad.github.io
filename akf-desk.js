@@ -15,7 +15,7 @@
   const SCRIPT = document.currentScript && document.currentScript.src;
   const BASE = new URL(".", SCRIPT || location.href).href;          // the main site folder (/ live, /portal-staging/ staging)
   // Jazba UI (the official design system) on every page, existing and future, even before sign-in
-  if (!document.querySelector('link[href*="jazba.css"]')) { const jz = document.createElement("link"); jz.rel = "stylesheet"; jz.href = BASE + "jazba.css?v=3"; document.head.append(jz); }
+  if (!document.querySelector('link[href*="jazba.css"]')) { const jz = document.createElement("link"); jz.rel = "stylesheet"; jz.href = BASE + "jazba.css?v=4"; document.head.append(jz); }
   // Jazba charts (3D, animated, clickable) on every page, existing and future portals: akf-charts.js
   if (!window.AKF_CHARTS && !document.querySelector('script[src*="akf-charts.js"]')) { const ck = document.createElement("script"); ck.src = BASE + "akf-charts.js"; document.head.append(ck); }
   // the Jazba look on every portal: maps the portal's own colour/font settings (never on the main page)
@@ -117,7 +117,7 @@
 .akd-card{background:var(--n1);border:1px solid var(--n3);border-radius:14px;box-shadow:0 14px 34px -14px rgba(60,50,0,.45);overflow:hidden;transform:rotate(-.6deg)}
 .akd-head{display:flex;align-items:center;gap:6px;padding:9px 10px 7px 12px;background:var(--n2);cursor:grab;user-select:none;touch-action:none}
 .akd.drag .akd-head{cursor:grabbing} .akd.drag .akd-card{transform:none;box-shadow:0 22px 44px -14px rgba(0,0,0,.45)}
-.akd-head b{flex:1;font-size:13.5px} .akd-head button{border:0;background:rgba(255,255,255,.55);border-radius:8px;width:28px;height:26px;cursor:pointer;font-size:14px;color:#5B4B00}
+.akd-head b{flex:1;font-size:13.5px} .akd-head{gap:8px} .akd-head button{border:0;background:rgba(255,255,255,.55);border-radius:8px;min-width:32px;height:32px;cursor:pointer;font-size:14px;color:#5B4B00}
 .akd-head button:focus-visible,.akd a:focus-visible,.akd-bell:focus-visible{outline:2px solid #0B51A7;outline-offset:1px}
 .akd-body{max-height:min(46vh,380px);overflow:auto;padding:4px 12px 10px}
 .akd h4{margin:10px 0 4px;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:#7A6400;display:flex;justify-content:space-between}
