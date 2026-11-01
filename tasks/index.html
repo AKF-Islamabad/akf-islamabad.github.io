@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-1y1B+LwF79BlwLJmjHN7OeApkuhkJuFG72dQuXgqBq8='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-0L42Kj66C+5nDYsTMCZlVuZ8fS2Jwy47WQSMETQZlc4='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -4125,7 +4125,7 @@ function NoPortalAccess({user}){ return html`<div class="auth"><div class="auth-
   <h2 style="margin:0">No access to ${PORTAL_NAME}</h2><p class="muted" style="margin:0">${user?"Ask the Super Admin to tick at least one tab of this portal for you on the main page.":"Your login has no profile in this portal yet. Ask the Super Admin to give you access on the main page."}</p>
   <a class="btn btn-primary" href=${PORTAL_HOME}>Back to all portals</a></div></div></div>`; }
 
-const COLLECTIONS = ["users","vendors","stock","ledger","docs","requests","rfqs","pos","audit","smsLog","budgets","invoices","assets","beneficiaries","tasks","events","notes"];
+const COLLECTIONS = ["users","vendors","stock","ledger","docs","requests","rfqs","pos","audit","smsLog","budgets","invoices","assets","beneficiaries","tasks","events","notes","tna"];
 /* tasks, events and notes use a random key as the row id, so two people creating one at the same moment never overwrite each other */
 const KEY_FIELD = { assets:"tag", tasks:"key", events:"key", notes:"key" };
 const NEWEST_FIRST = { ledger:"at", docs:"at", requests:"createdAt", rfqs:"at", pos:"at", audit:"at", smsLog:"at", beneficiaries:"at", assets:"at", invoices:"at", tasks:"createdAt", events:"createdAt" };
@@ -6893,6 +6893,15 @@ function makeTaskActions(commit,user,toast){
       return run((d,u)=>{ const n=(d.notes||[]).find(x=>x.key===key); if(!n||n.ownerId!==u.id) fail("This note is not yours.");
         ["text","done","due","color","pinned"].forEach(k=>{ if(k in patch) n[k]=k==="text"?String(patch.text).slice(0,1000):patch[k]; }); n.updatedAt=nowISO(); });
     },
+    /* ---- training needs: the manager confirms, rejects or marks done a suggested topic (never their own; 017 checks it too) ---- */
+    tnaSet(personId,topic,period,patch){
+      return run((d,u)=>{ const p=(d.users||[]).find(x=>x.id===personId); if(!tnaCanDecide(u,p)) fail("Only this person's manager can decide their training.");
+        if(!TNA_TOPICS[topic]||!/^[0-9]{4}-Q[1-4]$/.test(period)||!["confirmed","rejected","done"].includes(patch.status)) fail("Not a valid training record.");
+        d.tna=d.tna||[]; const id=`${personId}|${topic}|${period}`; let r=d.tna.find(x=>x.id===id);
+        if(!r){ r={id,personId,topic,period,createdAt:nowISO()}; d.tna.push(r); }
+        r.status=patch.status; r.note=String(patch.note||"").slice(0,300); if(patch.baseline!=null) r.baseline=patch.baseline; if(patch.status==="done") r.doneAt=tToday();
+        r.by=u.id; r.byName=u.name; r.at=nowISO(); });
+    },
     nDelete(key){
       return run((d,u)=>{ const n=(d.notes||[]).find(x=>x.key===key); if(!n||n.ownerId!==u.id) fail("This note is not yours."); d.notes=d.notes.filter(x=>x.key!==key); });
     },
@@ -7073,7 +7082,7 @@ function TRow({t,state,user,A,open,who=true}){
 
 /* ===================== the Tasks page ===================== */
 /* Task sections. In the Tasks & Events portal they are the sidebar items (like every other portal); in the all-in-one demo they are a strip on the Tasks page. */
-const TASK_VIEWS=()=>[["home","Home","home"],["eagle","Eagle view","grid"],["board","Board","board"],["events","Events","flag"],["tracking","Tracking","log"],["planner","Planner","cal"],["workload","Workload","users"],["performance","Performance","chart"],["myspace","To-Do & Notes","note"]].filter(v=>portalTab(v[0]));
+const TASK_VIEWS=()=>[["home","Home","home"],["eagle","Eagle view","grid"],["board","Board","board"],["events","Events","flag"],["tracking","Tracking","log"],["planner","Planner","cal"],["workload","Workload","users"],["performance","Performance","chart"],["training","Training needs","users"],["myspace","To-Do & Notes","note"]].filter(v=>portalTab(v[0]));
 const isTasksPortal=()=>typeof PORTAL!=="undefined"&&PORTAL==="tasks";
 const portalName=()=>typeof PORTAL_NAME!=="undefined"?PORTAL_NAME:"Procurement & Store Portal";
 function Tasks({state,user,A,taskOpen,setTaskOpen,onView}){
@@ -7125,6 +7134,7 @@ function Tasks({state,user,A,taskOpen,setTaskOpen,onView}){
     ${view==="myspace"&&html`<${TMySpace} ...${P}/>`}
     ${view==="planner"&&html`<${TPlanner} ...${P} month=${month} setMonth=${setMonth} selDay=${selDay} setSelDay=${setSelDay} range=${range} setRange=${setRange}/>`}
     ${view==="workload"&&html`<${TWorkload} ...${P}/>`}
+    ${view==="training"&&html`<${TTraining} ...${P}/>`}
     ${view==="performance"&&html`<${TPerformance} ...${P} perfMonth=${perfMonth} setPerfMonth=${setPerfMonth}/>`}
     ${view==="events"&&html`<${TEvents} ...${P}/>`}
     ${view==="tracking"&&html`<${TTracking} ...${P}/>`}
@@ -7321,6 +7331,105 @@ function tSuggestion(state,tasks){
   if(worst&&worst[1]>=2) return `${tName(state,worst[0])} has ${worst[1]} overdue tasks; rebalancing one or two to a colleague would help.`;
   if(over.length) return `${over.length} overdue task${over.length>1?"s":""} — review planned dates in the Planner and reschedule what slipped.`;
   return "Workload looks balanced. Keep estimates realistic and close reviewed tasks promptly.";
+}
+/* ===== Training needs (TNA) from the task records =====
+   Signals per person over a period → suggested topics with the evidence; the manager confirms or rejects each one (never
+   their own), marks it done, and the page shows the same signal before and after the training.
+   Saved as portal_rows "tna" (id person|topic|quarter): the person and the managers read it, only managers write (017). */
+const TNA_TOPICS={
+  late:{t:"Time management and planning",type:"Workshop (2–3 hours)",m:"late tasks",pct:true,good:"down"},
+  quality:{t:"",type:"Skills training + coaching by the HOD",m:"average rating",good:"up"},
+  rework:{t:"Procedures and SOPs for this work",type:"SOP session + one-page guide",m:"tasks sent back",pct:true,good:"down"},
+  overrun:{t:"Tools and methods (Jazba, Excel, filing)",type:"Training video + practice",m:"tasks over the time estimate",pct:true,good:"down"},
+  resched:{t:"Planning the week and estimating time",type:"Coaching by the HOD",m:"date changes per task",good:"down"},
+  duties:{t:"Job description and role clarity",type:"One-to-one with the HOD",m:"missed repeating duties",good:"down"},
+};
+const TNA_SKILL={FIN:"Budget, verification and payment procedures",ADMIN:"Procurement rules and record keeping",RMD:"Donor communication and receipt procedure",
+  REG:"Reporting and coordination",VOL:"Volunteer coordination",EDU:"Case handling and programme procedures",AKIM:"Case handling and programme procedures",
+  ORPHAN:"Case handling and programme procedures",WASH:"Case handling and programme procedures",MOWAKHAT:"Case handling and programme procedures",BANO:"Case handling and programme procedures"};
+const tnaTopic=(k,p)=>k==="quality"?(TNA_SKILL[tDept(tUDept(p)).code]||"Skills for this department's work"):TNA_TOPICS[k].t;
+const tnaQuarter=d=>{ const x=new Date(d); return x.getFullYear()+"-Q"+(Math.floor(x.getMonth()/3)+1); };
+const tnaScope=(me,p)=>{ const r=tRole(me); if(me.role==="super"||["RM","President","GS"].includes(r)) return true; if(T_MGR.includes(r)) return tUDept(p)===tUDept(me)||p.id===me.id; return p.id===me.id; };
+const tnaCanDecide=(me,p)=>!!p&&p.id!==me.id&&(me.role==="super"||["RM","HOD","MA","HR"].includes(tRole(me)))&&tnaScope(me,p);
+/* the signals for one person between two dates (ISO days) */
+function tnaSignals(tasks,p,from,to){
+  const inWin=d=>!!d&&d>=from&&d<=to, today=tToday();
+  const l=tasks.filter(t=>t.v===2&&t.assigneeId===p.id&&t.stage!=="07"&&(inWin(t.plannedDate)||inWin(tLocalDay(t.completedAt))));
+  const done=l.filter(t=>t.stage==="06");
+  const due=l.filter(t=>t.plannedDate&&(t.stage==="06"||t.plannedDate<today));
+  const late=due.filter(t=>t.stage==="06"?tLocalDay(t.completedAt)>t.plannedDate:true).length;
+  const rated=done.filter(t=>t.rating), rating=rated.length?rated.reduce((a,t)=>a+t.rating,0)/rated.length:0;
+  const rank=n=>{ const i=(TS&&TS.settings&&TS.settings.taskStages||TASK_STAGES_DEFAULT).findIndex(s=>s.name===n); return i; };
+  const back=l.filter(t=>(t.activity||[]).some(a=>{ const m=/^moved from (.+) to (.+)$/.exec(a.text||""); return m&&rank(m[1])>rank(m[2])&&rank(m[2])>=0; })).length;
+  const withEst=done.filter(t=>t.estimate>0), overrun=withEst.filter(t=>(t.timeLogged||0)>1.5*t.estimate).length;
+  const resched=l.reduce((a,t)=>a+(t.activity||[]).filter(x=>/^moved the planned date/.test(x.text||"")).length,0);
+  const duties=l.filter(t=>t.recurring&&t.recurring!=="none"&&tOverdue(t)).length;
+  return {n:l.length,due:due.length,late,rated:rated.length,rating,back,withEst:withEst.length,overrun,resched,duties};
+}
+/* the topics a person needs (with the evidence and the value used for before / after) */
+function tnaNeeds(s){
+  const out=[], pc=(a,b)=>Math.round(a/b*100);
+  if(s.due>=4&&s.late/s.due>=0.3) out.push({k:"late",v:pc(s.late,s.due),ev:`${s.late} of ${s.due} tasks late (${pc(s.late,s.due)}%)`});
+  if(s.rated>=3&&s.rating<3) out.push({k:"quality",v:+s.rating.toFixed(1),ev:`average rating ${s.rating.toFixed(1)} / 5 on ${s.rated} rated tasks`});
+  if(s.back>=2&&s.back/s.n>=0.2) out.push({k:"rework",v:pc(s.back,s.n),ev:`${s.back} of ${s.n} tasks sent back for rework`});
+  if(s.withEst>=3&&s.overrun/s.withEst>=0.4) out.push({k:"overrun",v:pc(s.overrun,s.withEst),ev:`${s.overrun} of ${s.withEst} tasks took more than 1.5× the estimate`});
+  if(s.n>=4&&s.resched/s.n>=0.5) out.push({k:"resched",v:+(s.resched/s.n).toFixed(1),ev:`${s.resched} date changes on ${s.n} tasks`});
+  if(s.duties>=2) out.push({k:"duties",v:s.duties,ev:`${s.duties} repeating duties missed`});
+  return out;
+}
+const tnaValue=(k,s)=>({late:s.due?Math.round(s.late/s.due*100):null,quality:s.rated?+s.rating.toFixed(1):null,rework:s.n?Math.round(s.back/s.n*100):null,
+  overrun:s.withEst?Math.round(s.overrun/s.withEst*100):null,resched:s.n?+(s.resched/s.n).toFixed(1):null,duties:s.duties})[k];
+const tnaFmt=(k,v)=>v==null?"—":TNA_TOPICS[k].pct?v+"%":k==="quality"?v+" / 5":String(v);
+function TTraining(P){
+  const {state,user,A}=P; const [months,setMonths]=useState(3); const [topic,setTopic]=useState(""); const [busy,setBusy]=useState("");
+  const to=tToday(), from=tAddDays(to,-Math.round(months*30.4)), q=tnaQuarter(new Date());
+  const tasks=state.tasks||[], recs=state.tna||[];
+  const people=(state.users||[]).filter(p=>p.active!==false&&!["President","GS"].includes(tRole(p))&&tnaScope(user,p));
+  const rows=people.flatMap(p=>{ const s=tnaSignals(tasks,p,from,to); return tnaNeeds(s).map(n=>({p,s,...n,rec:recs.find(r=>r.id===`${p.id}|${n.k}|${q}`)})); });
+  // trainings marked done (any quarter): the same signal 90 days before and after
+  const doneRecs=recs.filter(r=>r.status==="done"&&r.doneAt).map(r=>{ const p=(state.users||[]).find(u=>u.id===r.personId); if(!p||!tnaScope(user,p)) return null;
+    const b=tnaValue(r.topic,tnaSignals(tasks,p,tAddDays(r.doneAt,-90),tAddDays(r.doneAt,-1))), a=tnaValue(r.topic,tnaSignals(tasks,p,r.doneAt,to<tAddDays(r.doneAt,90)?to:tAddDays(r.doneAt,90)));
+    const better=b!=null&&a!=null&&(TNA_TOPICS[r.topic].good==="up"?a>b:a<b); return {r,p,b,a,better}; }).filter(Boolean);
+  const counts={}; rows.forEach(x=>{ counts[x.k]=(counts[x.k]||0)+1; });
+  // a topic flagged for half or more of a department's active people → a department workshop
+  const deptRoll=[]; const byDept={}; people.forEach(p=>{ const d=tUDept(p); (byDept[d]=byDept[d]||[]).push(p); });
+  Object.entries(byDept).forEach(([d,ps])=>{ const act=ps.filter(p=>tnaSignals(tasks,p,from,to).n>=4); if(act.length<2) return;
+    Object.keys(TNA_TOPICS).forEach(k=>{ const n=rows.filter(x=>x.k===k&&tUDept(x.p)===d).length; if(n>=2&&n/act.length>=0.5) deptRoll.push({d,k,n,of:act.length}); }); });
+  const chartRef=useRef(null);
+  useEffect(()=>{ const on=e=>{ if(e.detail&&e.detail.chart==="tna-topics") setTopic(t=>t===e.detail.key?"":e.detail.key); }; document.addEventListener("akf-chart-pick",on); return ()=>document.removeEventListener("akf-chart-pick",on); },[]);
+  const chart=window.AKF_CHARTS?AKF_CHARTS.bars({id:"tna-topics",empty:"No training needs found in this period.",items:Object.keys(TNA_TOPICS).filter(k=>counts[k]).map(k=>({key:k,label:k==="quality"?"Skills for the work":TNA_TOPICS[k].t,value:counts[k]}))}):"";
+  const shown=rows.filter(x=>!topic||x.k===topic).sort((a,b)=>(a.rec?1:0)-(b.rec?1:0)||a.p.name.localeCompare(b.p.name));
+  const decide=async(x,status)=>{ let note=""; if(status==="rejected"){ note=prompt("Why is this training not needed? (short)")||""; if(!note.trim()) return; }
+    setBusy(x.p.id+x.k); try{ await A.tnaSet(x.p.id,x.k,q,{status,note,baseline:x.v,doneAt:status==="done"?tToday():""}); }catch(e){} setBusy(""); };
+  const exportCsv=()=>{ const head=["Person","Department","Training topic","Type of training","Evidence","Status","Decided by","Note","Done on"];
+    const data=rows.map(x=>[x.p.name,tDept(tUDept(x.p)).name,tnaTopic(x.k,x.p),TNA_TOPICS[x.k].type,x.ev,x.rec?x.rec.status:"to review",x.rec?x.rec.byName:"",x.rec?x.rec.note||"":"",x.rec&&x.rec.doneAt||""])
+      .concat(doneRecs.map(d=>[d.p.name,tDept(tUDept(d.p)).name,tnaTopic(d.r.topic,d.p),TNA_TOPICS[d.r.topic].type,`before ${tnaFmt(d.r.topic,d.b)} → after ${tnaFmt(d.r.topic,d.a)}`,"done",d.r.byName,d.r.note||"",d.r.doneAt]));
+    const csv=[head,...data].map(r=>r.map(v=>`"${String(v==null?"":v).replace(/"/g,'""').replace(/^[=+\-@]/,"'$&")}"`).join(",")).join("\r\n");
+    const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob(["﻿"+csv],{type:"text/csv"})); a.download=`training-plan-${q}.csv`; a.click(); };
+  const st=x=>x.rec?html`<${Tag} tone=${x.rec.status==="confirmed"?"info":x.rec.status==="done"?"ok":"neutral"}>${{confirmed:"Confirmed",rejected:"Not needed",done:"Trained"}[x.rec.status]||x.rec.status}</${Tag}>`:html`<${Tag} tone="warn">To review</${Tag}>`;
+  return html`<div class="stack" style="gap:14px">
+    <div class="row wrap" style="gap:10px"><label class="row" style="gap:8px"><span class="xs bold faint">Look at the last</span>
+      <select class="input" style="width:150px" value=${months} onChange=${e=>setMonths(+e.target.value)}><option value="3">3 months</option><option value="6">6 months</option><option value="12">12 months</option></select></label>
+      <span class="grow"/><span class="xs faint">Quarter ${q} · from the task records: lateness, ratings, rework, time, date changes and repeating duties</span>
+      <button class="btn btn-ghost btn-sm" onClick=${exportCsv}><${Icon} name="download"/>Training plan (Excel)</button></div>
+    <div class="notice notice-info"><${Icon} name="info"/><span>These are suggestions from the work records. The manager confirms each one after a short talk with the person: a late task can also mean too much work or a slow step elsewhere.</span></div>
+    <div class="grid2">
+      <${Card} title="Training needs by topic" right=${topic?html`<button class="btn btn-ghost btn-sm" onClick=${()=>setTopic("")}>Show all</button>`:html`<span class="xs faint">click a bar to filter</span>`}>
+        <div ref=${chartRef} dangerouslySetInnerHTML=${{__html:chart}}></div><//>
+      <${Card} title="Department workshops suggested">${deptRoll.length?html`<div class="stack" style="gap:8px">${deptRoll.map(d=>html`<div class="row" style="gap:10px"><${Tag} tone="info">${tDept(d.d).name}</${Tag}><span>${d.k==="quality"?tnaTopic("quality",{taskDept:d.d}):TNA_TOPICS[d.k].t}</span><span class="grow"/><span class="xs faint">${d.n} of ${d.of} people</span></div>`)}</div>`:html`<${TEmpty} title="No department-wide gap">A topic shows here when half or more of a department needs it.<//>`}<//>
+    </div>
+    <${Card} title=${`Suggested training (${shown.length})`}>${shown.length?html`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Person</th><th>Training topic</th><th>Type</th><th>Evidence</th><th>Status</th><th></th></tr></thead><tbody>
+      ${shown.map(x=>html`<tr><td><b>${x.p.name}</b><div class="xs faint">${tDept(tUDept(x.p)).name}</div></td><td>${tnaTopic(x.k,x.p)}</td><td class="sm">${TNA_TOPICS[x.k].type}</td><td class="sm">${x.ev}</td><td>${st(x)}${x.rec&&x.rec.note?html`<div class="xs faint">${x.rec.note}</div>`:""}</td>
+        <td>${tnaCanDecide(user,x.p)?html`<div class="row" style="gap:6px;justify-content:flex-end">
+          ${(!x.rec||x.rec.status!=="confirmed")&&(!x.rec||x.rec.status!=="done")&&html`<button class="btn btn-soft btn-sm" disabled=${busy===x.p.id+x.k} onClick=${()=>decide(x,"confirmed")}>Confirm</button>`}
+          ${x.rec&&x.rec.status==="confirmed"&&html`<button class="btn btn-primary btn-sm" disabled=${busy===x.p.id+x.k} onClick=${()=>decide(x,"done")}>Training done</button>`}
+          ${(!x.rec||x.rec.status!=="rejected")&&(!x.rec||x.rec.status!=="done")&&html`<button class="btn btn-ghost btn-sm" disabled=${busy===x.p.id+x.k} onClick=${()=>decide(x,"rejected")}>Not needed</button>`}</div>`:""}</td></tr>`)}
+    </tbody></table></div>`:html`<${TEmpty} title="No training needs found">A topic appears when a person has enough tasks in the period (at least 3–4) and a clear pattern, e.g. 30% or more late.<//>`}<//>
+    <${Card} title="Did the training work?" desc="The same measure 90 days before and after the training">${doneRecs.length?html`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Person</th><th>Training</th><th>Done on</th><th>Before</th><th>After</th><th>Result</th></tr></thead><tbody>
+      ${doneRecs.map(d=>html`<tr><td><b>${d.p.name}</b></td><td>${tnaTopic(d.r.topic,d.p)}</td><td>${tFmt(d.r.doneAt,true)}</td><td>${tnaFmt(d.r.topic,d.b)}</td><td>${tnaFmt(d.r.topic,d.a)}</td>
+        <td>${d.a==null?html`<span class="xs faint">not enough tasks yet</span>`:d.better?html`<${Tag} tone="ok">Improved</${Tag}>`:html`<${Tag} tone="warn">No change yet</${Tag}>`}</td></tr>`)}
+    </tbody></table></div>`:html`<${TEmpty} title="No training marked done yet">After a confirmed training, press “Training done”. The result shows here as new tasks come in.<//>`}<//>
+  </div>`;
 }
 function TPerformance(P){
   const {state,filtered,perfMonth,setPerfMonth}=P; const mk=perfMonth; const tasks=filtered;
