@@ -65,14 +65,14 @@
     async function save(_sheet, rows, progress) {
       const failed = [], signin = [];
       let i = 0;
-      for (const r of rows) {
-        progress && progress(++i, rows.length);
+      // 4 people at a time, and each person's portals all at once (one by one was slow for big sheets)
+      const one = async (r) => {
         const d = r.data, email = loginOf(d.email), dept = d.dept ? deptCode.get(low(d.dept)) : undefined, role = d.role ? roleKey.get(low(d.role)) : undefined;
         try {
           let p = byEmail.get(email);
           if (!p) {
             const { data, error } = await sb.functions.invoke("admin-users", { body: { action: "create", email, full_name: d.name, designation: d.designation || "", dept: dept || "", org_role: role || "staff" } });
-            if (error) { failed.push({ row: r.row, msg: await errText(error) }); continue; }
+            if (error) { failed.push({ row: r.row, msg: await errText(error) }); return; }
             p = { id: data.id, email, full_name: d.name, active: true }; byEmail.set(email, p);
             signin.push([d.name, email, data.temp_password || "(invitation e-mail sent)"]);
             if (d.active === false) await sb.functions.invoke("admin-users", { body: { action: "update", id: p.id, active: false } });
@@ -84,16 +84,20 @@
             if (d.active === true || d.active === false) patch.active = d.active;
             if (p.is_super) delete patch.active;   // a Super Admin is changed only on the People & access page
             const { error } = await sb.functions.invoke("admin-users", { body: patch });
-            if (error) { failed.push({ row: r.row, msg: await errText(error) }); continue; }
+            if (error) { failed.push({ row: r.row, msg: await errText(error) }); return; }
           }
-          for (const m of mods) {
-            const v = d["m_" + m.key]; if (!v) continue;
-            const preset = PRESET[low(v)] || "";
+          const bad = (await Promise.all(mods.filter(m => d["m_" + m.key]).map(async m => {
+            const preset = PRESET[low(d["m_" + m.key])] || "";
             const { error } = await sb.rpc("core_set_access", { p_user: p.id, p_module: m.key, p_preset: preset, p_tabs: preset ? tabsFor(m.key, preset) : {} });
-            if (error) { failed.push({ row: r.row, msg: `${m.name} access not saved: ${error.message}` }); break; }
-          }
+            return error ? `${m.name} access not saved: ${error.message}` : "";
+          }))).filter(Boolean);
+          if (bad.length) failed.push({ row: r.row, msg: bad.join("; ") });
         } catch (e) { failed.push({ row: r.row, msg: (e && e.message) || "not saved" }); }
-      }
+        progress && progress(++i, rows.length);
+      };
+      const queue = rows.slice();
+      await Promise.all(Array.from({ length: Math.min(4, queue.length) }, async () => { while (queue.length) await one(queue.shift()); }));
+      failed.sort((a, b) => a.row - b.row);
       /* sign-in details for the new people, downloaded once (never stored by the ERP) */
       if (signin.length) {
         const csv = "﻿" + [["Full name", "Login", "Temporary password (must be changed at first sign-in)"], ...signin].map(x => x.map(csvCell).join(",")).join("\r\n");

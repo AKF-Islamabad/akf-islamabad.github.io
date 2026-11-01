@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-puukrs457FkwINFrbNxqc3YJTbJQ7Wuvrh1rgwQE0MQ='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-BhVXOLqGMuTydAmDnDO7vLxkgBKQvLcIoBN2i5QwL04='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -953,7 +953,16 @@ function setup() {
     el("div", {}, el("h3", { text: "Portals" }), el("p", { class: "small muted", text: "Switch a portal on when it is ready. Staff see it only if they also have access in People & access." }),
       el("div", { class: "card tblwrap" }, el("table", {}, el("thead", {}, el("tr", {}, ["Name", "Description", "Link", "Visible", ""].map(t => el("th", { text: t })))), el("tbody", {}, modRows)))),
     el("div", {}, el("h3", { text: "Departments" }),
-      el("div", { class: "row", style: "margin-bottom:10px" }, A.depts.map(d => el("span", { class: "tag" + (d.active ? "" : " bad"), text: `${d.name} · ${d.code}` }))),
+      el("p", { class: "small muted", text: "× deletes a department nobody is in. A department with people in it can be switched off instead (hidden from new choices); click it again to switch it back on." }),
+      el("div", { class: "row", style: "margin-bottom:10px" }, A.depts.map(d => el("span", { class: "tag" + (d.active ? "" : " bad"), style: "display:inline-flex;gap:6px;align-items:center" },
+        el("button", { type: "button", class: "linkbtn", style: "all:unset;cursor:pointer", title: d.active ? "Switch off" : "Switch back on", text: `${d.name} · ${d.code}${d.active ? "" : " (off)"}`, onclick: async () => {
+          try { await q(sb.from("core_departments").update({ active: !d.active }).eq("code", d.code)); toast(`${d.name} switched ${d.active ? "off" : "on"}`); loadAdmin(); } catch (e) { fail(e, "The department was not changed"); } } }),
+        el("button", { type: "button", style: "all:unset;cursor:pointer;font-weight:700", "aria-label": "Delete " + d.name, title: "Delete", text: "×", onclick: async () => {
+          const n = A.people.filter(x => x.dept === d.code).length;
+          if (n) { if (d.active && confirm(`${n} person(s) are in ${d.name}, so it cannot be deleted. Move them to another department first, or switch it off now?`)) { try { await q(sb.from("core_departments").update({ active: false }).eq("code", d.code)); toast(`${d.name} switched off`); loadAdmin(); } catch (e) { fail(e, "The department was not changed"); } } return; }
+          if (!confirm(`Delete the department "${d.name}"?`)) return;
+          try { await q(sb.from("core_departments").delete().eq("code", d.code)); toast(`${d.name} deleted`); loadAdmin(); }
+          catch (e) { fail(e, "The department is still used somewhere, so it was not deleted. Switch it off instead"); } } })))),
       el("div", { class: "row" }, newDept, newCode, el("button", { class: "btn sm", text: "Add department", onclick: async () => {
         const code = newCode.value.trim().toUpperCase(); if (!/^[A-Z0-9_-]{2,20}$/.test(code) || newDept.value.trim().length < 2) return toast("Enter a name and a short CODE (letters / digits)", true);
         try { await q(sb.from("core_departments").insert({ code, name: newDept.value.trim() })); toast("Department added"); loadAdmin(); } catch (e) { fail(e, "The department was not added"); } } }))));
@@ -1007,7 +1016,7 @@ async function saveGlobal(patch, logText) {
 }
 
 /* ONE Settings place for every portal: no portal has its own settings page */
-const SETTING_AREAS = [["general", "All portals", "settings", "Organisation, approvals, taxes, AI assistant"], ["matrix", "Approval matrix", "shield", "Who approves what, step by step, in each portal"], ["tasks", "Tasks & Events", "check", "Task departments and workflow stages"], ["donor", "Donor Management", "heart", "Receipts, lists, numbering, donor messages, old data"], ["excel", "Excel import & export", "sheet", "One Excel format: download, fill, upload, for any portal"]];
+const SETTING_AREAS = [["general", "All portals", "settings", "Organisation, approvals, taxes, AI assistant"], ["matrix", "Approval matrix", "shield", "Who approves what, step by step, in each portal"], ["tasks", "Tasks & Events", "check", "Task departments and workflow stages"], ["donor", "Donor Management", "heart", "Receipts, lists, numbering, donor messages, old data"], ["excel", "Excel import & export", "sheet", "One Excel format: download, fill, upload, for any portal"], ["clear", "Clear test data", "settings", "Remove records made while testing, to start fresh"]];
 /* A portal brings its own settings panel as a file (e.g. settings-fleet.js) that registers itself in
    window.AKF_SETTINGS_PANELS = [{ key, title, icon, desc, render(box, api) }] — it still shows HERE, in the one Settings place. */
 const settingsApi = () => ({ sb, el, icon, toast, fail, q, showLoader, hideLoader, saveGlobal });
@@ -1023,7 +1032,7 @@ function settings() {
   if (cur.startsWith("p:")) {
     body = el("section", { style: "padding-bottom:40px;display:grid;gap:16px" });
     try { panels.find(p => "p:" + p.key === cur).render(body, settingsApi()); } catch (e) { body.replaceChildren(el("div", { class: "notice bad", text: "These settings could not be shown." })); fail(e, "Settings panel failed"); }
-  } else body = cur === "portals" ? settingsPortals() : cur === "matrix" ? settingsMatrix() : cur === "tasks" ? settingsTasks() : cur === "donor" ? settingsDonor() : cur === "excel" ? settingsExcel() : settingsGeneral();
+  } else body = cur === "portals" ? settingsPortals() : cur === "matrix" ? settingsMatrix() : cur === "tasks" ? settingsTasks() : cur === "donor" ? settingsDonor() : cur === "excel" ? settingsExcel() : cur === "clear" ? settingsClear() : settingsGeneral();
   return el("section", { style: "display:grid;gap:18px" }, nav, body);
 }
 
@@ -1085,6 +1094,42 @@ function settingsExcel() {
         el("div", { class: "field" }, el("label", { style: "display:flex;gap:8px;align-items:center" }, "2  Choose the sheets", el("span", { class: "grow" }), all, el("small", { text: "All" })), sheetsBox),
         el("div", { style: "display:flex;gap:10px;flex-wrap:wrap;align-items:center" }, openBtn, status)));
     loadSheets();
+  })();
+  return box;
+}
+
+/* ---------- Settings → Clear test data (Super Admin only): the server keeps people, access, departments, settings and signatures ---------- */
+function settingsClear() {
+  const box = el("section", { style: "padding-bottom:40px;display:grid;gap:16px" }, el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })));
+  const PORTAL = { portal_rows: "Procurement, Store & Tasks", donor_rows: "Donor Management", fleet_rows: "Fleet & Ambulances", assistance_rows: "Financial Assistance" };
+  const nice = c => c.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/_/g, " ").replace(/^./, x => x.toUpperCase());
+  (async () => {
+    if (!S.me.is_super) { box.replaceChildren(el("div", { class: "notice bad", text: "Only the Super Admin can clear data." })); return; }
+    let list;
+    try { list = (await q(sb.rpc("core_test_data"))) || []; } catch (e) { box.replaceChildren(el("div", { class: "notice bad", text: "The records could not be counted." })); return fail(e, "Test data could not be counted"); }
+    const boxes = list.map(x => { const c = el("input", { type: "checkbox", "aria-label": PORTAL[x.t] + ": " + nice(x.c) }); c.item = x; return c; });
+    const restart = el("input", { type: "checkbox" }); restart.checked = true;
+    const word = el("input", { class: "input", placeholder: "Type CLEAR", maxlength: 5, style: "max-width:160px", "aria-label": "Type CLEAR to confirm" });
+    const go = el("button", { class: "btn danger", text: "Clear the ticked records", onclick: async () => {
+      const pick = boxes.filter(c => c.checked).map(c => ({ t: c.item.t, c: c.item.c }));
+      if (!pick.length) return toast("Tick what to clear", true);
+      if (word.value.trim() !== "CLEAR") return toast("Type CLEAR in the box to confirm", true);
+      const n = boxes.filter(c => c.checked).reduce((s, c) => s + c.item.n, 0);
+      if (!confirm(`Delete ${n} record(s) for good? This cannot be undone.`)) return;
+      go.disabled = true;
+      try { const r = await q(sb.rpc("core_clear_test_data", { p_pick: pick, p_confirm: "CLEAR", p_restart: restart.checked })); toast(`${r.total} record(s) cleared`); render(); }
+      catch (e) { go.disabled = false; fail(e, "Nothing was cleared"); } } });
+    const groups = Object.keys(PORTAL).filter(t => boxes.some(c => c.item.t === t)).map(t => {
+      const mine = boxes.filter(c => c.item.t === t), all = el("input", { type: "checkbox", "aria-label": "All of " + PORTAL[t] });
+      all.addEventListener("change", () => mine.forEach(c => { c.checked = all.checked; }));
+      return el("div", { class: "card", style: "display:grid;gap:8px" }, el("label", { class: "row" }, all, el("b", { text: PORTAL[t] })),
+        el("div", { style: "display:grid;gap:6px;padding-left:24px" }, mine.map(c => el("label", { class: "row small" }, c, `${nice(c.item.c)} · ${c.item.n}`))));
+    });
+    box.replaceChildren(
+      el("div", { class: "notice", text: "Use this once staff testing is over. Tick what to remove, type CLEAR and press the button. People, logins, access, departments, settings, signatures and the RMD team are always kept. Every clear is recorded in Activity. Files uploaded to the Assistance portal stay in storage." }),
+      ...(groups.length ? groups : [el("div", { class: "empty", text: "There is nothing to clear." })]),
+      ...(groups.length ? [el("label", { class: "row small" }, restart, "Start the numbers again from 1 (receipts, case numbers, vehicle requests) for the portals I clear"),
+        el("div", { class: "row" }, word, go)] : []));
   })();
   return box;
 }

@@ -226,6 +226,8 @@
     // keyboard: arrow keys on the fold button move the note
     tog.onkeydown = (e) => { const d = { ArrowLeft: [-24, 0], ArrowRight: [24, 0], ArrowUp: [0, -24], ArrowDown: [0, 24] }[e.key]; if (!d) return; e.preventDefault();
       const r = root.getBoundingClientRect(); pos = { x: r.left + d[0], y: r.top + d[1] }; place(); store.set("akf-note-pos", pos); };
+    const off = bellLabel();   // folded note: still show "turn on" until this device has notifications
+    if (folded && off && !off[1]) { const b = el("button", "akd-bell", "🔕 Turn on"); b.type = "button"; b.title = "Get notifications with sound on this device"; b.onclick = (e) => { e.stopPropagation(); turnOn(); }; head.append(b); }
     head.append(tog); head.onclick = () => { if (moved) { moved = false; return; } folded = !folded; paint(); };
     drag(head);
     const body = el("div", "akd-body");
