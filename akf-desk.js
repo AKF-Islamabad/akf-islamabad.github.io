@@ -15,7 +15,7 @@
   const SCRIPT = document.currentScript && document.currentScript.src;
   const BASE = new URL(".", SCRIPT || location.href).href;          // the main site folder (/ live, /portal-staging/ staging)
   // Jazba UI (the official design system) on every page, existing and future, even before sign-in
-  if (!document.querySelector('link[href*="jazba.css"]')) { const jz = document.createElement("link"); jz.rel = "stylesheet"; jz.href = BASE + "jazba.css?v=4"; document.head.append(jz); }
+  if (!document.querySelector('link[href*="jazba.css"]')) { const jz = document.createElement("link"); jz.rel = "stylesheet"; jz.href = BASE + "jazba.css?v=5"; document.head.append(jz); }
   // Jazba charts (3D, animated, clickable) on every page, existing and future portals: akf-charts.js
   if (!window.AKF_CHARTS && !document.querySelector('script[src*="akf-charts.js"]')) { const ck = document.createElement("script"); ck.src = BASE + "akf-charts.js"; document.head.append(ck); }
   // the Jazba look on every portal: maps the portal's own colour/font settings (never on the main page)

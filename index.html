@@ -11,7 +11,7 @@
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <link rel="stylesheet" href="fonts/manrope.css">
-<link rel="stylesheet" href="jazba.css?v=4">
+<link rel="stylesheet" href="jazba.css?v=5">
 <link rel="icon" href="icon.jpg">
 <style>
 :root{
@@ -296,10 +296,12 @@ dialog::backdrop{background:rgba(6,20,45,.45);backdrop-filter:blur(6px)}
 @media (prefers-reduced-motion: reduce){ .auth-brand::before,.auth .ctl.err,.auth .go .spin{animation:none} }
 /* ---------- Jazba shell on the hub ---------- */
 .jz-main>main{padding-top:14px;padding-bottom:112px}   /* room under the last cards: the AI button and the note float over the bottom edge */
+@media (min-width:821px){ .jz-main>main.wrap{padding-right:clamp(16px,calc(96px - (100vw - 1256px) / 2),88px)} }   /* a right gutter for the round AI button when the screen has no free margin */
+.jz-today>.jz-impact{margin-bottom:6px}   /* 24px under the month banner, like the other big gaps */
 /* portal cards: "Open" is the action (a button), the access level is a quiet label; titles take two lines so the rows line up */
 .tile h3{min-height:2.5em;line-height:1.25}
-.tile .foot .tag,.tile:hover .foot .tag{background:none;padding:0;color:var(--muted);font-weight:600;font-size:12.5px;border-radius:0}
-.tile .foot .row{gap:6px;padding:8px 14px;border-radius:999px;background:color-mix(in srgb,var(--accent) 80%,#000);color:#fff;font-weight:700}   /* darker so white text passes 4.5:1 on every portal colour */
+.tile .foot .tag,.tile:hover .foot .tag{background:none;padding:0;color:var(--muted);font-weight:600;font-size:12px;border-radius:0}
+.tile .foot .row{gap:6px;padding:8px 14px;border-radius:99px;background:color-mix(in srgb,var(--accent) 80%,#000);color:#fff;font-weight:700}   /* darker so white text passes 4.5:1 on every portal colour */
 .tile:hover .foot .row{filter:brightness(1.08)}
 /* the month banner: slim and quiet while there is nothing to show yet */
 .jz-impact.quiet{padding:12px 20px}

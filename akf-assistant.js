@@ -12,9 +12,11 @@
   "use strict";
   if (window.AKF_ASSISTANT) return;
   const CSS = `
-.kai-fab{position:fixed;right:20px;bottom:20px;z-index:8000;display:flex;align-items:center;gap:9px;height:52px;padding:0 20px 0 16px;border:0;border-radius:99px;cursor:pointer;color:#fff;font:700 14.5px/1 "Segoe UI Variable Text","Segoe UI",Inter,system-ui,sans-serif;
+.kai-fab{position:fixed;right:20px;bottom:20px;z-index:8000;display:flex;align-items:center;gap:0;height:52px;padding:0 16px;border:0;border-radius:99px;cursor:pointer;color:#fff;font:700 14.5px/1 "Segoe UI Variable Text","Segoe UI",Inter,system-ui,sans-serif;
   background:linear-gradient(135deg,#1A66CC 0%,#0B51A7 45%,#06368A 100%);box-shadow:0 14px 30px -10px rgba(11,81,167,.7);transition:transform .3s cubic-bezier(.34,1.56,.64,1),box-shadow .3s}
-.kai-fab:hover{transform:translateY(-2px) scale(1.03)} .kai-fab svg{width:20px;height:20px}
+.kai-fab:hover{transform:translateY(-2px) scale(1.03)} .kai-fab svg{width:20px;height:20px;flex:none}
+.kai-fab span{max-width:0;overflow:hidden;white-space:nowrap;transition:max-width .3s,margin .3s}   /* a round button that keeps clear of the cards; the label slides out on hover or keyboard focus */
+.kai-fab:hover span,.kai-fab:focus-visible span{max-width:170px;margin:0 4px 0 9px}
 .kai-fab::after{content:"";position:absolute;inset:-4px;border-radius:inherit;border:2px solid rgba(25,194,174,.55);animation:kaiPulse 2.6s ease-out infinite;pointer-events:none}
 @keyframes kaiPulse{0%{transform:scale(.92);opacity:1}100%{transform:scale(1.25);opacity:0}}
 .kai-panel{position:fixed;right:20px;bottom:20px;z-index:8001;width:min(430px,calc(100vw - 24px));height:min(640px,calc(100vh - 40px));display:flex;flex-direction:column;overflow:hidden;
