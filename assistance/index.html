@@ -1232,10 +1232,11 @@ ol.as-stages b{font-weight:600;font-size:14px} ol.as-stages small{display:block;
 .as-viewer{display:grid;place-items:center;min-height:240px;background:var(--surface-2);border-radius:12px;padding:10px}
 .as-viewer img{max-width:100%;height:auto;display:block;border-radius:8px}
 /* print slip (only the slip is printed) */
+/* design.css (shared with Fleet) prints only #print-area, so the slip rule needs !important to beat it */
 #printArea{display:none}
 @media print{
   body.as-printing>*:not(#printArea){display:none!important}
-  body.as-printing #printArea{display:block;color:#000;font:13px/1.5 Arial,sans-serif}
+  body.as-printing #printArea{display:block!important;color:#000;font:13px/1.5 Arial,sans-serif}
   .as-slip{border:1.5px solid #000;border-radius:10px;padding:20px;max-width:640px;margin:0 auto}
   .as-slip header{display:flex;gap:14px;align-items:center;border-bottom:1px solid #999;padding-bottom:12px;margin-bottom:14px}
   .as-slip header img{width:60px;height:60px;border-radius:8px}
