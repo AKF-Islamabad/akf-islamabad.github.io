@@ -97,6 +97,10 @@
     name: "Procurement",
     async load(sb) {
       const S = await readRows(sb, ["vendors", "budgets"]);
+      // the real departments (main page → Departments) replace the sample list, as in the portal
+      const { data: cd } = await sb.from("core_departments").select("name,active").order("name");
+      const real = (cd || []).filter(x => x.active !== false && String(x.name || "").trim().length >= 2).map(x => String(x.name).trim());
+      if (real.length) BUDGET_COLS.find(c => c.k === "dept").list = [...real, "OTHER"];
       const findVendor = (st, name, ntn) => st.vendors.find(v => lc(v.name) === lc(name)) || (ntn ? st.vendors.find(v => v.ntn && v.ntn === ntn) : null) || null;
       const findBudget = (st, code) => st.budgets.find(b => b.code === String(code || "").toUpperCase().trim()) || null;
       const sheets = [

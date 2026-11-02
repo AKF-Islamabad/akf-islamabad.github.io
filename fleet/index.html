@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-fleet.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-+elTlpGssWI2qTgRFSkGl7hQ6isA0BjvTkaM3LABtrY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-bRD5LhMSCldK3W13ivwHe1MNuXAZ7GDnoCIiWhSu+mc='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1968,6 +1968,7 @@ function erpRows() {
   const out = [];
   for (const [c, get] of Object.entries(COL_ARR)) for (const x of get() || []) {
     if (!x || typeof x !== 'object') continue;
+    if (x._core && x._core === JSON.stringify(x)) continue;   // a real department nobody has edited in Fleet yet: nothing to save
     if (x.id == null || x.id === '') x.id = NUMERIC.has(c) ? nid() : (PREFIX[c] || '') + rid();
     out.push([c, String(x.id), x]);
   }
@@ -2096,6 +2097,13 @@ async function erpLoadAll() {
   for (const r of rows) { if (r.collection === 'driverpii') pii.push(r); else erpApply(r.collection, r.id, r.data); }
   for (const r of pii) erpApply(r.collection, r.id, r.data);
   [S.trips, S.fuel, S.mlog, S.inc, S.exp, S.opf].forEach(sortArr);
+  // the real departments (main page → Departments) join the list; one is only saved here once someone edits it in Settings
+  try {
+    const { data: cd } = await SB.from('core_departments').select('name,active').order('name');
+    const have = new Set(S.dept.map(d => String(d.n || '').toLowerCase()));
+    (cd || []).forEach(x => { const n = cleanStr(String(x.name || '').trim()).slice(0, 80); if (x.active === false || n.length < 2 || have.has(n.toLowerCase())) return;
+      const o = { n }; Object.defineProperty(o, '_core', { value: JSON.stringify(o) }); S.dept.push(o); have.add(n.toLowerCase()); });
+  } catch (e) { console.warn('[departments]', e); }
   S.veh.sort((a, b) => String(a.p).localeCompare(String(b.p))); S.dept.sort((a, b) => String(a.n).localeCompare(String(b.n)));
   erpStatuses(); erpCkd();
 }

@@ -45,7 +45,12 @@
   const tMin = m => { m = Math.round(m || 0); if (!m) return ""; const h = Math.floor(m / 60), r = m % 60; return h ? (r ? `${h}h ${r}m` : `${h}h`) : `${r}m`; };
   const tRole = u => { if (!u) return "Staff"; if (TASK_ADMIN.includes(u.role) || u.taskAdmin) return "RM"; if (u.taskRole && TASK_ROLES[u.taskRole]) return u.taskRole;
     return u.role === "hod" ? "HOD" : u.role === "manager_hr" ? "MA" : u.role === "president" ? "President" : u.role === "gen_sec" ? "GS" : "Staff"; };
-  const tUDept = u => (u && (u.taskDept || PORTAL_TO_TASK_DEPT[u.dept])) || "01";
+  /* same as tDepts() / tUDept() in portal-app.html: the saved task departments plus each real department not in them yet ("d_" + code) */
+  const withReal = (base, real) => { const have = new Set(base.map(x => String(x.name || "").toLowerCase())), ids = new Set(base.map(x => x.id));
+    return base.concat(real.filter(x => !have.has(x.name.toLowerCase()) && !PORTAL_TO_TASK_DEPT[x.name] && !ids.has("d_" + x.code)).map(x => ({ id: "d_" + x.code, code: x.code.slice(0, 10), name: x.name.slice(0, 60) }))); };
+  let DEPTS_NOW = TASK_DEPTS_DEFAULT;   // set by rules() for the sheet being checked
+  const tUDept = u => { if (!u) return "01"; if (u.taskDept) return u.taskDept; if (PORTAL_TO_TASK_DEPT[u.dept]) return PORTAL_TO_TASK_DEPT[u.dept];
+    const n = String(u.dept || "").toLowerCase(), x = n && DEPTS_NOW.find(z => String(z.name || "").toLowerCase() === n); return x ? x.id : "01"; };
   const tNum = t => +(String(t.id || "").replace(/\D/g, "")) || 0;
   const tOpen = t => t.stage !== "06" && t.stage !== "07";
   const lc = s => String(s == null ? "" : s).trim().toLowerCase();
@@ -63,7 +68,9 @@
       all = all.concat(r.data || []);
       if (!r.data || r.data.length < 1000) break;
     }
-    const st = { users: [], tasks: [], events: [], audit: [], settings: {} };
+    const st = { users: [], tasks: [], events: [], audit: [], settings: {}, realDepts: [] };
+    const { data: cd } = await sb.from("core_departments").select("code,name,active").order("name");   // the real departments, as in the portal
+    st.realDepts = (cd || []).filter(x => x.active !== false && String(x.name || "").trim().length >= 2).map(x => ({ code: String(x.code || ""), name: String(x.name).trim() }));
     all.forEach(r => { if (r.collection === "settings") { if (r.id === "global") st.settings = r.data || {}; } else if (st[r.collection] && r.data) st[r.collection].push(r.data); });
     st.tasks.sort((a, b) => (a.createdAt || "") < (b.createdAt || "") ? 1 : -1);
     return st;
@@ -91,8 +98,9 @@
 
   /* the task rules of portal-app.html for the person saving (the Super Admin = RM) */
   function rules(d, u) {
-    const depts = (d.settings && d.settings.taskDepts) || TASK_DEPTS_DEFAULT, stages = (d.settings && d.settings.taskStages) || TASK_STAGES_DEFAULT;
+    const depts = withReal((d.settings && Array.isArray(d.settings.taskDepts) && d.settings.taskDepts.length && d.settings.taskDepts) || TASK_DEPTS_DEFAULT, d.realDepts || []), stages = (d.settings && d.settings.taskStages) || TASK_STAGES_DEFAULT;
     let mx = T_MX_BUILTIN; try { const m = window.AKF_MATRIX && window.AKF_MATRIX.get && window.AKF_MATRIX.get(d.settings || {}); const t = m && m.tasks; if (t) mx = { approvers: Array.isArray(t.approvers) ? t.approvers : T_MX_BUILTIN.approvers, closers: Array.isArray(t.closers) ? t.closers : T_MX_BUILTIN.closers, selfNeedsApproval: t.selfNeedsApproval !== false }; } catch (e) { mx = T_MX_BUILTIN; }
+    DEPTS_NOW = depts;
     const dept = id => depts.find(x => x.id === id) || { id, name: "Unknown department" };
     const stage = id => stages.find(x => x.id === id) || { id, name: id };
     const user = id => d.users.find(x => x.id === id);
