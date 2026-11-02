@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-XoXW9x7wIIH9M7Mpe5oetJkhRocBhhhSH71ycYlN0PM='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-bOi8hNEXHRUNDH3maa2XOxgm3OJ8oL0XXQ/Mw6Gt5VY='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -688,7 +688,11 @@ function setPassword() {
   const a = el("input", { class: "input", type: "password", autocomplete: "new-password", minlength: 12, maxlength: 128, required: true });
   const b = el("input", { class: "input", type: "password", autocomplete: "new-password", minlength: 12, maxlength: 128, required: true });
   const msg = el("div"), btn = el("button", { class: "btn", type: "submit", text: "Save password" });
-  const form = el("form", { style: "display:grid;gap:14px" }, el("label", { class: "f" }, "New password (at least 12 characters, with a capital letter, a small letter and a number)", a), el("label", { class: "f" }, "Type it again", b), msg, btn);
+  // the same eye button as on the sign-in screen, one per box
+  const withEye = i => { const eye = el("button", { class: "eye", type: "button", "aria-label": "Show password" }, icon("eye", 18));
+    eye.addEventListener("click", () => { const show = i.type === "password"; i.type = show ? "text" : "password"; eye.setAttribute("aria-label", show ? "Hide password" : "Show password"); i.focus(); });
+    return el("div", { class: "ctl" }, icon("lock", 18), i, eye); };
+  const form = el("form", { style: "display:grid;gap:14px" }, el("label", { class: "f" }, "New password (at least 12 characters, with a capital letter, a small letter and a number)", withEye(a)), el("label", { class: "f" }, "Type it again", withEye(b)), msg, btn);
   form.addEventListener("submit", async ev => {
     ev.preventDefault(); msg.replaceChildren();
     if (a.value.length < 12 || !/[A-Z]/.test(a.value) || !/[a-z]/.test(a.value) || !/[0-9]/.test(a.value)) return msg.append(el("div", { class: "notice bad", text: "Use at least 12 characters, with a capital letter, a small letter and a number." }));
