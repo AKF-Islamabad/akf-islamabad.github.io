@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-eQlZK543NRV2ZadccCzGR3VbE7sqP+bwr218PbXVYZs='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-XoXW9x7wIIH9M7Mpe5oetJkhRocBhhhSH71ycYlN0PM='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -879,6 +879,10 @@ function accessDialog(p, m) {
   const boxes = {};   // boxes[tab][action] = checkbox
   let changed = false;
   const presetRow = el("div", { class: "row" });
+  /* Assistance: the server lets only the Front Desk Officer approval role register applications, so the Add tick alone is not enough */
+  const fdNote = el("p", { class: "small", role: "status", style: "display:none;margin:0;padding:8px 10px;border-radius:8px;background:#FFF4E0;color:#7A4B00",
+    text: `Applications → Add works only when "Role in approvals" is Front Desk Officer. ${p.full_name}'s is ${Object.fromEntries(ORG_ROLES)[p.org_role || "staff"] || "Staff"}: change it with Manage on the People list.` });
+  const checkFD = () => { const b = m.key === "assistance" && boxes.applications && boxes.applications.add; fdNote.style.display = b && b.checked && p.org_role !== "front_desk" && !p.is_super ? "" : "none"; };
   const tick = name => {
     preset = name;
     tabs.forEach(t => { const want = name ? (t.presets[name] || (name === "admin" ? t.actions : [])) : []; ACTIONS.forEach(a => { if (boxes[t.tab_key][a]) boxes[t.tab_key][a].checked = want.includes(a); }); });
@@ -887,6 +891,7 @@ function accessDialog(p, m) {
   function drawPresets() {
     presetRow.replaceChildren(...["", ...ROLES].map(r => el("button", { class: "btn sm " + (preset === r ? "" : "ghost"), type: "button", text: r ? ROLE_LABEL[r] : "No access", onclick: () => { changed = true; tick(r); } })),
       ...(preset === "custom" ? [el("span", { class: "tag warn", text: "Custom" })] : []));   // replaceChildren prints a null as "null"
+    checkFD();
   }
   const rows = tabs.map(t => {
     boxes[t.tab_key] = {};
@@ -905,7 +910,7 @@ function accessDialog(p, m) {
   });
   drawPresets();
   const body = tabs.length
-    ? [el("p", { class: "small muted", text: "Pick a preset, then adjust any tick. A tab with no tick is hidden from this person." }), presetRow,
+    ? [el("p", { class: "small muted", text: "Pick a preset, then adjust any tick. A tab with no tick is hidden from this person." }), presetRow, fdNote,
        el("div", { class: "tblwrap", style: "border:1px solid var(--line)" }, el("table", {}, el("thead", {}, el("tr", {}, el("th", { text: "Tab" }), ACTIONS.map(a => el("th", { style: "text-align:center", text: ACTION_LABEL[a] })))), el("tbody", {}, rows)))]
     : [el("p", { text: "This portal has no tabs registered yet, so access is simply open or closed." }), presetRow];
   const d = dialog(`${p.full_name} — ${m.name}`, body, close => [el("button", { class: "btn ghost", text: "Cancel", onclick: close }), el("button", { class: "btn", text: "Save access", onclick: async ev => {

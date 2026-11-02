@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-wIIItYRoDAoJU/gwm2FW2nJ5XI9CzEW53K1AVFi55Sk='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-CVIUoXa1HN/BN3zxpjMMvBeimZUVIrbreR+YtQRR8Gw='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -3737,7 +3737,9 @@ async function loadRealDepts(){
 const DONORS = ["Orphan Health","Disaster","Education","General Fund","OTHER"];
 const CATS = ["MED","FOOD","NFI","OFF","IT","OTHER"];
 const UOMS = ["Pcs","Box","Kg","Ltr","Pack","Set","Carton"];
-const STORES = ["CS1 Central Store 1","CS2 Central Store 2"];
+const DEFAULT_STORES = ["CS1 Central Store 1","CS2 Central Store 2"];
+let STORES = DEFAULT_STORES;   // "CODE Name"; the Super Admin renames or adds stores in Settings (settings.stores)
+const storesOf = st => { const l=st&&Array.isArray(st.stores)?st.stores.filter(x=>/^[A-Z0-9]{1,6} \S/.test(String(x||""))):[]; return l.length?l:DEFAULT_STORES; };
 let SETTINGS = { orgName:"Alkhidmat Foundation Islamabad Region", escalationHours:48, gst:0.18, whtGoodsFiler:0.04, whtGoodsNonFiler:0.08, whtServicesFiler:0.08, whtServicesNonFiler:0.16, storeAutoApprove:0, procurementAutoApprove:0, assetThreshold:50000, actingApprover:"", fiscalYear:"2026-27", directPurchaseLimit:100000, aiProvider:"builtin", aiKey:"", aiModel:"gemini-2.5-flash" };
 const DEFAULT_SETTINGS={...SETTINGS};
 
@@ -4649,7 +4651,7 @@ function makeActions(commit, user, toast){
         r.items.forEach(it=>{ let s=d.stock.find(s=>s.id===it.itemId)||d.stock.find(s=>s.name.toLowerCase()===it.name.toLowerCase());
           if(s){ s.qty=Math.max(0,s.qty-it.qty); d.ledger.unshift({id:uid(),at:nowISO(),itemId:s.id,type:"out",qty:it.qty,ref:id,note:`Issued to ${r.dept}`}); }
           amount+=it.qty*it.price; lines.push({item:it.name,qty:it.qty,uom:it.uom,price:it.price}); });
-        d.docs.unshift({id,type:"GIN",title:"Goods Issuance Note",at:nowISO(),by:user.name,byId:user.id,amount,ref:r.id,store:"CS1 Central Store 1",lines,gatePass:gp,vehicle,driver,to:`${r.dept} · ${r.requester} (HOD)`,receiverId:r.requesterId,note});
+        d.docs.unshift({id,type:"GIN",title:"Goods Issuance Note",at:nowISO(),by:user.name,byId:user.id,amount,ref:r.id,store:STORES[0],lines,gatePass:gp,vehicle,driver,to:`${r.dept} · ${r.requester} (HOD)`,receiverId:r.requesterId,note});
         (d.assets||[]).filter(a=>a.requestId===r.id&&a.status==="In store").forEach(a=>{ a.status="Issued"; a.custodian=`${r.dept} · ${r.requester}`; a.location=r.dept; a.issuedAt=nowISO(); a.gdn=id; });
         r.links.issue=id; advance(d,r,"issued",`Issued to HOD via GIN ${id} · Gate pass ${gp}`,note);
       }); toast(`GIN ${id} issued · gate pass ${gp}`,"ok");
@@ -4759,11 +4761,17 @@ function makeActions(commit, user, toast){
     payInvoice(invId,payRef){ commit(d=>{ const inv=d.invoices.find(i=>i.id===invId); inv.status="Paid"; inv.paidAt=nowISO(); inv.payRef=payRef; inv.paidBy=user.name; const po=d.pos.find(p=>p.id===inv.poId); if(po) po.paid=true; log(d,inv.id,"Payment released",payRef); }); toast("Payment recorded","ok"); },
     distribute({beneficiary,lines,donor,note}){ let id,gp; commit(d=>{ id=nextNumber(d,`AKF-BEN-RCT-${YEAR}-${MONTH()}-`,5); let amount=0; const out=[];
         lines.forEach(l=>{ const s=d.stock.find(x=>x.id===l.itemId); if(!s||l.qty<=0) return; s.qty=Math.max(0,s.qty-l.qty); amount+=l.qty*s.price; out.push({item:s.name,qty:l.qty,uom:s.uom,price:s.price,batch:s.batch,expiry:s.expiry}); d.ledger.unshift({id:uid(),at:nowISO(),itemId:s.id,type:"out",qty:l.qty,ref:id,note:"Beneficiary distribution · "+beneficiary.village}); });
-        d.docs.unshift({id,type:"BEN",title:"Beneficiary receipt",at:nowISO(),by:user.name,amount,ref:"Donor: "+donor,store:"CS1 Central Store 1",lines:out,beneficiary,note});
+        d.docs.unshift({id,type:"BEN",title:"Beneficiary receipt",at:nowISO(),by:user.name,amount,ref:"Donor: "+donor,store:STORES[0],lines:out,beneficiary,note});
         log(d,id,"Beneficiary receipt issued",pkr(amount)); }); toast(`${id} issued`,"ok"); },   /* name and CNIC stay on the receipt only, never in the activity log */
     attach(reqId,file){ commit(d=>{ const r=d.requests.find(r=>r.id===reqId); r.attachments=r.attachments||[]; r.attachments.push({id:uid(),at:nowISO(),by:user.name,...file}); log(d,r.id,"Attachment added",`${file.label} · ${file.name}`,r.dept); }); toast("Attachment saved","ok"); },
     removeAttachment(reqId,aid){ commit(d=>{ const r=d.requests.find(r=>r.id===reqId); const a=(r.attachments||[]).find(a=>a.id===aid); r.attachments=(r.attachments||[]).filter(a=>a.id!==aid); if(a) log(d,r.id,"Attachment removed",a.name,r.dept); }); },
     restore(json){ try{ const s=JSON.parse(json); if(!s||!Array.isArray(s.requests)||!Array.isArray(s.users)) throw 0; saveState(s); location.reload(); }catch(e){ toast("That file is not a valid portal backup","bad"); } },
+    /* rename (same code) or add stores; items and documents of a renamed store follow it */
+    saveStores(list){ commit(d=>{ const code=x=>x.split(" ")[0], ren=new Map(); storesOf(d.settings).forEach(o=>{ const n=list.find(x=>code(x)===code(o)); if(n&&n!==o) ren.set(o,n); });
+      d.settings={...d.settings,stores:list};
+      ren.forEach((n,o)=>{ d.stock.forEach(x=>{ if(x.store===o) x.store=n; }); d.docs.forEach(x=>{ if(x.store===o) x.store=n; }); });
+      log(d,"SETTINGS","Stores changed",[...ren].map(([o,n])=>o+" → "+n).concat(list.filter(x=>!storesOf(SETTINGS).some(o=>code(o)===code(x))).map(x=>"Added "+x)).join(" · ")); });
+      STORES=list; toast("Stores saved","ok"); },
     saveSettings(st){ commit(d=>{ const diffs=Object.keys(st).filter(k=>String(d.settings[k])!==String(st[k])).map(k=>`${k}: ${d.settings[k]} → ${st[k]}`); d.settings={...d.settings,...st}; if(diffs.length) log(d,"SETTINGS","Settings changed",diffs.join(" · ")); }); toast("Settings saved","ok"); },
     async changePasswordSB(next){ try{ await DB.changePassword(next); commit(d=>{ log(d,user.username,"Password changed",""); });   /* the password lives only in Supabase Auth, never on the profile */ toast("Password changed","ok"); return true; }catch(e){ toast(/password/i.test(e.message||"")&&!/[{}<>]/.test(e.message)?e.message:errRef(e,"Could not change password"),"bad"); return false; } },
     async restoreSB(json){ try{ const s=JSON.parse(json); if(!s||!Array.isArray(s.requests)) throw new Error("not a backup"); await DB.replaceAll(s,true); toast("Backup restored","ok"); setTimeout(()=>location.reload(),600); }catch(e){ toast(errRef(e,"Restore failed"),"bad"); } },
@@ -5442,7 +5450,8 @@ function Store({state,user,A,openReq,openDoc,readOnly,focusItem}){
       <div class="row wrap sa-more"><button class="btn btn-ghost btn-sm" disabled=${!state.stock.length} onClick=${()=>setForm("transfer")}>Transfer</button><button class="btn btn-ghost btn-sm" disabled=${!state.stock.length} onClick=${()=>setForm("return")}>Return</button><button class="btn btn-ghost btn-sm" disabled=${!state.stock.length} onClick=${()=>setForm("disposal")}>Disposal</button><button class="btn btn-ghost btn-sm" disabled=${!state.stock.length} onClick=${()=>setForm("psv")}>Stock count</button>${manage&&html`<button class="btn btn-primary btn-sm" onClick=${()=>setItemModal({})}><${Icon} name="plus"/>Add item</button>`}</div>
     </div>`}
     ${dq&&html`<div id="donor-goods"><${DonorGoodsCard} state=${state} A=${A} canAct=${storeAct} onReceived=${()=>setTab("received")}/></div>`}
-    ${!isHod&&html`<div class="seg">${[["register","Stock register"],["received","Received"],["issued","Issued"],["stock","Bin cards"],["requests","Issue requests"],["assets","Assets"],["docs","Documents"]].map(([k,l])=>html`<button class=${tab===k?"active":""} onClick=${()=>setTab(k)}>${l}</button>`)}</div>`}
+    ${!isHod&&html`<div class="seg">${[["register","Stock register"],["received","Received"],["issued","Issued"],["stock","Bin cards"],["requests","Issue requests"],["assets","Assets"],["docs","Documents"]].concat(user.role==="super"?[["stores","Store names"]]:[]).map(([k,l])=>html`<button class=${tab===k?"active":""} onClick=${()=>setTab(k)}>${l}</button>`)}</div>`}
+    ${tab==="stores"&&user.role==="super"&&html`<${StoresCard} state=${state} A=${A}/>`}
     ${form==="receive"&&html`<${StockReceiveForm} state=${state} onCancel=${()=>setForm(null)} onSave=${p=>{A.receiveStock(p);setForm(null);setTab("received");}}/>`}
     ${form==="issue"&&html`<${StockIssueForm} state=${state} onCancel=${()=>setForm(null)} onSave=${p=>{A.issueStock(p);setForm(null);setTab("issued");}}/>`}
     ${form==="beneficiary"&&html`<${BeneficiaryForm} stock=${state.stock.filter(s=>s.qty>0)} onCancel=${()=>setForm(null)} onSave=${p=>{A.distribute(p);setForm(null);}}/>`}
@@ -5894,9 +5903,20 @@ function Finance({state,user,A,openReq,openDoc,readOnly}){
 }
 
 /* ---------- Settings (Super Admin) ---------- */
+/* store names: the code (CS1 …) stays, because item codes carry it; the name can change */
+function StoresCard({state,A}){
+  const saved=storesOf(state.settings), split=x=>({code:x.split(" ")[0],name:x.slice(x.indexOf(" ")+1),old:true});
+  const [rows,setRows]=useState(()=>saved.map(split)); const put=(i,k,v)=>setRows(rows.map((r,j)=>j===i?{...r,[k]:v}:r));
+  const list=rows.map(r=>(r.code.trim().toUpperCase()+" "+r.name.replace(/\s+/g," ").trim()));
+  const codes=rows.map(r=>r.code.trim().toUpperCase()), bad=rows.some((r,i)=>!/^[A-Z0-9]{1,6}$/.test(codes[i])||r.name.trim().length<2||codes.indexOf(codes[i])!==i);
+  const dirty=JSON.stringify(list)!==JSON.stringify(saved);
+  return html`<${Card} title="Stores" desc="Rename a store or add one. The code stays the same, because item codes carry it. Items and documents of a renamed store move to the new name.">
+    <div class="stack" style="gap:8px">${rows.map((r,i)=>html`<div class="row"><input class="input" style="max-width:90px" aria-label="Store code" value=${r.code} disabled=${r.old} maxlength="6" placeholder="CS3" onInput=${e=>put(i,"code",e.target.value.toUpperCase())}/><input class="input grow" aria-label="Store name" value=${r.name} maxlength="60" placeholder="Store name" onInput=${e=>put(i,"name",e.target.value)}/>${!r.old&&html`<button class="btn btn-ghost btn-sm" onClick=${()=>setRows(rows.filter((_,j)=>j!==i))}>Remove</button>`}</div>`)}</div>
+    <div class="row" style="margin-top:10px"><button class="btn btn-ghost btn-sm" onClick=${()=>setRows([...rows,{code:"CS"+(rows.length+1),name:"",old:false}])}><${Icon} name="plus"/>Add store</button><span class="grow sm muted">${bad?"Each store needs a short code (letters or digits, no repeats) and a name.":dirty?"You have unsaved changes.":""}</span><button class="btn btn-primary" disabled=${!dirty||bad} onClick=${()=>{ A.saveStores(list); setRows(list.map(split)); }}><${Icon} name="check"/>Save stores</button></div><//>`;
+}
 function Settings({state,A,user}){
   /* task departments & stages are saved separately by their own card below, so they are left out of this form */
-  const noTask=o=>{ const {taskDepts,taskStages,...rest}=o||{}; return rest; };
+  const noTask=o=>{ const {taskDepts,taskStages,stores,...rest}=o||{}; return rest; };
   const [f,setF]=useState(noTask({...DEFAULT_SETTINGS,...state.settings,storeAutoApprove:0,procurementAutoApprove:0})); const set=(k,v)=>setF({...f,[k]:v}); const pct=k=>html`<input class="input" type="number" step="0.5" min="0" max="100" value=${Math.round(f[k]*1000)/10} onInput=${e=>set(k,Number(e.target.value)/100)}/>`;
   const dirty=JSON.stringify(f)!==JSON.stringify(noTask(state.settings));
   return html`<div class="stack" style="gap:16px">
@@ -5911,6 +5931,7 @@ function Settings({state,A,user}){
         ${f.aiProvider==="gemini"&&html`<${Field} label="Gemini API key (aistudio.google.com/apikey)"><input class="input" type="password" value=${f.aiKey||""} onInput=${e=>set("aiKey",e.target.value.trim())} placeholder="AIza…"/><//><${Field} label="Model"><input class="input" value=${f.aiModel||"gemini-2.5-flash"} onInput=${e=>set("aiModel",e.target.value.trim())}/><//>`}</div>
       ${f.aiProvider==="gemini"&&html`<div class="notice notice-warn" style="margin-top:10px"><${Icon} name="alert"/><span>The key is stored with the portal settings, so any signed-in user's browser can use it. Use a free-tier key with no billing attached. Only a summary of portal figures (no passwords or signatures) is sent to Google.</span></div>`}<//>
     <${Card} title="Tax rules (FBR)" desc="Applied automatically to every quotation and purchase order."><div class="grid4"><${Field} label="GST %">${pct("gst")}<//><${Field} label="WHT goods · filer %">${pct("whtGoodsFiler")}<//><${Field} label="WHT goods · non-filer %">${pct("whtGoodsNonFiler")}<//><${Field} label="WHT services · filer %">${pct("whtServicesFiler")}<//><${Field} label="WHT services · non-filer %">${pct("whtServicesNonFiler")}<//></div><//>
+    <${StoresCard} state=${state} A=${A}/>
     <${BackupCard} state=${state} A=${A}/>
     <div class="row"><span class="grow sm muted">${dirty?"You have unsaved changes.":"All changes saved."}</span><button class="btn btn-ghost" onClick=${()=>setF(noTask({...DEFAULT_SETTINGS}))}>Restore defaults</button><button class="btn btn-primary" disabled=${!dirty} onClick=${()=>A.saveSettings(f)}><${Icon} name="check"/>Save settings</button></div>
     <h2 style="margin:12px 0 0;font-size:17px">Tasks & Events</h2>
@@ -6351,7 +6372,7 @@ function App(){
     sb.from("core_modules").select("name").eq("key",PORTAL).maybeSingle().then(({data})=>{ if(data&&data.name){ PORTAL_NAME=data.name; document.title="Alkhidmat Foundation Islamabad · "+data.name; } },()=>{})
       .then(()=>sb.rpc("core_my_tabs",{p_module:PORTAL})).then(({data,error})=>{ const g=error?[]:(data||[]).map(t=>t.tab_key); PORTAL_GRID=g; setGrid(g); },()=>{ PORTAL_GRID=[]; setGrid([]); }); },[authUser&&authUser.id]);
   if(boot!=="ready"||!state) return html`<${BootScreen} status=${boot} err=${bootErr}/>`;
-  SETTINGS=state.settings;
+  SETTINGS=state.settings; STORES=storesOf(state.settings);
   let user=null;
   if(SB_MODE){ if(authUser){ user=profileFor(state,authUser); if(!user&&state.users.length===0&&state.authLoaded){ /* first ever login on an empty portal becomes Super Admin */ const email=(authUser.email||"").toLowerCase(); user={id:authUser.id,name:email.split("@")[0].replace(/[._]/g," ").replace(/\b\w/g,c=>c.toUpperCase()),username:email.split("@")[0],email,role:"super",designation:"System Administrator",dept:"IT",active:true}; const u=user; setTimeout(()=>commit(d=>{ if(!d.users.length) d.users.push(u); }),0); } if(user&&!user.active) user=null; } }
   else user=state.users.find(u=>u.id===sessionId&&u.active)||null;
