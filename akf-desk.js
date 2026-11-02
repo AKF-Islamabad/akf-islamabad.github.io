@@ -80,11 +80,28 @@
     if (isIOS && !standalone) { alert("On iPhone and iPad: tap Share → \"Add to Home Screen\", open the portals from that icon, then turn notifications on there."); return; }
     if (!canPush) { alert("This browser cannot show notifications. Use Chrome, Edge, Firefox or Safari."); return; }
     unlock();
+    if (Notification.permission === "denied") { allowHelp(); return; }   // the browser no longer asks: only the person can allow it again
     const p = await Notification.requestPermission();
-    if (p !== "granted") { alert("Notifications are blocked for this site. Allow them in the browser's site settings (the lock icon next to the address)."); paint(); return; }
+    if (p !== "granted") { if (p === "denied") allowHelp(); paint(); return; }   // "default" = the question was closed: ask again next time
     try { await subscribe(); await sb.functions.invoke("push", { body: { action: "test" } }); ding(); }
     catch (e) { alert("Notifications could not be switched on: " + e.message); }
     paint();
+  }
+  // a site can't undo a "Block" in the browser, so show the person how to allow it, step by step
+  let cssIn = false;
+  function addCss() { if (cssIn) return; cssIn = true; const st = el("style"); st.textContent = CSS; document.head.appendChild(st); }
+  function allowHelp() {
+    addCss();   // also on pages that hide the note (data-desk="off")
+    const d = el("dialog", "akd-help"); d.setAttribute("aria-labelledby", "akd-help-t");
+    const t = el("h2", "", "Notifications are blocked in this browser"); t.id = "akd-help-t";
+    const steps = el("ol"); [
+      "Click the icon just left of the web address (a lock or two small sliders).",
+      "Find \"Notifications\" (or open \"Site settings\") and set it to \"Allow\".",
+      "Reload this page, then click \"Turn on\" again."].forEach((x) => steps.append(el("li", "", x)));
+    const ok = el("button", "", "OK"); ok.type = "button"; ok.onclick = () => d.close();
+    d.addEventListener("close", () => d.remove());
+    d.append(t, el("p", "", "This was chosen in the browser earlier, so the portal can't change it. It takes three clicks:"), steps, el("p", "akd-help-n", "On a phone: open the browser menu → Settings → Site settings → Notifications."), ok);
+    document.body.appendChild(d); d.showModal(); ok.focus();
   }
   // a new bell item: system notification when the page is in the background, the bell sound always
   async function notifyNow(list) {
@@ -113,6 +130,10 @@
 
   /* ---------- the sticky note ---------- */
   const CSS = `
+.akd-help{max-width:min(440px,calc(100vw - 32px));border:0;border-radius:14px;padding:20px 22px;font:14px/1.5 Manrope,"Segoe UI",system-ui,sans-serif;color:#1d2433;background:#fff;box-shadow:0 20px 50px -20px rgba(0,0,0,.5)}
+.akd-help::backdrop{background:rgba(15,23,42,.45)}
+.akd-help h2{margin:0 0 8px;font-size:17px}.akd-help ol{margin:8px 0;padding-left:20px}.akd-help li{margin:4px 0}.akd-help .akd-help-n{color:#5b6475;font-size:13px}
+.akd-help button{float:right;margin-top:6px;border:0;border-radius:8px;background:#0b5cad;color:#fff;font:600 14px Manrope,"Segoe UI",system-ui,sans-serif;padding:9px 22px;cursor:pointer}
 .akd{position:fixed;left:16px;bottom:16px;z-index:7990;width:min(320px,calc(100vw - 32px));font:13px/1.4 Manrope,"Segoe UI",system-ui,sans-serif;color:#3B3208}
 .akd-card{background:var(--n1);border:1px solid var(--n3);border-radius:14px;box-shadow:0 14px 34px -14px rgba(60,50,0,.45);overflow:hidden;transform:rotate(-.6deg)}
 .akd-head{display:flex;align-items:center;gap:6px;padding:9px 10px 7px 12px;background:var(--n2);cursor:grab;user-select:none;touch-action:none}
@@ -209,13 +230,14 @@
   }
   function bellLabel() {
     if (!("Notification" in window) && !isIOS) return null;
+    if ("Notification" in window && Notification.permission === "denied") return ["🔕 Notifications blocked: how to allow", false];
     return ("Notification" in window && Notification.permission === "granted") ? ["🔔 Notifications on", true] : ["🔕 Turn on notifications", false];
   }
   function paint() {
     if (!me) { if (root) root.remove(); root = null; return; }
     if (document.documentElement.dataset.desk === "off") return;   // a page may opt out with data-desk="off"; bell and push keep running
     if (!root) {
-      const st = el("style"); st.textContent = CSS; document.head.appendChild(st);
+      addCss();
       root = el("aside", "akd"); root.setAttribute("aria-label", "My sticky note"); document.body.appendChild(root);
     }
     root.classList.toggle("min", folded);
@@ -229,7 +251,7 @@
     tog.onkeydown = (e) => { const d = { ArrowLeft: [-24, 0], ArrowRight: [24, 0], ArrowUp: [0, -24], ArrowDown: [0, 24] }[e.key]; if (!d) return; e.preventDefault();
       const r = root.getBoundingClientRect(); pos = { x: r.left + d[0], y: r.top + d[1] }; place(); store.set("akf-note-pos", pos); };
     const off = bellLabel();   // folded note: still show "turn on" until this device has notifications
-    if (folded && off && !off[1]) { const b = el("button", "akd-bell", "🔕 Turn on"); b.type = "button"; b.title = "Get notifications with sound on this device"; b.onclick = (e) => { e.stopPropagation(); turnOn(); }; head.append(b); }
+    if (folded && off && !off[1]) { const b = el("button", "akd-bell", "Notification" in window && Notification.permission === "denied" ? "🔕 Blocked" : "🔕 Turn on"); b.type = "button"; b.title = "Get notifications with sound on this device"; b.onclick = (e) => { e.stopPropagation(); turnOn(); }; head.append(b); }
     head.append(tog); head.onclick = () => { if (moved) { moved = false; return; } folded = !folded; paint(); };
     drag(head);
     const body = el("div", "akd-body");
