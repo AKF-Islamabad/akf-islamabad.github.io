@@ -117,7 +117,11 @@
   // portals call this with their bell list: [{ key, title, body?, url?, pushed? }] — pushed: the server already sends it
   // for the main page's bell button (My desk's note is hidden there)
   window.AKF_DESK = { turnOn: () => turnOn(), isOn: () => "Notification" in window && Notification.permission === "granted",
-    portals: () => sb.rpc("core_my_portals").then(r => r.data || []) };   // for the Jazba rail on portals
+    portals: () => sb.rpc("core_my_portals").then(r => r.data || []),   // for the Jazba rail on portals
+    /* one signature per person for every portal (027_one_signature.sql): e-mail → picture, read once per page */
+    signatures: () => sigP || (sigP = sb.rpc("core_signatures_all").then(r => { const m = {}; (r.data || []).forEach(x => { m[String(x.email).toLowerCase()] = x.image; }); return m; }).catch(() => { sigP = null; return {}; })),
+    saveSignature: img => sb.rpc("core_signature_save", { p_image: img || "" }).then(r => { sigP = null; if (r.error) throw r.error; }) };
+  let sigP = null;
   window.AKF_NOTIFY = function (items) {
     if (!me || !Array.isArray(items)) return;
     const k = "akf-seen-" + me.id; const seen = store.get(k, null); const first = seen === null; const s = seen || {};

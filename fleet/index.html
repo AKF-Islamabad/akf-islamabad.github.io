@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-fleet.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-QItZXml0LNfW/aEnU0uecKYcuqbmKT3fXfGjoZOrDwg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-vHIiexHnVO11F8bLMJZHJ2v4Qb7UoHq0T+gmlCOcaZM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -2111,7 +2111,7 @@ async function erpLoadAll() {
 async function erpOdometers() { try { const { data } = await SB.rpc('fleet_odometers'); ERP_ODO = {}; (data || []).forEach(r => { ERP_ODO[r.plate] = +r.odo || 0; }); } catch (e) { console.warn('[odo]', e); } }
 async function erpRefresh() { try { await erpLoadAll(); await erpOdometers(); } catch (e) { toast(String(e.message || e)); } if ($('modal').classList.contains('hidden')) erpRender(true); }
 async function erpReload() { return { ok: true }; }
-let erpChan = null, erpRT = 0;
+let erpChan = null, erpRT = 0, SIG_CENTRAL = {};
 function erpSubscribe() {
   const on = () => {
     if (erpChan) return;
@@ -2216,9 +2216,11 @@ async function apiReq(d) {
     const row = { e: u.e, n: u.n, d: data, at: pstamp() }, ex = SIGS[u.e.toLowerCase()];
     const r = ex ? await SB.from('fleet_rows').update({ data: row }).eq('collection', 'signatures').eq('id', ME.id).select('id').maybeSingle() : await SB.from('fleet_rows').insert({ collection: 'signatures', id: ME.id, data: row }).select('id').maybeSingle();
     if (r.error || !r.data) return no(erpErr(r.error || {}, 'The signature was not saved'));
-    SIGS[u.e.toLowerCase()] = { d: data, at: row.at }; return { ok: true };
+    SIGS[u.e.toLowerCase()] = { d: data, at: row.at };
+    if (window.AKF_DESK && AKF_DESK.saveSignature) AKF_DESK.saveSignature(data).catch(e => console.warn('[signature]', e && e.message));   // one signature for every portal
+    return { ok: true };
   }
-  if (op === 'sigs') { const m = {}; (d.emails || []).forEach(e => { const k = String(e || '').toLowerCase(); if (SIGS[k]) m[k] = SIGS[k]; }); return { ok: true, sigs: m }; }
+  if (op === 'sigs') { const m = {}; (d.emails || []).forEach(e => { const k = String(e || '').toLowerCase(); if (SIGS[k]) m[k] = SIGS[k]; else if (SIG_CENTRAL[k]) m[k] = { d: SIG_CENTRAL[k], at: '' }; }); return { ok: true, sigs: m }; }
   if (op === 'upload') {
     const data = String(d.data || ''); if (data.length > 46000 || !/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(data)) return no('File is too large (max about 40 KB after compression)');
     const key = 'UP-' + Date.now() + '-' + rid().slice(0, 4), r = await insRow('uploads', key, { n: String(d.name || 'photo').slice(0, 80), t: 'image/jpeg', d: data, at: pstamp() });
@@ -2571,6 +2573,8 @@ async function erpBoot() {
     PQ.dir = (staff.data || []).map(x => ({ e: String(x.email).toLowerCase(), n: x.full_name, r: x.is_super ? 'Super Admin' : ROLE_LABEL[x.org_role] || 'Staff', d: x.dept_name || '', des: x.designation || '', ph: x.phone || '' }));
     PQ.cfg = null; PII_OK = erpCan('compliance');
     await erpLoadAll(); await erpOdometers();
+    // a signature saved in another portal counts here too (one per person; Fleet's own one wins)
+    if (window.AKF_DESK && AKF_DESK.signatures) AKF_DESK.signatures().then(m => { SIG_CENTRAL = m || {}; if (!PQ.mysig && SIG_CENTRAL[ME.email]) { PQ.mysig = { d: SIG_CENTRAL[ME.email], at: '' }; render(); } });
     if (ME.role === 'driver') S.me = PQ.u.n;
   } catch (e) { hideLoader(); fatal(ERP_NAME + ' could not open', String(e && e.message || e)); return; }
   $('side-portal').textContent = ERP_NAME; $('crumb').textContent = 'Alkhidmat Foundation Islamabad · ' + ERP_NAME;

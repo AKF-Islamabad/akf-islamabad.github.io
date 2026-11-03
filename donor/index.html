@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Foundation Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-7GR3WT8zZcfq0JeRmPY37GsK1BULQ86+v0vNNjXGUMY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-c8l51Q126b9epxdcgQBKCs0rBoe0w5wQuxE3dWB0IJw='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -2764,6 +2764,8 @@ function signatoryForm(existing) {
         sigId = 'SIG-' + (await sha256(url)).slice(0, 16); S.signatures[sigId] = url;
       }
       const userId = can('signatories') ? f.userId.value : ME.id;
+      // my own signature is the same in every portal (027_one_signature.sql); a signatory added for someone else is not
+      if (hasNew && userId === ME.id && ERP && window.AKF_DESK && AKF_DESK.saveSignature) AKF_DESK.saveSignature(S.signatures[sigId]).catch(e => console.warn('[signature]', e && e.message));
       let rec = existing;
       if (!rec) { rec = { id: 'SG-' + hex(rand(5)), active: true }; S.signatories.push(rec); }
       Object.assign(rec, { name, designation: des, sigId, userId, updatedAt: new Date().toISOString(), updatedBy: ME.email });
@@ -5936,7 +5938,18 @@ async function erpBoot() {
   if (window.AKF_ASSISTANT) AKF_ASSISTANT({ sb: erpSb, portal: PORTAL_TITLE, user: ME.name, context: erpAiContext,
     hints: ['What needs my attention today?', 'How much did we collect this month?', 'Explain how a receipt gets verified', 'How do I record an in-kind donation?'] });
   await audit('LOGIN', ME.email, 'Opened Donor Management'); await persist();
+  await erpAdoptSignature();
   await erpReconcile();
+}
+/* a signature saved in another portal: someone who signs receipts here and has none yet gets it, once */
+async function erpAdoptSignature() {
+  if (!can('donation.create') || S.signatories.some(x => x.userId === ME.id) || !window.AKF_DESK || !AKF_DESK.signatures) return;
+  try {
+    const url = (await AKF_DESK.signatures())[String(ME.email).toLowerCase()]; if (!url) return;
+    const sigId = 'SIG-' + (await sha256(url)).slice(0, 16); S.signatures[sigId] = url;
+    await upsertMySignatory(sigId); S.users[ME.id].sigId = sigId;
+    await audit('SIGNATORY_ADDED', ME.name, 'Signature taken from another portal'); await persist(); buildChrome();
+  } catch (e) { console.warn('[signature]', e && e.message); }
 }
 /* what Alkhidmat AI may know: totals and counts this person can see. No names, CNIC, phones or addresses. */
 function erpAiContext() {
