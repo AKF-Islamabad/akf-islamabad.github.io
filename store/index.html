@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-1f3pnUoDP3fkM74seB2yUlywIcbJgC4g8rBP13UpzBs='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-Ru/LGx2oB5gB3y8VQxBeuzTTeuGIuoqEaXqs2Cjm4ww='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -4132,7 +4132,7 @@ const PORTAL_HOME = new URL("../", location.href).href;
 let PORTAL_GRID = null;   // tab keys ticked for this person on the main page (null = offline demo: all)
 const portalTab = k => PORTAL_GRID === null || PORTAL_GRID.includes(k);
 /* Procurement shows purchase requests; Store shows store requests and purchases that reached the store (PO issued → GRN → GIN) */
-const portalRequest = r => PORTAL === "procurement" ? r.type === "procurement" : PORTAL === "store" ? (r.type === "store" || ["po","grn","issued"].includes(r.stage)) : false;
+const portalRequest = r => PORTAL === "procurement" ? r.type === "procurement" : PORTAL === "store" ? (r.type === "store" || ["po","grn","issued"].includes(r.stage)) : r.stage === "issued" && !!r.receiverId;   // Tasks: only goods waiting for their receiver to accept
 function NoPortalAccess({user}){ return html`<div class="auth"><div class="auth-stage" style="max-width:460px"><div class="card" style="padding:28px;text-align:center;display:grid;gap:12px;justify-items:center">
   <h2 style="margin:0">No access to ${PORTAL_NAME}</h2><p class="muted" style="margin:0">${user?"Ask the Super Admin to tick at least one tab of this portal for you on the main page.":"Your login has no profile in this portal yet. Ask the Super Admin to give you access on the main page."}</p>
   <a class="btn btn-primary" href=${PORTAL_HOME}>Back to all portals</a></div></div></div>`; }
@@ -4502,7 +4502,7 @@ function TrackTable({req,state}){
   const evFor=s=>[...req.timeline].reverse().find(t=>t.stage===s.key&&!/sent back|amend/i.test(t.action)&&(t.role===s.owner||s.owner==="hod"||t.role==="super"||s.key==="committee"||(s.key==="approved"&&!!SETTINGS.actingApprover&&t.role===SETTINGS.actingApprover)));
   const userOf=e=>e&&((e.uid&&state.users.find(u=>u.id===e.uid))||state.users.find(u=>u.name===e.by));
   // the real people who hold a step: their names and designations ("Taimoor Tahir · Sr. Manager Finance"), not the role's name
-  const holders=s=>state.users.filter(u=>u.active!==false&&u.role!=="super"&&(s.owner==="hod"?u.id===req.requesterId:u.role===s.owner))
+  const holders=s=>state.users.filter(u=>u.active!==false&&u.role!=="super"&&(s.key==="closed"&&req.receiverId?u.id===req.receiverId:s.owner==="hod"?u.id===req.requesterId:u.role===s.owner))
     .filter((u,i,a)=>a.findIndex(x=>String(x.name||x.email).trim().toLowerCase()===String(u.name||u.email).trim().toLowerCase())===i);   // a person with two records is listed once
   const officers=s=>holders(s).map(u=>u.name);
   const desigs=s=>[...new Set(holders(s).map(u=>u.designation||(ROLES[u.role]||{}).label||"").filter(Boolean))].join(", ");
@@ -4669,16 +4669,16 @@ function makeActions(commit, user, toast){
         advance(d,r,"grn",`GRN ${id} · goods received in ${store.split(" ")[0]}`,note);
       }); toast(`${id} created · stock updated`,"ok");
     },
-    issueToDept(reqId,{vehicle,driver,note}){
-      let id,gp; commit(d=>{ const r=d.requests.find(r=>r.id===reqId); id=nextNumber(d,`AKF-GIN-${YEAR}-`); gp=nextNumber(d,`AKF-GP-${YEAR}-${MONTH()}-`);
+    issueToDept(reqId,{vehicle,driver,note,receiverId}){
+      let id,gp,rcv; commit(d=>{ const r=d.requests.find(r=>r.id===reqId); rcv=d.users.find(u=>u.id===receiverId)||{id:r.requesterId,name:r.requester}; r.receiverId=rcv.id; r.receiver=rcv.name; id=nextNumber(d,`AKF-GIN-${YEAR}-`); gp=nextNumber(d,`AKF-GP-${YEAR}-${MONTH()}-`);
         let amount=0; const lines=[];
         r.items.forEach(it=>{ let s=d.stock.find(s=>s.id===it.itemId)||d.stock.find(s=>s.name.toLowerCase()===it.name.toLowerCase());
           if(s){ s.qty=Math.max(0,s.qty-it.qty); d.ledger.unshift({id:uid(),at:nowISO(),itemId:s.id,type:"out",qty:it.qty,ref:id,note:`Issued to ${r.dept}`}); }
           amount+=it.qty*it.price; lines.push({item:it.name,qty:it.qty,uom:it.uom,price:it.price}); });
-        d.docs.unshift({id,type:"GIN",title:"Goods Issuance Note",at:nowISO(),by:user.name,byId:user.id,amount,ref:r.id,store:STORES[0],lines,gatePass:gp,vehicle,driver,to:`${r.dept} · ${r.requester} (HOD)`,receiverId:r.requesterId,note});
-        (d.assets||[]).filter(a=>a.requestId===r.id&&a.status==="In store").forEach(a=>{ a.status="Issued"; a.custodian=`${r.dept} · ${r.requester}`; a.location=r.dept; a.issuedAt=nowISO(); a.gdn=id; });
-        r.links.issue=id; advance(d,r,"issued",`Issued to HOD via GIN ${id} · Gate pass ${gp}`,note);
-      }); toast(`GIN ${id} issued · gate pass ${gp}`,"ok");
+        d.docs.unshift({id,type:"GIN",title:"Goods Issuance Note",at:nowISO(),by:user.name,byId:user.id,amount,ref:r.id,store:STORES[0],lines,gatePass:gp,vehicle,driver,to:`${rcv.name}${rcv.designation?" · "+rcv.designation:""} · ${r.dept}`,receiverId:rcv.id,note});
+        (d.assets||[]).filter(a=>a.requestId===r.id&&a.status==="In store").forEach(a=>{ a.status="Issued"; a.custodian=`${r.dept} · ${rcv.name}`; a.location=r.dept; a.issuedAt=nowISO(); a.gdn=id; });
+        r.links.issue=id; advance(d,r,"issued",`Issued to ${rcv.name} via GIN ${id} · Gate pass ${gp} · waiting for acceptance`,note);
+      }); toast(`GIN ${id} sent to ${rcv.name} to accept and sign`,"ok");
     },
     /* Purchased goods that should be kept: a GIN to store is recorded, stock stays in the store, request completes. */
     placeInStore(reqId,{store,rack,bin,note}){
@@ -4785,10 +4785,12 @@ function makeActions(commit, user, toast){
     saveBudget(b){ commit(d=>{ const ex=d.budgets.find(x=>x.code===b.code); if(ex){ log(d,b.code,"Budget revised",`${pkr(ex.allocated)} → ${pkr(b.allocated)}`); Object.assign(ex,b);} else { d.budgets.push(b); log(d,b.code,"Budget line created",pkr(b.allocated)); } }); toast("Budget saved","ok"); },
     recordInvoice({poId,vendorRef,amount}){ let id; commit(d=>{ id=nextNumber(d,`INV-${YEAR}-`); const po=d.pos.find(p=>p.id===poId); d.invoices.unshift({id,poId,vendorId:po.vendorId,vendorRef,amount,at:nowISO(),status:"Recorded",by:user.name}); log(d,id,"Vendor invoice recorded",`${poId} · ${pkr(amount)}`); }); toast(`${id} recorded`,"ok"); },
     payInvoice(invId,payRef){ commit(d=>{ const inv=d.invoices.find(i=>i.id===invId); inv.status="Paid"; inv.paidAt=nowISO(); inv.payRef=payRef; inv.paidBy=user.name; const po=d.pos.find(p=>p.id===inv.poId); if(po) po.paid=true; log(d,inv.id,"Payment released",payRef); }); toast("Payment recorded","ok"); },
-    distribute({beneficiary,lines,donor,note}){ let id,gp; commit(d=>{ id=nextNumber(d,`AKF-BEN-RCT-${YEAR}-${MONTH()}-`,5); let amount=0; const out=[];
+    distribute({beneficiary,lines,donor,note,repId}){ let id,gp,rp; commit(d=>{ rp=d.users.find(u=>u.id===repId)||{}; id=nextNumber(d,`AKF-BEN-RCT-${YEAR}-${MONTH()}-`,5); let amount=0; const out=[];
         lines.forEach(l=>{ const s=d.stock.find(x=>x.id===l.itemId); if(!s||l.qty<=0) return; s.qty=Math.max(0,s.qty-l.qty); amount+=l.qty*s.price; out.push({item:s.name,qty:l.qty,uom:s.uom,price:s.price,batch:s.batch,expiry:s.expiry}); d.ledger.unshift({id:uid(),at:nowISO(),itemId:s.id,type:"out",qty:l.qty,ref:id,note:"Beneficiary distribution · "+beneficiary.village}); });
-        d.docs.unshift({id,type:"BEN",title:"Beneficiary receipt",at:nowISO(),by:user.name,amount,ref:"Donor: "+donor,store:STORES[0],lines:out,beneficiary,note});
-        log(d,id,"Beneficiary receipt issued",pkr(amount)); }); toast(`${id} issued`,"ok"); },   /* name and CNIC stay on the receipt only, never in the activity log */
+        d.docs.unshift({id,type:"BEN",title:"Beneficiary receipt",at:nowISO(),by:user.name,amount,ref:"Donor: "+donor,store:STORES[0],lines:out,beneficiary,note,repId:rp.id,repName:rp.name});
+        log(d,id,"Beneficiary receipt issued",pkr(amount)); }); toast(`${id} issued · sent to ${rp.name||"the representative"} to confirm`,"ok"); },
+    /* the department representative confirms the beneficiary received the items; signed in their own name */
+    confirmBen(docId){ commit(d=>{ const x=d.docs.find(x=>x.id===docId); if(!x||x.repId!==user.id||x.accepted) return; x.accepted={uid:user.id,by:user.name,desig:user.designation,at:nowISO()}; log(d,x.id,"Beneficiary receipt confirmed",""); }); toast("Receipt confirmed and signed","ok"); },   /* name and CNIC stay on the receipt only, never in the activity log */
     attach(reqId,file){ commit(d=>{ const r=d.requests.find(r=>r.id===reqId); r.attachments=r.attachments||[]; r.attachments.push({id:uid(),at:nowISO(),by:user.name,...file}); log(d,r.id,"Attachment added",`${file.label} · ${file.name}`,r.dept); }); toast("Attachment saved","ok"); },
     removeAttachment(reqId,aid){ commit(d=>{ const r=d.requests.find(r=>r.id===reqId); const a=(r.attachments||[]).find(a=>a.id===aid); r.attachments=(r.attachments||[]).filter(a=>a.id!==aid); if(a) log(d,r.id,"Attachment removed",a.name,r.dept); }); },
     restore(json){ try{ const s=JSON.parse(json); if(!s||!Array.isArray(s.requests)||!Array.isArray(s.users)) throw 0; saveState(s); location.reload(); }catch(e){ toast("That file is not a valid portal backup","bad"); } },
@@ -4835,6 +4837,8 @@ function canAct(user, req){
   const n=nextStage(req); const owner=n?n.owner:null;
   /* acting approver (Settings) may sign the final approval in place of its owner */
   if(n && n.key==="approved" && SETTINGS.actingApprover && SETTINGS.actingApprover===user.role) return true;
+  /* issued goods: only the person they were issued to accepts them (and the GIN becomes final) */
+  if(n && n.key==="closed" && req.receiverId) return user.id===req.receiverId;
   /* a view-only role acts only on an approval step the matrix gave it */
   if(READ_ONLY_ROLES.includes(user.role)) return !!n && n.kind==="approval" && owner===user.role;
   if(owner==="hod") return req.requesterId===user.id || (user.role==="hod" && req.dept===user.dept);
@@ -4861,7 +4865,7 @@ function visibleRequests(user, requests){ return visibleRequestsAll(user, reques
 function visibleRequestsAll(user, requests){
   if(user.role==="super"||READ_ONLY_ROLES.includes(user.role)) return requests;
   return requests.filter(r=>{
-    if(r.requesterId===user.id) return true;
+    if(r.requesterId===user.id||r.receiverId===user.id) return true;
     if(user.role==="hod") return r.dept===user.dept;
     const flow=flowOf(r); const reached=stageIndex(r)+1;
     if(r.timeline.some(t=>t.uid===user.id||(t.role===user.role&&!t.uid))) return true;
@@ -4928,6 +4932,7 @@ function BudgetCard({req,state,user,A}){
 }
 function RequestModal({req,state,user,A,onClose,openDoc,readOnly}){
   const [comment,setComment]=useState("");
+  const [bud,setBud]=useState({used:"",avail:""}); // what Finance writes at the budget step
   const [mode,setMode]=useState(null); // sub-forms: rfq | quote | po | grn | issue
   const can=canAct(user,req);
   const [attLabel,setAttLabel]=useState("Quotation"); const fileRef=useRef();
@@ -4951,16 +4956,21 @@ function RequestModal({req,state,user,A,onClose,openDoc,readOnly}){
     const k=next.key;
     const nextAfter=flowOf(req)[stageIndex(req)+2];
     const fwdLabel=nextAfter?` & forward to ${nextAfter.who}`:"";
-    if(k==="budget"){ const bu=budgetUse(state,req.projectCode); const over=bu.exists&&bu.remaining<0;
-      actionBlock=html`<${Act} ...${actProps}><${BudgetPanel} code=${req.projectCode} use=${bu}/>
+    if(k==="budget"){ const n=v=>Number(String(v).replace(/,/g,"")); const filled=bud.used!==""&&bud.avail!==""&&n(bud.used)>=0&&n(bud.avail)>=0;
+      const over=filled&&total>n(bud.avail);
+      const note=()=>`Budget used PKR ${fmt(n(bud.used))} · Available PKR ${fmt(n(bud.avail))}${comment.trim()?" · "+comment.trim():""}`;
+      actionBlock=html`<${Act} ...${actProps}>
+        <div class="grid2"><label class="field"><span>Budget used (PKR)</span><input class="input" inputmode="numeric" value=${bud.used} onInput=${e=>setBud(b=>({...b,used:e.target.value}))} placeholder="e.g. 250000"/></label>
+          <label class="field"><span>Budget available (PKR)</span><input class="input" inputmode="numeric" value=${bud.avail} onInput=${e=>setBud(b=>({...b,avail:e.target.value}))} placeholder="e.g. 750000"/></label></div>
+        <div class="notice notice-info"><${Icon} name="shield"/><span>This request: <b>PKR ${fmt(total)}</b>${filled?html` · available after it <b>PKR ${fmt(n(bud.avail)-total)}</b>`:" · write the budget used and available above"}.</span></div>
         ${mode==="amend"?html`<${AmendForm} req=${req} onCancel=${()=>setMode(null)} onSave=${(items,reason)=>{A.amendItems(req.id,items,reason);setMode(null);}}/>`:""}
-        ${CommentBox({ph:over?"Over budget — explain why this should still proceed (required)":"Budget line / donor availability…"})}
-        <div class="row wrap"><button class="btn btn-primary" disabled=${over&&!comment.trim()} onClick=${()=>{A.forward(req.id,comment);onClose();}}><${Icon} name="check"/>Approve budget${fwdLabel}</button>${mode!=="amend"&&html`<button class="btn btn-ghost" onClick=${()=>setMode("amend")}><${Icon} name="edit"/>Amend items</button>`}${backBtn}${rejectBtn}</div><//>`; }
+        ${CommentBox({ph:over?"The request is more than the available budget — write why it should still go ahead (required)":"Remarks (optional)"})}
+        <div class="row wrap"><button class="btn btn-primary" disabled=${!filled||(over&&!comment.trim())} onClick=${()=>{A.forward(req.id,note());onClose();}}><${Icon} name="check"/>Approve budget${fwdLabel}</button>${mode!=="amend"&&html`<button class="btn btn-ghost" onClick=${()=>setMode("amend")}><${Icon} name="edit"/>Amend items</button>`}${backBtn}${rejectBtn}</div><//>`; }
     if(k==="checked") actionBlock=html`<${Act} ...${actProps}>${html`<${StockCheck} req=${req} stock=${state.stock}/>`}${CommentBox({ph:"Availability note, rack / bin…"})}<div class="row wrap"><button class="btn btn-primary" onClick=${()=>{A.forward(req.id,comment);onClose();}}><${Icon} name="check"/>Confirm items${fwdLabel}</button>${backBtn}${rejectBtn}</div><//>`;
     /* custom approval steps from the matrix (x_…): approve / send back / reject by their owner, like a recommendation */
-    if(/^x_/.test(k)) actionBlock=html`<${Act} ...${actProps}>${req.type==="procurement"&&html`<${BudgetPanel} code=${req.projectCode} use=${budgetUse(state,req.projectCode)}/>`}${CommentBox({ph:`${next.label} — remarks…`})}<div class="row wrap"><button class="btn btn-primary" onClick=${()=>{A.forward(req.id,comment);onClose();}}><${Icon} name="check"/>Approve${fwdLabel}</button>${backBtn}${rejectBtn}</div><//>`;
-    if(k==="rec_hr"||k==="rec_rm") actionBlock=html`<${Act} ...${actProps}>${req.type==="procurement"&&html`<${BudgetPanel} code=${req.projectCode} use=${budgetUse(state,req.projectCode)}/>`}${CommentBox({ph:"Recommendation remarks…"})}<div class="row wrap"><button class="btn btn-primary" onClick=${()=>{A.forward(req.id,comment);onClose();}}><${Icon} name="check"/>Recommend${fwdLabel}</button>${backBtn}${rejectBtn}</div><//>`;
-    if(k==="approved") actionBlock=html`<${Act} ...${actProps}>${req.type==="procurement"&&html`<${BudgetPanel} code=${req.projectCode} use=${budgetUse(state,req.projectCode)}/>`}${CommentBox({ph:"Approval remarks…"})}<div class="row wrap"><button class="btn btn-ok" onClick=${()=>{A.forward(req.id,comment);onClose();}}><${Icon} name="stamp"/>Approve</button>${backBtn}${rejectBtn}</div><//>`;
+    if(/^x_/.test(k)) actionBlock=html`<${Act} ...${actProps}>${req.type==="procurement"&&html`<${FinanceNote} req=${req}/>`}${CommentBox({ph:`${next.label} — remarks…`})}<div class="row wrap"><button class="btn btn-primary" onClick=${()=>{A.forward(req.id,comment);onClose();}}><${Icon} name="check"/>Approve${fwdLabel}</button>${backBtn}${rejectBtn}</div><//>`;
+    if(k==="rec_hr"||k==="rec_rm") actionBlock=html`<${Act} ...${actProps}>${req.type==="procurement"&&html`<${FinanceNote} req=${req}/>`}${CommentBox({ph:"Recommendation remarks…"})}<div class="row wrap"><button class="btn btn-primary" onClick=${()=>{A.forward(req.id,comment);onClose();}}><${Icon} name="check"/>Recommend${fwdLabel}</button>${backBtn}${rejectBtn}</div><//>`;
+    if(k==="approved") actionBlock=html`<${Act} ...${actProps}>${req.type==="procurement"&&html`<${FinanceNote} req=${req}/>`}${CommentBox({ph:"Approval remarks…"})}<div class="row wrap"><button class="btn btn-ok" onClick=${()=>{A.forward(req.id,comment);onClose();}}><${Icon} name="stamp"/>Approve</button>${backBtn}${rejectBtn}</div><//>`;
     if(k==="rfq"){ const lim=Number(state.settings.directPurchaseLimit)||100000; const needRfq=total>lim;
       actionBlock=html`<${Act} ...${actProps}>${rfq?html`<${QuotesPanel} rfq=${rfq} state=${state} A=${A} req=${req} collect onIssued=${onClose}/>`:mode==="rfq"?html`<${RfqForm} vendors=${state.vendors} req=${req} onCancel=${()=>setMode(null)} onSend=${(ids,days)=>{A.sendRFQ(req.id,ids,days);onClose();}}/>`
         :mode==="direct"?html`<${DirectForm} vendors=${state.vendors} req=${req} onCancel=${()=>setMode(null)} onSave=${p=>{A.directPurchase(req.id,p);onClose();}}/>`
@@ -4968,10 +4978,11 @@ function RequestModal({req,state,user,A,onClose,openDoc,readOnly}){
     if(k==="committee") actionBlock=html`<${Act} ...${actProps}><${CommitteePanel} rfq=${rfq} state=${state} A=${A} req=${req} user=${user} onDone=${onClose}/><//>`;
     if(k==="po") actionBlock=html`<${Act} ...${actProps}><${QuotesPanel} rfq=${rfq} state=${state} A=${A} req=${req} onIssued=${onClose}/><//>`;
     if(k==="grn") actionBlock=html`<${Act} ...${actProps}>${mode==="grn"?html`<${GrnForm} req=${req} po=${po} onCancel=${()=>setMode(null)} onSave=${p=>{A.receiveGRN(req.id,p);onClose();}}/>`:html`<p class="sm muted" style="margin:0">${po?`${po.id} issued to ${vendorName(po.vendorId)} · delivery by ${fmtD(po.deliveryBy)}`:"Awaiting goods from vendor"}.</p><button class="btn btn-primary" onClick=${()=>setMode("grn")}><${Icon} name="box"/>Receive goods (create GRN)</button>`}<//>`;
-    if(k==="issued") actionBlock=html`<${Act} ...${actProps}>${mode==="issue"?html`<${IssueForm} onCancel=${()=>setMode(null)} onSave=${p=>{A.issueToDept(req.id,p);onClose();}}/>`
+    if(k==="issued") actionBlock=html`<${Act} ...${actProps}>${mode==="issue"?html`<${IssueForm} users=${state.users} defaultId=${req.requesterId} onCancel=${()=>setMode(null)} onSave=${p=>{A.issueToDept(req.id,p);onClose();}}/>`
       :mode==="place"?html`<${PlaceForm} onCancel=${()=>setMode(null)} onSave=${p=>{A.placeInStore(req.id,p);onClose();}}/>`
-      :html`<p class="sm muted" style="margin:0">Issue the items to ${req.requester} (${req.dept}) with a Goods Issuance Note (GIN) — stock is deducted and a gate pass generated.${req.type==="procurement"?" If the items are to be kept, issue them into the store instead.":""}</p><div class="row wrap"><button class="btn btn-primary" onClick=${()=>setMode("issue")}><${Icon} name="truck"/>Issue to HOD (GIN)</button>${req.type==="procurement"&&html`<button class="btn btn-ghost" onClick=${()=>setMode("place")}><${Icon} name="box"/>Issue & place in store</button>`}</div>`}<//>`;
-    if(k==="closed") actionBlock=html`<${Act} ...${actProps}>${CommentBox({ph:"Condition of goods, shortages…"})}<div class="row wrap"><button class="btn btn-ok" onClick=${()=>{A.confirmReceipt(req.id,comment);onClose();}}><${Icon} name="check"/>Confirm items received</button></div><//>`;
+      :html`<p class="sm muted" style="margin:0">Issue the items with a Goods Issuance Note (GIN) to the employee who receives them (requested by ${req.requester}, ${req.dept}). Stock is deducted and a gate pass generated; the GIN is final once that employee accepts and signs.${req.type==="procurement"?" If the items are to be kept, issue them into the store instead.":""}</p><div class="row wrap"><button class="btn btn-primary" onClick=${()=>setMode("issue")}><${Icon} name="truck"/>Issue items (GIN)</button>${req.type==="procurement"&&html`<button class="btn btn-ghost" onClick=${()=>setMode("place")}><${Icon} name="box"/>Issue & place in store</button>`}</div>`}<//>`;
+    if(k==="closed"){ const signed=!!sigOf(state.users.find(u=>u.id===user.id));
+      actionBlock=html`<${Act} next=${req.receiverId?{...next,label:"Accept issued items",who:req.receiver||"the receiver"}:next}>${req.receiverId&&html`<p class="sm" style="margin:0">Issued to you via <b>${req.links.issue||"GIN"}</b>. Check the items, then accept: your signature goes on the GIN and it becomes final.</p>`}${!signed&&html`<div class="notice notice-info"><${Icon} name="pen"/><span>Add your signature first (sidebar or your name at the top), then accept.</span></div>`}${CommentBox({ph:"Condition of goods, shortages…"})}<div class="row wrap"><button class="btn btn-ok" disabled=${!signed} onClick=${()=>{A.confirmReceipt(req.id,comment);onClose();}}><${Icon} name="check"/>Accept & sign</button></div><//>`; }
   }
   const cancelable=!readOnly&&isHodOwner&&req.status==="active"&&req.stage==="submitted";
 
@@ -5002,10 +5013,10 @@ function RequestModal({req,state,user,A,onClose,openDoc,readOnly}){
   <//>`;
 }
 
-function BudgetPanel({code,use}){
-  if(!use.exists) return html`<div class="notice notice-warn"><${Icon} name="alert"/><span>No budget line for project <b>${code}</b>. Super Admin can add one under Budget & Payments.</span></div>`;
-  const pct=Math.min(100,Math.round((use.spent+use.committed)/use.allocated*100)); const over=use.remaining<0;
-  return html`<div class=${"notice "+(over?"notice-bad":"notice-info")} style="display:block"><div class="row between wrap"><b>Budget ${code}</b><span class="num">${pkr(use.allocated)} allocated · ${pkr(use.spent)} spent · ${pkr(use.committed)} committed · <b>${over?"over by "+pkr(-use.remaining):pkr(use.remaining)+" remaining"}</b></span></div><div class="bar" style="margin-top:8px;background:rgba(255,255,255,.5)"><i style=${`width:${pct}%;background:${over?"var(--bad)":"var(--brand-2)"}`}/></div></div>`;
+/* what Finance wrote at the budget step (budget used · available), shown to every later approver */
+function FinanceNote({req}){
+  const t=[...req.timeline].reverse().find(t=>t.stage==="budget"&&/^Budget used/.test(t.comment||""));
+  return t&&html`<div class="notice notice-info"><${Icon} name="shield"/><span><b>Finance · ${t.by}:</b> ${t.comment}</span></div>`;
 }
 function AmendForm({req,onCancel,onSave}){
   const [items,setItems]=useState(req.items.map(i=>({...i}))); const [reason,setReason]=useState("");
@@ -5154,14 +5165,16 @@ function GrnForm({req,po,onCancel,onSave}){
     <div class="grid2"><${Field} label="Vendor delivery performance (updates vendor rating)"><select class="select" value=${rating} onChange=${e=>setRating(Number(e.target.value))}><option value="5">5 – On time, complete, good quality</option><option value="4">4 – Minor issues</option><option value="3">3 – Late or partial</option><option value="2">2 – Significant problems</option><option value="1">1 – Rejected / replaced</option></select><//><${Field} label="Inspection notes"><textarea class="textarea" placeholder="Damages, photo references…" value=${note} onInput=${e=>setNote(e.target.value)} style="min-height:42px"/><//></div>
     <div class="row"><button class="btn btn-ghost" onClick=${onCancel}>Back</button><span class="grow"/><button class="btn btn-primary" onClick=${()=>onSave({store,rack,bin,lines,note,rating})}><${Icon} name="check"/>Create GRN & add to stock</button></div></div>`;
 }
-function IssueForm({onCancel,onSave}){
-  const [vehicle,setVehicle]=useState(""); const [driver,setDriver]=useState(""); const [note,setNote]=useState("");
-  return html`<div class="stack"><div class="grid3"><${Field} label="Vehicle no. (gate pass)"><input class="input" placeholder="LEA-123" value=${vehicle} onInput=${e=>setVehicle(e.target.value)}/><//><${Field} label="Driver / carrier"><input class="input" placeholder="Name" value=${driver} onInput=${e=>setDriver(e.target.value)}/><//><${Field} label="Note"><input class="input" placeholder="Handed to…" value=${note} onInput=${e=>setNote(e.target.value)}/><//></div>
-    <div class="row"><button class="btn btn-ghost" onClick=${onCancel}>Back</button><span class="grow"/><button class="btn btn-primary" onClick=${()=>onSave({vehicle:vehicle||"Hand carry",driver:driver||"—",note})}><${Icon} name="truck"/>Issue & generate GIN</button></div></div>`;
+/* any active employee (never the Super Admin): who receives issued goods, or confirms a beneficiary distribution */
+const PersonPick=({users,value,onChange})=>html`<select class="select" value=${value} onChange=${e=>onChange(e.target.value)}><option value="">Select employee…</option>${users.filter(u=>u.active!==false&&!u.erased&&tPick(u)).sort((a,b)=>String(a.name).localeCompare(b.name)).map(u=>html`<option value=${u.id}>${u.name}${u.designation?" · "+u.designation:""}${u.dept?" · "+u.dept:""}</option>`)}</select>`;
+function IssueForm({users,defaultId,onCancel,onSave}){
+  const [vehicle,setVehicle]=useState(""); const [driver,setDriver]=useState(""); const [note,setNote]=useState(""); const [rcv,setRcv]=useState(defaultId||"");
+  return html`<div class="stack"><${Field} label="Issued to (receives the items, accepts and signs in the portal)"><${PersonPick} users=${users} value=${rcv} onChange=${setRcv}/><//><div class="grid3"><${Field} label="Vehicle no. (gate pass)"><input class="input" placeholder="LEA-123" value=${vehicle} onInput=${e=>setVehicle(e.target.value)}/><//><${Field} label="Driver / carrier"><input class="input" placeholder="Name" value=${driver} onInput=${e=>setDriver(e.target.value)}/><//><${Field} label="Note"><input class="input" placeholder="Handed to…" value=${note} onInput=${e=>setNote(e.target.value)}/><//></div>
+    <div class="row"><button class="btn btn-ghost" onClick=${onCancel}>Back</button><span class="grow"/><button class="btn btn-primary" disabled=${!rcv} onClick=${()=>onSave({vehicle:vehicle||"Hand carry",driver:driver||"—",note,receiverId:rcv})}><${Icon} name="truck"/>Issue & send for acceptance</button></div></div>`;
 }
 
 /* ---------- Printable document (GRN / GDN / PO / RFQ / movement) ---------- */
-function DocModal({id,state,onClose,openReq}){
+function DocModal({id,state,user,A,onClose,openReq}){
   const doc=state.docs.find(d=>d.id===id); const po=state.pos.find(p=>p.id===id); const rfq=state.rfqs.find(r=>r.id===id);
   const vendor=po?state.vendors.find(v=>v.id===po.vendorId):null;
   const header=(title,sub)=>html`<${DocHeader} title=${title} sub=${sub} id=${id}/>`;
@@ -5187,10 +5200,11 @@ function DocModal({id,state,onClose,openReq}){
       ${doc.beneficiary&&html`<div class="kv"><dt>Beneficiary</dt><dd>${doc.beneficiary.name} s/o·d/o ${doc.beneficiary.father}</dd><dt>CNIC</dt><dd class="num">${doc.beneficiary.cnic}</dd><dt>Phone</dt><dd>${doc.beneficiary.phone||"—"}</dd><dt>Village</dt><dd>${doc.beneficiary.village}</dd><dt>Family size</dt><dd>${doc.beneficiary.family}</dd><dt>Purpose</dt><dd>${doc.beneficiary.purpose}</dd></div>`}
       <div class="kv">${RECEIPT_TYPES[doc.type]&&html`<dt>Receipt type</dt><dd><b>${RECEIPT_TYPES[doc.type]}</b></dd>`}${doc.from&&html`<dt>${doc.type==="GDN-D"?"Donor":"Supplier"}</dt><dd>${doc.from}</dd>`}<dt>${doc.approval?"Approval reference":"Reference"}</dt><dd>${req?html`<button class="btn btn-soft btn-sm id" onClick=${()=>openReq(doc.ref)}>${doc.ref}</button>`:doc.ref||"—"}</dd>${doc.to&&html`<dt>Issued to</dt><dd>${doc.to}</dd>`}${doc.purpose&&html`<dt>Purpose</dt><dd>${doc.purpose}</dd>`}${doc.gatePass&&html`<dt>Gate pass</dt><dd class="id">${doc.gatePass} · Vehicle ${doc.vehicle} · Driver ${doc.driver}</dd>`}<dt>Prepared by</dt><dd>${doc.by} · Store Officer</dd>${doc.note&&html`<dt>Note</dt><dd>${doc.note}</dd>`}</div>
       <div class="tbl-wrap"><table class="tbl" style="min-width:420px"><thead><tr><th>Item</th><th class="r">Qty</th><th class="r">Unit price</th><th class="r">Amount</th></tr></thead><tbody>${doc.lines.map(l=>html`<tr><td>${l.item}${l.condition?html`<div class="xs faint">Condition: ${l.condition}</div>`:""}${l.batch?html`<div class="xs faint">Batch ${l.batch}${l.expiry?" · exp "+l.expiry:""}</div>`:""}</td><td class="r num">${l.qty} ${l.uom}</td><td class="r num">${fmt(l.price)}</td><td class="r num bold">${fmt(l.qty*l.price)}</td></tr>`)}<tr><td colspan="3" class="r bold">Total</td><td class="r num bold">${pkr(doc.amount)}</td></tr></tbody></table></div>
+      ${doc.type==="BEN"&&user&&doc.repId===user.id&&!doc.accepted&&html`<div class="actions no-print"><h4>Your action · confirm the beneficiary received these items</h4>${sigOf(state.users.find(u=>u.id===user.id))?"":html`<div class="notice notice-info"><${Icon} name="pen"/><span>Add your signature first (sidebar or your name at the top), then confirm.</span></div>`}<div class="row wrap"><button class="btn btn-ok" disabled=${!sigOf(state.users.find(u=>u.id===user.id))} onClick=${()=>{A.confirmBen(doc.id);onClose();}}><${Icon} name="check"/>Confirm & sign</button></div></div>`}
       <div class="split" style="align-items:center"><div class="signs">
         ${sign(doc.byId?{uid:doc.byId,by:doc.by,at:doc.at}:{by:doc.by,at:doc.at},"Prepared by","store_officer")}
-        ${doc.type==="BEN"?html`<${SignBox} state=${state} name=${doc.beneficiary&&doc.beneficiary.name} designation="Beneficiary" label="thumb impression"/>`
-          :isIssue&&req?sign(stageEv(req,"closed")||{uid:req.requesterId,by:req.requester},"Received by (HOD)","hod")
+        ${doc.type==="BEN"?html`<${SignBox} state=${state} name=${doc.beneficiary&&doc.beneficiary.name} designation="Beneficiary" label="thumb impression"/>${doc.repId&&html`<${SignBox} state=${state} userId=${doc.repId} name=${doc.repName} label=${doc.accepted?"Confirmed by department representative":"Representative · waiting to confirm"} at=${doc.accepted&&doc.accepted.at}/>`}`
+          :isIssue&&req?sign(stageEv(req,"closed")||{uid:req.receiverId||req.requesterId,by:req.receiver||req.requester},req.stage==="closed"?"Received & accepted by":"Received by · waiting for acceptance","hod")
           :html`<${SignBox} state=${state} label="Verified by"/>`}
         ${req?sign(stageEv(req,"approved"),"Approved by","president"):html`<${SignBox} state=${state} label="Approved by" role="president"/>`}
       </div><${QR} text=${trackUrl(id)} caption=${"Verify · "+id}/></div></div>`; }
@@ -5230,11 +5244,12 @@ function TrackBox({state,user,openReq,openDoc,inline}){
 /* ---------- Notifications derived from state ---------- */
 function buildNotifications(state,user){
   const n=[]; const reqs=visibleRequests(user,state.requests);
-  reqs.filter(r=>canAct(user,r)).forEach(r=>n.push({tone:"info",icon:"stamp",t:`${nextStage(r).label} needed · ${r.id}`,d:`${r.dept} · ${pkr(reqTotal(r))}`,at:r.timeline[r.timeline.length-1].at,id:r.id}));
+  reqs.filter(r=>canAct(user,r)).forEach(r=>{ const rc=nextStage(r).key==="closed"&&r.receiverId===user.id; n.push({tone:"info",icon:rc?"box":"stamp",t:rc?`Accept and sign for items issued to you · ${r.id}`:`${nextStage(r).label} needed · ${r.id}`,d:`${r.dept} · ${pkr(reqTotal(r))}`,at:r.timeline[r.timeline.length-1].at,id:r.id,receive:rc}); });
   reqs.filter(r=>isEscalated(r)).forEach(r=>n.push({tone:"bad",icon:"alert",t:`${escHours(r)}h escalation · ${r.id}`,d:`Waiting for ${nextStage(r).who} for ${Math.round(hoursSince(r.timeline[r.timeline.length-1].at))}h`,at:r.timeline[r.timeline.length-1].at,id:r.id}));
   if(user.role==="hod") reqs.filter(r=>r.requesterId===user.id&&r.status==="rejected").slice(0,2).forEach(r=>n.push({tone:"bad",icon:"x",t:`Rejected · ${r.id}`,d:(r.timeline[r.timeline.length-1]||{}).comment||"",at:r.timeline[r.timeline.length-1].at,id:r.id}));
   if(["super","store_officer","gen_sec","president"].includes(user.role)){ const soon=state.stock.filter(s=>s.expiry&&(new Date(s.expiry)-Date.now())/864e5<30); if(soon.length) n.push({tone:"warn",icon:"clock",t:`${soon.length} item${soon.length>1?"s":""} expiring within 30 days`,d:soon.map(s=>s.name).join(", "),at:nowISO()});
     const low=state.stock.filter(s=>s.qty<=s.min); if(low.length) n.push({tone:"warn",icon:"box",t:`${low.length} item${low.length>1?"s":""} below minimum stock`,d:low.map(s=>s.name).join(", "),at:nowISO()}); }
+  (state.docs||[]).filter(x=>x.type==="BEN"&&x.repId===user.id&&!x.accepted).forEach(x=>n.push({tone:"info",icon:"pen",t:`Confirm beneficiary receipt · ${x.id}`,d:`${x.lines.length} item${x.lines.length>1?"s":""} · ${pkr(x.amount)}`,at:x.at,doc:x.id,key:"ben|"+x.id,receive:true}));
   taskNotifications(state,user).forEach(x=>{ x.key=x.key||[x.icon,x.task,x.at].join("|"); n.push(x); });
   /* stable key per notification: a new event (new step, new day for stock alerts) makes it unread again */
   n.forEach(x=>{ x.key=x.key||[x.icon,x.id||x.t.replace(/\d+/g,"#"),x.id?x.at:nowISO().slice(0,10)].join("|"); });
@@ -5534,7 +5549,7 @@ function Store({state,user,A,openReq,openDoc,readOnly,focusItem}){
     ${tab==="stores"&&user.role==="super"&&html`<${StoresCard} state=${state} A=${A}/>`}
     ${form==="receive"&&html`<${StockReceiveForm} state=${state} onCancel=${()=>setForm(null)} onSave=${p=>{A.receiveStock(p);setForm(null);setTab("received");}}/>`}
     ${form==="issue"&&html`<${StockIssueForm} state=${state} onCancel=${()=>setForm(null)} onSave=${p=>{A.issueStock(p);setForm(null);setTab("issued");}}/>`}
-    ${form==="beneficiary"&&html`<${BeneficiaryForm} stock=${state.stock.filter(s=>s.qty>0)} onCancel=${()=>setForm(null)} onSave=${p=>{A.distribute(p);setForm(null);}}/>`}
+    ${form==="beneficiary"&&html`<${BeneficiaryForm} users=${state.users} stock=${state.stock.filter(s=>s.qty>0)} onCancel=${()=>setForm(null)} onSave=${p=>{A.distribute(p);setForm(null);}}/>`}
     ${form&&!["receive","issue","beneficiary"].includes(form)&&html`<${MoveForm} kind=${form} stock=${state.stock} preset=${sel} onCancel=${()=>setForm(null)} onSave=${p=>{A.stockMove(form,p);setForm(null);}}/>`}
     ${tab==="register"&&!isHod&&html`<${StockRegister} state=${state} openItem=${id=>{ setSel(id); setTab("stock"); }}/>`}
     ${(tab==="received"||tab==="issued")&&!isHod&&html`<${StockMovements} kind=${tab} state=${state} openDoc=${openDoc}/>`}
@@ -6029,14 +6044,16 @@ function BackupCard({state,A}){
     <div class="row wrap"><button class="btn btn-primary" onClick=${backup}><${Icon} name="download"/>Download backup</button><input type="file" accept="application/json,.json" class="hidden" ref=${fileRef} onChange=${restore}/><button class="btn btn-ghost" onClick=${()=>fileRef.current.click()}>Restore from backup…</button><span class="grow xs faint">${state.requests.length} requests · ${state.docs.length} documents · ${state.stock.length} stock items · ${(state.assets||[]).length} assets · ${state.users.length} users · ${state.audit.length} audit entries</span></div></div><//>`;
 }
 /* ---------- Beneficiary distribution ---------- */
-function BeneficiaryForm({stock,onCancel,onSave}){
+function BeneficiaryForm({stock,users,onCancel,onSave}){
+  const [repId,setRepId]=useState("");
   const [b,setB]=useState({name:"",father:"",cnic:"",phone:"",village:"",family:1,purpose:"Ramadan food pack"}); const set=(k,v)=>setB({...b,[k]:v});
   const [donor,setDonor]=useState(DONORS[3]); const [lines,setLines]=useState([{itemId:stock[0]?stock[0].id:"",qty:1}]);
-  const ok=b.name.trim()&&/^\d{5}-\d{7}-\d$/.test(b.cnic)&&b.village.trim()&&lines.every(l=>l.itemId&&l.qty>0&&(stock.find(s=>s.id===l.itemId)||{}).qty>=l.qty);
+  const ok=repId&&b.name.trim()&&/^\d{5}-\d{7}-\d$/.test(b.cnic)&&b.village.trim()&&lines.every(l=>l.itemId&&l.qty>0&&(stock.find(s=>s.id===l.itemId)||{}).qty>=l.qty);
   return html`<${Card} title="Beneficiary receipt (AKF-BEN-RCT)" desc="Direct distribution from store to a beneficiary. Stock is deducted and a receipt with QR, thumb impression and signatures is generated."><div class="stack">
     <div class="grid4"><${Field} label="Beneficiary name"><input class="input" value=${b.name} onInput=${e=>set("name",e.target.value)}/><//><${Field} label="Father / husband"><input class="input" value=${b.father} onInput=${e=>set("father",e.target.value)}/><//><${Field} label="CNIC (37405-1234567-8)"><input class="input" value=${b.cnic} onInput=${e=>set("cnic",e.target.value)} placeholder="37405-1234567-8"/><//><${Field} label="Phone"><input class="input" value=${b.phone} onInput=${e=>set("phone",e.target.value)}/><//><${Field} label="Village / area"><input class="input" value=${b.village} onInput=${e=>set("village",e.target.value)}/><//><${Field} label="Family size"><input class="input" type="number" min="1" value=${b.family} onInput=${e=>set("family",Number(e.target.value))}/><//><${Field} label="Purpose"><input class="input" value=${b.purpose} onInput=${e=>set("purpose",e.target.value)}/><//><${Field} label="Donor"><${Pick} value=${donor} options=${DONORS} onChange=${setDonor}/><//></div>
+    <${Field} label="Department representative (confirms the beneficiary received the items)"><${PersonPick} users=${users} value=${repId} onChange=${setRepId}/><//>
     <div class="list">${lines.map((l,i)=>html`<div class="row"><select class="select grow" value=${l.itemId} onChange=${e=>setLines(lines.map((x,j)=>j===i?{...x,itemId:e.target.value}:x))}>${stock.map(s=>html`<option value=${s.id}>${s.name} · ${s.qty} ${s.uom} available</option>`)}</select><input class="input" type="number" min="1" style="width:90px" value=${l.qty} onInput=${e=>setLines(lines.map((x,j)=>j===i?{...x,qty:Number(e.target.value)}:x))}/><button class="iconbtn" style="width:32px;height:32px" disabled=${lines.length===1} onClick=${()=>setLines(lines.filter((_,j)=>j!==i))}><${Icon} name="trash"/></button></div>`)}</div>
-    <div class="row wrap"><button class="btn btn-ghost btn-sm" onClick=${()=>setLines([...lines,{itemId:stock[0]?stock[0].id:"",qty:1}])}><${Icon} name="plus"/>Add item</button><span class="grow"/><button class="btn btn-ghost" onClick=${onCancel}>Cancel</button><button class="btn btn-primary" disabled=${!ok} onClick=${()=>onSave({beneficiary:b,lines,donor})}><${Icon} name="check"/>Issue receipt</button></div></div><//>`;
+    <div class="row wrap"><button class="btn btn-ghost btn-sm" onClick=${()=>setLines([...lines,{itemId:stock[0]?stock[0].id:"",qty:1}])}><${Icon} name="plus"/>Add item</button><span class="grow"/><button class="btn btn-ghost" onClick=${onCancel}>Cancel</button><button class="btn btn-primary" disabled=${!ok} onClick=${()=>onSave({beneficiary:b,lines,donor,repId})}><${Icon} name="check"/>Issue receipt</button></div></div><//>`;
 }
 /* Super Admin: erase a deactivated person's personal data. The Supabase login and their private notes (which RLS hides
    from everyone else) can only be removed in the Supabase SQL Editor, so the exact lines are shown to copy. */
@@ -6494,13 +6511,13 @@ function App(){
   if(!user) return html`<${Login} users=${state.users} onLogin=${login} sbLogin=${null}/>${html`<${Toasts} items=${toasts}/>`}`;
   if(pendingTrack){ const id=pendingTrack; setTimeout(()=>{ setPendingTrack(null); try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} openDoc(id); },0); }
 
-  const notes=buildNotifications(state,user).filter(n=>PORTAL==="tasks"?!!(n.task||n.event||n.taskView):!(n.task||n.event||n.taskView));
+  const notes=buildNotifications(state,user).filter(n=>PORTAL==="tasks"?!!(n.task||n.event||n.taskView||n.receive):!(n.task||n.event||n.taskView));
   useEffect(()=>{ if(window.AKF_NOTIFY) AKF_NOTIFY(notes.map(n=>({key:n.key||n.t,title:n.t,body:n.d,pushed:/^(tas|tcm|trq)\|/.test(n.key||"")}))); }); /* system notification + bell sound (akf-desk.js); tas/tcm/trq are also pushed by the server */
   const dqN=dqApp&&dqApp.items&&tabs.some(t=>t.id==="store")?dqApp.items.length:0;
   if(dqN>0) notes.unshift({tone:"info",icon:"box",t:`${dqN} in-kind donation${dqN===1?"":"s"} to receive`,d:"From Donor Management · Store → In-kind from Donor Management",at:nowISO(),goTab:"store",key:"box|DONQ|"+dqN+"|"+dqApp.items.map(x=>x.id).sort().slice(-1)[0]});
   if(readKeys.__uid!==user.id){ setTimeout(()=>{ loadRead(user.id); setReadKeys(r=>({...r,__uid:user.id})); },0); }
   const unread=notes.filter(n=>!readKeys[n.key]);
-  const openNote=n=>{ markRead(user.id,[n.key]); setBell(false); if(n.task||n.event||n.taskView){ setTab("tasks"); setTaskOpen(n.task||(n.event?"ev:"+n.event:"view:"+n.taskView)); } else if(n.goTab) setTab(n.goTab); else if(n.id) openReq(n.id); };
+  const openNote=n=>{ markRead(user.id,[n.key]); setBell(false); if(n.task||n.event||n.taskView){ setTab("tasks"); setTaskOpen(n.task||(n.event?"ev:"+n.event:"view:"+n.taskView)); } else if(n.goTab) setTab(n.goTab); else if(n.doc) openDoc(n.doc); else if(n.id) openReq(n.id); };
   /* opening a request any other way also clears its notifications */
   if(modal&&modal.kind==="req"){ const ks=unread.filter(n=>n.id===modal.id).map(n=>n.key); if(ks.length) setTimeout(()=>markRead(user.id,ks),0); }
   const counts={}; visibleRequests(user,state.requests).forEach(r=>{ if(!canAct(user,r)) return; const t=isDecisionStep(nextStage(r))?(tabs.some(t=>t.id==="approvals")?"approvals":"dashboard"):r.type==="store"?"store":(ownerOf(r)==="store_officer"?"store":"procurement"); counts[t]=(counts[t]||0)+1; });
@@ -6539,7 +6556,7 @@ function App(){
     </div>
     <nav class="mobilenav">${(tp?navItems.filter(t=>/^tv:(home|board|events|planner)$/.test(t.id)).concat(navItems.filter(t=>!/^tv:/.test(t.id))):navItems).map(t=>html`<button class=${t.on?"active":""} onClick=${t.go}><${Icon} name=${t.icon} cls="icon-lg icon"/>${t.id==="tasksettings"?"Settings":t.label.split(" ")[0]}${t.count?html`<span class="count">${t.count}</span>`:""}</button>`)}</nav>
     ${modal&&modal.kind==="req"&&(()=>{ const r=state.requests.find(x=>x.id===modal.id); const allowed=r&&visibleRequests(user,[r]).length>0; return allowed?html`<${RequestModal} key=${r.id} req=${r} state=${state} user=${user} A=${A} readOnly=${readOnly} onClose=${()=>setModal(null)} openDoc=${openDoc}/>`:html`<${Modal} title="Request" sub=${modal.id} onClose=${()=>setModal(null)} narrow><${Empty} title=${r?"Not available to you":"Request not found"}>${r?"This request has not reached your step yet, or belongs to another department.":"Check the ID and try again."}<//><//>`; })()}
-    ${modal&&modal.kind==="doc"&&html`<${DocModal} key=${modal.id} id=${modal.id} state=${state} onClose=${()=>setModal(null)} openReq=${openReq}/>`}
+    ${modal&&modal.kind==="doc"&&html`<${DocModal} key=${modal.id} id=${modal.id} state=${state} user=${user} A=${A} onClose=${()=>setModal(null)} openReq=${openReq}/>`}
     ${modal&&modal.kind==="stock"&&html`<${StockDocModal} key=${modal.id} id=${modal.id} state=${state} onClose=${()=>setModal(null)}/>`}
     ${pw&&html`<${ChangePassword} A=${A} onClose=${()=>setPw(false)}/>`}
     ${myData&&html`<${MyDataModal} state=${state} user=${user} A=${A} onClose=${()=>setMyData(false)}/>`}
