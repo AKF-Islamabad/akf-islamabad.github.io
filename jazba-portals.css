@@ -52,7 +52,7 @@ h1,h2,h3,h4,h5,h6,button,input,select,textarea{font-family:inherit}
   html[data-jz-shell="on"] .main{margin-left:0!important}
   html[data-jz-shell="on"] body{padding-left:0}
   /* the rail is hidden; ☰ in the top strip slides it out over the page, open with names */
-  html .jz-shell-rail.jz-rail{top:46px;height:calc(100vh - 46px);width:260px;box-sizing:border-box;transform:translateX(-105%);transition:transform .25s ease-out;z-index:9000;visibility:hidden}
+  html .jz-shell-rail.jz-rail{top:var(--jz-strip-h,46px);height:calc(100vh - var(--jz-strip-h,46px));width:260px;box-sizing:border-box;transform:translateX(-105%);transition:transform .25s ease-out;z-index:9000;visibility:hidden}
   html.jz-rail-open .jz-shell-rail.jz-rail{transform:none;visibility:visible;box-shadow:16px 0 48px rgba(4,37,68,.35)}
   .jz-edge{position:fixed;left:0;top:46px;bottom:0;width:10px;z-index:8999}   /* pointing at the left edge opens the menu */
   .jz-shell-rail .jz-rail-text,.jz-shell-rail .jz-rail-h,.jz-shell-rail .jz-rail-foot{opacity:1!important;pointer-events:auto!important}
@@ -177,3 +177,8 @@ html[data-jz-family="kit"] .empty .e-ic{border-radius:12px;background:#E6F0FA;co
 html[data-jz-family="kit"] .ds.ok{background:#E7F6EC;color:#15803D}
 html[data-jz-family="kit"] .ds.now{background:#FEF3E2;color:#B45309}
 html[data-jz-family="kit"] .ds.bad{background:#FDE8E8;color:#DC0505}
+
+/* the portal strip stays at the top while the page scrolls; each portal's own sticky header sits just below it */
+html[data-jz-shell="on"] .jz-topstrip{position:sticky;top:0;z-index:55}   /* above page headers (20–30), below pop-ups (60–100) */
+html[data-jz-shell="on"] .topbar{top:var(--jz-strip-h,46px)!important}
+@media print{html[data-jz-shell="on"] .topbar{top:0!important}}

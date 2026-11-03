@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-xJXDaPkxs+hJ/5jmk8IIMU03KbyUh5dhAEK5vyk45+k='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-6cs8OKcqpfnk5quzmgjMEONavpPXFMl6WZ/5Ffet7D0='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -7265,6 +7265,7 @@ function Tasks({state,user,A,taskOpen,setTaskOpen,onView}){
   const lsk="akf-tasks-"+user.id; const saved=(()=>{ try{ return JSON.parse(tLS.get(lsk)||"{}"); }catch(e){ return {}; } })();
   const [view,setView]=useState(saved.view||"home"); const [mode,setMode]=useState(saved.mode||"board");
   const [f,setF]=useState({q:"",dept:"",pri:"",who:"all",tag:"",...(saved.f||{}),q:""});
+  const [eng,setEng]=useState(false);   // the engagement request window is open
   const [modal,setModal]=useState(null);   // {kind:"new",preset,returnEvent} | {kind:"event",key,tab} — existing tasks open through taskOpen
   const [month,setMonth]=useState(tToday().slice(0,7)); const [selDay,setSelDay]=useState(tToday());
   const [range,setRange]=useState({from:tToday(),to:tAddDays(tToday(),6)}); const [perfMonth,setPerfMonth]=useState(tToday().slice(0,7));
@@ -7291,7 +7292,7 @@ function Tasks({state,user,A,taskOpen,setTaskOpen,onView}){
   /* "/" jumps to the search box, as in most task tools */
   useEffect(()=>{ const k=e=>{ if(e.key==="/"&&!/input|textarea|select/i.test((e.target.tagName||""))&&!e.target.isContentEditable){ const i=document.querySelector(".tk-search input"); if(i){ e.preventDefault(); i.focus(); } } }; window.addEventListener("keydown",k); return ()=>window.removeEventListener("keydown",k); },[]);
   if(VIEWS.length&&!VIEWS.some(v=>v[0]===view)) setTimeout(()=>setView(VIEWS[0][0]),0);   // older saved views (assistant / settings) are gone
-  const P={state,user,A,open,vis,filtered,f,setFilter,clearF,openNew,go,timer,openEvent,newEvent};
+  const P={state,user,A,open,vis,filtered,f,setFilter,clearF,openNew,go,timer,openEvent,newEvent,openEng:()=>setEng(true)};
   const migrating=(state.tasks||[]).some(t=>t.v!==2);
   return html`<${Fragment}><div class="tk-page">
     <div class="tk-views">
@@ -7299,7 +7300,7 @@ function Tasks({state,user,A,taskOpen,setTaskOpen,onView}){
       <span class="grow"/>
       ${running&&html`<span class="tk-timer"><${Icon} name="clock"/>${running.id} · ${timer.label}<button onClick=${()=>open(running.key)}>Open</button><button onClick=${()=>stopTimer(timer,A)}>Stop & log</button></span>`}
       ${TR.canCreateEvent(user)&&html`<button class="btn btn-soft" onClick=${newEvent}><${Icon} name="flag"/>New event request</button>`}
-      ${tCanEngage(user)&&html`<button class="btn btn-soft" onClick=${()=>go("engagements",{engNew:Date.now()})}><${Icon} name="send"/>Engagement request</button>`}
+      ${tCanEngage(user)&&html`<button class="btn btn-soft" onClick=${()=>setEng(true)}><${Icon} name="send"/>Engagement request</button>`}
       ${TR.canCreate(user)&&html`<button class="btn btn-primary" onClick=${()=>openNew()}><${Icon} name="plus"/>New task</button>`}
     </div>
     <div class="xs faint row" style="gap:6px;margin-top:-6px"><${Icon} name=${SB_READY?"shield":"alert"} cls="icon" style="width:13px"/>${SB_READY?"Saved in Supabase, shared with all staff":"Offline mode: saved in this browser only"} · ${(state.tasks||[]).length} task${(state.tasks||[]).length===1?"":"s"} in the database · ${vis.length} visible to you as ${TROLE_LABEL[tRole(user)]}${tRole(user)==="HOD"?" of "+tDept(tUDept(user)).name:""}</div>
@@ -7316,6 +7317,7 @@ function Tasks({state,user,A,taskOpen,setTaskOpen,onView}){
     ${view==="tracking"&&html`<${TTracking} ...${P}/>`}
     ${view==="engagements"&&html`<${TEngagements} ...${P}/>`}
   </div>
+  ${eng&&html`<${EngageModal} state=${state} user=${user} A=${A} onClose=${()=>setEng(false)} onSent=${()=>{ setEng(false); setView("engagements"); }}/>`}
   ${modal&&modal.kind==="new"&&html`<${TaskModal} isNew preset=${modal.preset} state=${state} user=${user} A=${A} timer=${timer} open=${open} openEvent=${openEvent}
     onClose=${()=>{ const back=modal.returnEvent; setModal(null); if(back) openEvent(back,"checklist"); }}
     onCreated=${t=>{ const back=modal.returnEvent; setModal(null); clearF(); if(back){ openEvent(back,"checklist"); return; } if(view==="home"||view==="settings"||view==="assistant") setView("board"); }}/>`}
@@ -7741,13 +7743,25 @@ function TEagle({state,user,A,open,vis,go,setFilter}){
 
 /* ---------- Self tasks: governance of work people set for themselves ---------- */
 /* ---------- Engagements: borrowing someone from another department for a time ---------- */
-function TEngagements({state,user,A,open,f,setFilter}){
+/* the engagement request form: a window that opens from the Tasks header or the Engagements page */
+function EngageModal({state,user,A,onClose,onSent}){
+  const [form,setForm]=useState({employeeId:"",purpose:"",from:"",to:""});
+  const people=tEngPeople(state,user), emp=tUser(state,form.employeeId);
+  const send=()=>{ const e=A.engCreate(form); if(e) onSent(e); };
+  return html`<${Modal} title="New engagement request" sub=${`From ${tDept(tUDept(user)).name} · path: you → HOD of the person's department → Regional Manager`} onClose=${onClose}>
+    <div class="stack">
+      <div class="grid2"><${Field} label="Employee needed"><select class="select" value=${form.employeeId} onChange=${ev=>setForm(x=>({...x,employeeId:ev.target.value}))}><option value="">Choose…</option>${people.map(p=>html`<option value=${p.id}>${p.name} · ${tDept(tUDept(p)).name}${p.designation?" · "+p.designation:""}</option>`)}</select><//>
+        <${Field} label="Their department"><input class="input" disabled value=${emp?tDept(tUDept(emp)).name+(tHodOf(state,tUDept(emp))?" · HOD "+tHodOf(state,tUDept(emp)).name:" · no HOD set"):""}/><//>
+        <${Field} label="Available from"><input class="input" type="datetime-local" value=${form.from} onInput=${ev=>setForm(x=>({...x,from:ev.target.value}))}/><//>
+        <${Field} label="Available until"><input class="input" type="datetime-local" value=${form.to} min=${form.from} onInput=${ev=>setForm(x=>({...x,to:ev.target.value}))}/><//></div>
+      <${Field} label="Purpose"><textarea class="textarea" placeholder="What they will do, where and why…" value=${form.purpose} onInput=${ev=>setForm(x=>({...x,purpose:ev.target.value}))}/><//>
+      <div class="row" style="gap:8px"><button class="btn btn-primary" onClick=${send}><${Icon} name="send"/>Send request</button><button class="btn btn-ghost" onClick=${onClose}>Close</button></div>
+    </div>  <//>`;
+}
+function TEngagements({state,user,A,open,openEng}){
   const all=(state.engagements||[]).filter(e=>tEngSees(e,user));
   const mine=all.filter(e=>tEngMine(e,user)), rest=all.filter(e=>!tEngMine(e,user));
-  const [form,setForm]=useState(null); const [notes,setNotes]=useState({});
-  useEffect(()=>{ if(f.engNew&&tCanEngage(user)){ setForm({employeeId:"",purpose:"",from:"",to:""}); setFilter("engNew",0); } },[f.engNew]);
-  const people=tEngPeople(state,user), emp=form&&tUser(state,form.employeeId);
-  const send=()=>{ const e=A.engCreate(form); if(e) setForm(null); };
+  const [notes,setNotes]=useState({});
   const decide=(e,yes)=>{ if(A.engDecide(e.key,yes,notes[e.key]||"")) setNotes(n=>({...n,[e.key]:""})); };
   const STEP={request:"Requested",hod:"Department HOD",rm:"Regional Manager",cancel:"Cancelled by requester"};
   const card=e=>{ const st=ENG_STATUS[e.status]||[e.status,"neutral"]; const my=tEngMine(e,user);
@@ -7764,16 +7778,8 @@ function TEngagements({state,user,A,open,f,setFilter}){
     </div></div>`; };
   return html`<div class="stack" style="gap:14px">
     <div class="row between wrap"><div><h3 style="margin:0">Engagement requests</h3><div class="sm muted">To give work to someone from another department: the requesting HOD sends it, that department's HOD recommends it (is the person free?), the Regional Manager approves it, and the task is then created for that person.</div></div>
-      ${tCanEngage(user)&&!form&&html`<button class="btn btn-primary" onClick=${()=>setForm({employeeId:"",purpose:"",from:"",to:""})}><${Icon} name="plus"/>New engagement request</button>`}</div>
+      ${tCanEngage(user)&&html`<button class="btn btn-primary" onClick=${openEng}><${Icon} name="plus"/>New engagement request</button>`}</div>
     ${!tCanEngage(user)&&html`<div class="notice notice-info"><${Icon} name="shield"/><span>Only a Head of Department sends an engagement request (main page → People → Role in approvals: HOD). You are signed in as ${TROLE_LABEL[tRole(user)]}${tRole(user)==="RM"?": you approve the requests that reach you here.":"."}</span></div>`}
-    ${form&&html`<${Card} title="New engagement request" desc=${`From ${tDept(tUDept(user)).name}. Path: you → HOD of the person's department → Regional Manager.`}><div class="stack">
-      <div class="grid2"><${Field} label="Employee needed"><select class="select" value=${form.employeeId} onChange=${ev=>setForm(x=>({...x,employeeId:ev.target.value}))}><option value="">Choose…</option>${people.map(p=>html`<option value=${p.id}>${p.name} · ${tDept(tUDept(p)).name}${p.designation?" · "+p.designation:""}</option>`)}</select><//>
-        <${Field} label="Their department"><input class="input" disabled value=${emp?tDept(tUDept(emp)).name+(tHodOf(state,tUDept(emp))?" · HOD "+tHodOf(state,tUDept(emp)).name:" · no HOD set"):""}/><//>
-        <${Field} label="Available from"><input class="input" type="datetime-local" value=${form.from} onInput=${ev=>setForm(x=>({...x,from:ev.target.value}))}/><//>
-        <${Field} label="Available until"><input class="input" type="datetime-local" value=${form.to} min=${form.from} onInput=${ev=>setForm(x=>({...x,to:ev.target.value}))}/><//></div>
-      <${Field} label="Purpose"><textarea class="textarea" placeholder="What they will do, where and why…" value=${form.purpose} onInput=${ev=>setForm(x=>({...x,purpose:ev.target.value}))}/><//>
-      <div class="row" style="gap:8px"><button class="btn btn-primary" onClick=${send}><${Icon} name="send"/>Send request</button><button class="btn btn-ghost" onClick=${()=>setForm(null)}>Close</button></div>
-    </div><//>`}
     ${mine.length>0&&html`<div class="stack" style="gap:8px"><b>Waiting for your decision <span class="faint">${mine.length}</span></b>${mine.map(card)}</div>`}
     <div class="stack" style="gap:8px"><b>All requests you can see <span class="faint">${rest.length}</span></b>${rest.length?rest.map(card):html`<${TEmpty} title="No engagement requests yet">${tCanEngage(user)?"Use New engagement request to ask for someone from another department.":"Requests that involve you or your department appear here."}<//>`}</div>
   </div>`;

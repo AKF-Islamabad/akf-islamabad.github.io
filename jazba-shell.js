@@ -45,6 +45,9 @@
     meBox = el("div", "jz-ts-me"); meBox.setAttribute("aria-label", "Signed in as");
     strip.append(menu, home, stripLinks, meBox, find);
     document.body.prepend(rail); document.body.prepend(strip);
+    // the strip's height (one or two rows of portal names): sticky page headers and the menu sit just below it
+    const sh = () => document.documentElement.style.setProperty("--jz-strip-h", strip.offsetHeight + "px"); sh();
+    if (window.ResizeObserver) new ResizeObserver(sh).observe(strip); else addEventListener("resize", sh);
     const setOpen = (on, focus = true) => { clearTimeout(hideT); document.documentElement.classList.toggle("jz-rail-open", on); menu.setAttribute("aria-expanded", String(on)); if (on && focus) rail.focus(); };
     // auto open / hide with a mouse: point at ☰ or the left edge to open, move away to hide (touch and keyboard: ☰ click)
     let hideT = 0;
