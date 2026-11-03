@@ -25,7 +25,10 @@
   // the original is re-rendered often, so find it again by its label at click time
   const proxy = (label, list) => () => { const o = list().find(b => labelOf(b) === label); if (o) o.click(); };
 
-  let rail, mine, acct, strip, stripLinks, portals = [];
+  let rail, mine, acct, strip, stripLinks, meBox, portals = [];
+  // the signed-in person, read from the portal's own account button: full name and designation / role
+  const meOf = () => { const n = document.querySelector(".me-t b, #me-name"), r = document.querySelector(".me-t span, #me-role");
+    return [(n && n.textContent || "").trim(), (r && r.textContent || "").trim()]; };
   function build() {
     rail = el("nav", "jz-rail jz-shell-rail"); rail.setAttribute("aria-label", "Jazba"); rail.tabIndex = 0;
     mine = el("div"); acct = el("div", "jz-shell-acct");
@@ -39,7 +42,8 @@
     const home = el("a", "jz-ts-home"); home.href = BASE; home.title = "Today (main page)"; const hi = el("img"); hi.src = BASE + "icon.jpg"; hi.alt = "Alkhidmat · Today"; hi.width = 30; hi.height = 30; home.append(hi);
     stripLinks = el("div", "jz-ts-portals");
     const find = el("button", "jz-ts-search"); find.type = "button"; find.title = "Search (Ctrl K)"; find.setAttribute("aria-label", "Search and ask Alkhidmat AI"); find.append(SVG(ICON.search)); find.addEventListener("click", openPalette);
-    strip.append(menu, home, stripLinks, find);
+    meBox = el("div", "jz-ts-me"); meBox.setAttribute("aria-label", "Signed in as");
+    strip.append(menu, home, stripLinks, meBox, find);
     document.body.prepend(rail); document.body.prepend(strip);
     const setOpen = (on, focus = true) => { clearTimeout(hideT); document.documentElement.classList.toggle("jz-rail-open", on); menu.setAttribute("aria-expanded", String(on)); if (on && focus) rail.focus(); };
     // auto open / hide with a mouse: point at ☰ or the left edge to open, move away to hide (touch and keyboard: ☰ click)
@@ -60,8 +64,10 @@
     // Donor/Fleet/Assistance share one design kit (#sidebar + .main)
     else if (!document.documentElement.dataset.jzFamily && document.getElementById("sidebar")) document.documentElement.dataset.jzFamily = "kit";
     // the sign-out clock changes the page every second: rebuild only when the menu itself changed (no flicker, focus stays)
-    const sig = navItems().map(b => labelOf(b) + "|" + b.classList.contains("active") + "|" + countOf(b)).concat(accountItems().map(labelOf)).join("\n");
+    const who = meOf();
+    const sig = navItems().map(b => labelOf(b) + "|" + b.classList.contains("active") + "|" + countOf(b)).concat(accountItems().map(labelOf), who).join("\n");
     if (sig === paintMine.sig) return; paintMine.sig = sig;
+    meBox.replaceChildren(...(who[0] ? [el("b", "", who[0]), el("small", "", who[1])] : [])); meBox.title = who.filter(Boolean).join(" · ");
     mine.replaceChildren(...navItems().map(b => {
       const label = labelOf(b); if (!label) return null;
       const a = el("button", "jz-rail-link" + (b.classList.contains("active") ? " on" : "")); a.type = "button"; a.title = label;
