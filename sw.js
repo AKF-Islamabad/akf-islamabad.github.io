@@ -9,6 +9,8 @@ function show(n) {
     body: String(n.body || "").slice(0, 240),
     tag: String(n.tag || "") || undefined,
     renotify: !!n.tag,                       // a repeat of the same item rings again
+    requireInteraction: true,                // stays on screen until the person clicks it: nothing is missed
+    silent: false, vibrate: [200, 100, 200], // with the device's notification sound (and vibration on phones)
     icon: "icon.jpg", badge: "icon.jpg",
     data: { url: n.url || self.registration.scope },
   });

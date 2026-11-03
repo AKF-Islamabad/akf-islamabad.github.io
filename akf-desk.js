@@ -84,7 +84,8 @@
     unlock();
     if (Notification.permission === "denied") { allowHelp(); return; }   // the browser no longer asks: only the person can allow it again
     const p = await Notification.requestPermission();
-    if (p !== "granted") { if (p === "denied") allowHelp(); paint(); return; }   // "default" = the question was closed: ask again next time
+    if (p !== "granted") { if (p === "denied" && !gate) allowHelp(); paint(); enforce(); return; }   // "default" = the question was closed: ask again next time
+    enforce();   // the compulsory notice closes as soon as they are on
     try { await subscribe(); await sb.functions.invoke("push", { body: { action: "test" } }); ding(); }
     catch (e) { alert("Notifications could not be switched on: " + e.message); }
     paint();
@@ -105,6 +106,46 @@
     d.append(t, el("p", "", "This was chosen in the browser earlier, so the portal can't change it. It takes three clicks:"), steps, el("p", "akd-help-n", "On a phone: open the browser menu → Settings → Site settings → Notifications."), ok);
     document.body.appendChild(d); d.showModal(); ok.focus();
   }
+  /* RULE (every page, every person): notifications with sound are compulsory, so no task, approval or message is ever
+     missed. While they are off, this notice covers the page and cannot be closed; it goes away by itself once they are
+     on. A browser that cannot show notifications at all gets a warning bar instead (the person could never comply). */
+  let gate = null, bar = null;
+  function enforce() {
+    addCss();
+    const off = (x) => { if (x) x.remove(); return null; };
+    if (!me) { gate = off(gate); bar = off(bar); return; }
+    if (!canPush && (!isIOS || standalone)) {
+      gate = off(gate);
+      if (!bar) { bar = el("div", "akd-bar", "This browser cannot show notifications, so you may miss tasks. Please use Chrome, Edge or Firefox."); bar.setAttribute("role", "alert"); document.body.prepend(bar); }
+      return;
+    }
+    bar = off(bar);
+    const iosTab = isIOS && !standalone, st = "Notification" in window ? Notification.permission : "default";
+    if (!iosTab && st === "granted") { gate = off(gate); return; }
+    const want = iosTab ? "ios" : st;
+    if (gate && gate.dataset.want === want) return;
+    gate = off(gate);
+    const d = el("dialog", "akd-help akd-gate"); d.dataset.want = want; d.setAttribute("aria-labelledby", "akd-gate-t");
+    d.addEventListener("cancel", (e) => e.preventDefault());   // Esc does not close it: notifications are compulsory
+    const t = el("h2", "", "Turn on notifications to continue"); t.id = "akd-gate-t";
+    const why = el("p", "", "Alkhidmat portals rule: every staff member keeps notifications with sound ON, so no task, approval or message is ever missed.");
+    const btn = el("button", "", ""); btn.type = "button";
+    if (want === "ios") {
+      const s = el("ol"); ["Tap the Share button (the square with an arrow) at the bottom.", "Choose \"Add to Home Screen\", then Add.", "Open the portals from the new icon and turn notifications on there."].forEach((x) => s.append(el("li", "", x)));
+      btn.textContent = "Check again"; btn.onclick = () => location.reload();
+      d.append(t, why, el("p", "", "On iPhone and iPad, notifications work only from the Home Screen icon:"), s, btn);
+    } else if (want === "denied") {
+      const s = el("ol"); ["Click the icon just left of the web address (a lock or two small sliders).", "Set \"Notifications\" to \"Allow\".", "Click \"Check again\" below."].forEach((x) => s.append(el("li", "", x)));
+      btn.textContent = "Check again"; btn.onclick = () => location.reload();
+      d.append(t, why, el("p", "", "Notifications are blocked for this site in your browser. Only you can allow them:"), s, el("p", "akd-help-n", "On a phone: browser menu → Settings → Site settings → Notifications → Allow."), btn);
+    } else {
+      btn.textContent = "Turn on notifications"; btn.onclick = () => turnOn();
+      d.append(t, why, el("p", "", "Click the button, then choose \"Allow\" when the browser asks."), btn);
+    }
+    document.body.appendChild(d); d.showModal(); btn.focus(); gate = d;
+  }
+  // the person may allow it in the browser's settings without reloading
+  try { navigator.permissions && navigator.permissions.query({ name: "notifications" }).then((p) => { p.onchange = () => enforce(); }).catch(() => {}); } catch (_) {}
   // a new bell item: system notification when the page is in the background, the bell sound always
   async function notifyNow(list) {
     ding();
@@ -138,6 +179,9 @@
   const CSS = `
 .akd-help{max-width:min(440px,calc(100vw - 32px));border:0;border-radius:14px;padding:20px 22px;font:14px/1.5 Manrope,"Segoe UI",system-ui,sans-serif;color:#1d2433;background:#fff;box-shadow:0 20px 50px -20px rgba(0,0,0,.5)}
 .akd-help::backdrop{background:rgba(15,23,42,.45)}
+.akd-gate::backdrop{background:rgba(4,20,40,.82);backdrop-filter:blur(3px)}
+.akd-gate h2{color:#B42318}
+.akd-bar{position:sticky;top:0;z-index:2147483000;background:#B42318;color:#fff;padding:8px 14px;font:600 14px/1.4 Manrope,"Segoe UI",system-ui,sans-serif;text-align:center}
 .akd-help h2{margin:0 0 8px;font-size:17px}.akd-help ol{margin:8px 0;padding-left:20px}.akd-help li{margin:4px 0}.akd-help .akd-help-n{color:#5b6475;font-size:13px}
 .akd-help button{float:right;margin-top:6px;border:0;border-radius:8px;background:#0b5cad;color:#fff;font:600 14px Manrope,"Segoe UI",system-ui,sans-serif;padding:9px 22px;cursor:pointer}
 .akd{position:fixed;left:16px;bottom:16px;z-index:7990;width:min(320px,calc(100vw - 32px));font:13px/1.4 Manrope,"Segoe UI",system-ui,sans-serif;color:#3B3208}
@@ -343,9 +387,10 @@
   async function tick() {
     const { data: s } = await sb.auth.getSession().catch(() => ({ data: {} }));
     const u = s && s.session && s.session.user;
-    if (!u) { me = null; paint(); return; }
+    if (!u) { me = null; paint(); enforce(); return; }
     if (expired(s.session, Date.now())) { signOutNow(s.session); return; }
     if (!me || me.id !== u.id) { me = { id: u.id, email: String(u.email || "").toLowerCase() }; data = null; paint(); }
+    enforce();
     load().catch(() => {});
     if (!saved && canPush && Notification.permission === "granted") { saved = true; subscribe().catch(() => { saved = false; }); }
   }
