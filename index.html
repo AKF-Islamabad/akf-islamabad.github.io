@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-op06k/Bd2NbxMWv/djGv/tZ0IlJddf8V1moZIC3j4y0='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-hm2I9/iBP1s7e1FOJcPnpwR0BNHp9iVoHRQIliB4q68='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -976,7 +976,7 @@ function addPerson() {
       msg.replaceChildren(); if (name.value.trim().length < 2 || !/^\S+@\S+\.\S+$/.test(email.value.trim())) return msg.append(el("div", { class: "notice bad", text: "Enter the full name and a valid e-mail." }));
       ev.target.disabled = true;
       try { const r = await adminCall({ action: "create", full_name: name.value, email: email.value, designation: desig.value, dept: await dept.getCode(), org_role: orgRole.value, send_invite: how.value === "invite" });
-        close(); toast(how.value === "invite" ? "Invitation sent" : "Person added"); if (r.temp_password) showSecret(name.value.trim(), r.temp_password); loadAdmin();
+        close(); toast(r.invite_failed ? "The invitation e-mail could not be sent, so they were added with a temporary password: give it to them" : how.value === "invite" ? "Invitation sent" : "Person added"); if (r.temp_password) showSecret(name.value.trim(), r.temp_password); loadAdmin();
       } catch (e) { ev.target.disabled = false; fail(e, "The person was not added"); }
     } })]);
 }
