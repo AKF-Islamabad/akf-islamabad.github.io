@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-CQQZ0583EYERk2GZukrLQTqpMqrtv122Vx0yWW/Xsbc='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-tntGQr6T7STGgecubMB4PtEE/m4hwNKm2rCjeMtQ5WQ='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -369,7 +369,7 @@ const ROLE_LABEL = { viewer: "Viewer", staff: "Staff", manager: "Manager", admin
 const ACTIONS = ["view", "add", "edit", "delete", "approve", "export"];
 const ACTION_LABEL = { view: "See", add: "Add", edit: "Edit", delete: "Delete", approve: "Approve", export: "Export" };
 const AUTH_TYPE = (/[#&]type=(invite|recovery)/.exec(location.hash) || [])[1] || "";   // read before supabase-js clears the link
-const S = { view: "boot", session: null, me: null, portals: [], tab: "portals", admin: null, recovery: AUTH_TYPE === "recovery" || AUTH_TYPE === "invite", busy: false, q: "", dept: "" };
+const S = { view: "boot", session: null, me: null, portals: [], tab: "portals", admin: null, recovery: AUTH_TYPE === "recovery" || AUTH_TYPE === "invite", busy: false, q: "", dept: "", st: "", role: "", acc: "" };
 let sb = null;
 
 /* ---------- safe DOM building: text is always set as text, never parsed as HTML ---------- */
@@ -849,14 +849,28 @@ function tileMotion(a) {
 /* ---------- Super Admin: people & access ---------- */
 function people() {
   const A = S.admin, mods = A.modules;
-  const search = el("input", { class: "input", type: "search", placeholder: "Search name or e-mail", value: S.q, style: "max-width:260px", "aria-label": "Search people" });
+  const search = el("input", { class: "input", type: "search", placeholder: "Search name, e-mail or designation", value: S.q, style: "max-width:260px", "aria-label": "Search people" });
   search.addEventListener("input", () => { S.q = search.value; drawRows(); });
   const dept = el("select", { class: "input", style: "max-width:200px", "aria-label": "Filter by department" }, el("option", { value: "", text: "All departments" }), A.depts.map(d => el("option", { value: d.code, text: d.name })));
   dept.value = S.dept; dept.addEventListener("change", () => { S.dept = dept.value; drawRows(); });
+  /* more filters: status, role in approvals, and who has (or lacks) a portal */
+  const pick = (key, label, opts) => { const x = el("select", { class: "input", style: "max-width:220px", "aria-label": label }, el("option", { value: "", text: label }), opts.map(([v, t]) => el("option", { value: v, text: t })));
+    x.value = S[key]; x.addEventListener("change", () => { S[key] = x.value; drawRows(); }); return x; };
+  const st = pick("st", "Any status", [["active", "Active"], ["off", "Deactivated"], ["temp", "Temporary password"], ["super", "Super Admin"], ["outside", "Not an @" + ((CFG && CFG.emailDomain) || "organisation") + " e-mail"]]);
+  const role = pick("role", "Any role in approvals", ORG_ROLES.map(r => [r[0], r[1]]));
+  const acc = pick("acc", "Any portal access", [["none", "No portal access at all"]].concat(...mods.map(m => [["has:" + m.key, "Has " + m.name], ["no:" + m.key, "No " + m.name]])));
+  const shown = el("span", { class: "muted small" });
+  const clear = el("button", { class: "btn ghost sm", text: "Clear filters", onclick: () => { S.q = S.dept = S.st = S.role = S.acc = ""; search.value = dept.value = st.value = role.value = acc.value = ""; drawRows(); } });
+  const has = (p, k) => !!(A.acc[p.id] || {})[k];
+  const stOk = p => !S.st || (S.st === "active" ? p.active : S.st === "off" ? !p.active : S.st === "temp" ? p.must_change_password : S.st === "super" ? p.is_super
+    : !String(p.email || "").toLowerCase().endsWith("@" + String((CFG && CFG.emailDomain) || "").toLowerCase()));
+  const accOk = p => !S.acc || (S.acc === "none" ? !p.is_super && !mods.some(m => has(p, m.key)) : S.acc.startsWith("has:") ? p.is_super || has(p, S.acc.slice(4)) : !p.is_super && !has(p, S.acc.slice(3)));
   const tbody = el("tbody");
   function drawRows() {
     const needle = S.q.trim().toLowerCase();
-    const list = A.people.filter(p => (!needle || (p.full_name + " " + p.email).toLowerCase().includes(needle)) && (!S.dept || p.dept === S.dept));
+    const list = A.people.filter(p => (!needle || (p.full_name + " " + p.email + " " + (p.designation || "")).toLowerCase().includes(needle)) && (!S.dept || p.dept === S.dept)
+      && stOk(p) && (!S.role || (!p.is_super && (p.org_role || "staff") === S.role)) && accOk(p));
+    shown.textContent = list.length === A.people.length ? "" : `Showing ${list.length} of ${A.people.length}`; clear.hidden = !(S.q || S.dept || S.st || S.role || S.acc);
     tbody.replaceChildren(...list.map(p => el("tr", {},
       el("td", {}, el("b", { text: p.full_name }), el("span", { class: "sub", text: p.email }), el("span", { class: "sub", text: [p.designation, (A.depts.find(d => d.code === p.dept) || {}).name, p.is_super ? "" : ((ORG_ROLES.find(r => r[0] === p.org_role) || [])[1] || "")].filter(Boolean).join(" · ") })),
       el("td", {}, p.is_super ? el("span", { class: "tag brand", text: "Super Admin" }) : null, " ", p.active ? el("span", { class: "tag ok", text: "Active" }) : el("span", { class: "tag bad", text: "Deactivated" }), p.must_change_password ? el("span", { class: "tag warn", text: "Temp password" }) : null),
@@ -890,7 +904,7 @@ function people() {
     el("ul", { style: "margin:6px 0 4px;padding-left:20px" }, outside.map(p => el("li", {}, el("b", { text: p.full_name }), " · " + p.email + " ", el("button", { class: "btn ghost sm", text: "Manage", onclick: () => managePerson(p) })))),
     el("span", { class: "small", text: "If the person also has an @" + CFG.emailDomain + " login, open Manage on the outside one and click Delete. Records they created stay." })) : null;
   return el("section", {},
-    el("div", { class: "bar" }, search, dept, el("div", { class: "grow" }), el("span", { class: "muted small", text: `${A.people.length} people` }), el("button", { class: "btn", onclick: addPerson }, icon("plus", 16), "Add person")),
+    el("div", { class: "bar", style: "flex-wrap:wrap" }, search, dept, st, role, acc, clear, shown, el("div", { class: "grow" }), el("span", { class: "muted small", text: `${A.people.length} people` }), el("button", { class: "btn", onclick: addPerson }, icon("plus", 16), "Add person")),
     gaps, outsideBox,
     el("div", { class: "card tblwrap" }, el("table", {},
       el("thead", {}, el("tr", {}, el("th", { text: "Person" }), el("th", { text: "Status" }), mods.map(m => el("th", { text: m.name + (m.enabled ? "" : " (off)") })), el("th", {}))), tbody)),
