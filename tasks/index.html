@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-DX9iQ25fvRrR9qNnr7Uocrn1XUbncrrcS15iVyLgUs4='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-nxl0ZPOrw/6yTIGIV3Z6kpmMxsJXTwNkRqO4bd0Gdvc='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -4341,6 +4341,8 @@ const escHTML=t=>String(t==null?"":t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&
 /* a person's signature: the one saved in this portal, else the one they saved in any other portal (AKF_DESK.signatures) */
 let SIG_CENTRAL={};
 const sigOf=u=>u?(u.signature||SIG_CENTRAL[String(u.email||"").toLowerCase()]||""):"";
+/* FBR NTN: 1234567-8 (7 digits, check digit optional), G645842 (a letter + 6 digits, older firms' format) or a person's 13-digit CNIC */
+const ntnOk=v=>/^(\d{7}(-?\d)?|[A-Za-z]\d{6}(-?\d)?|\d{5}-?\d{7}-?\d)$/.test(String(v||"").trim());
 const safeUrl=u=>{ const s=String(u||"").trim(); return /^(data:(image\/(png|jpe?g|gif|webp)|application\/pdf|text\/plain|text\/csv|application\/(vnd\.[\w.+-]+|msword|octet-stream))[;,]|blob:|https:\/\/)/i.test(s)?s:"about:blank"; };
 /* errors from the database or other services: the user sees a generic message and a reference; the details go to this browser's console only */
 function errRef(e,what){ const ref=Math.random().toString(36).slice(2,8).toUpperCase(); try{ console.error(`[ref ${ref}]`,e); }catch(x){}
@@ -5386,11 +5388,11 @@ function Vendors({state,user,A,openReq,openDoc,readOnly}){
   const blank={name:"",ntn:"",bank:"",contact:"",type:"Goods",filer:true,gstRegistered:true,cheque:false,category:"MED",rating:3,address:"",email:""};
   const [f,setF]=useState(null); const set=(k,v)=>setF(x=>({...x,[k]:v}));
   const [tab,setTab]=useState("vendors");
-  const ok=f&&f.name.trim()&&/^\d{7}-\d$/.test(f.ntn)&&f.bank.trim()&&f.cheque;
+  const ok=f&&f.name.trim()&&ntnOk(f.ntn)&&f.bank.trim()&&f.cheque;
   return html`<div class="stack" style="gap:16px">
     <div class="row between wrap"><div class="seg">${[["vendors","Vendor database"],["rfq","RFQs & magic links"],["sms","SMS log"]].map(([k,l])=>html`<button class=${tab===k?"active":""} onClick=${()=>setTab(k)}>${l}</button>`)}</div>${tab==="vendors"&&!readOnly&&!f&&html`<button class="btn btn-primary" onClick=${()=>setF(blank)}><${Icon} name="plus"/>Add vendor</button>`}</div>
     ${tab==="vendors"&&f&&html`<${Card} title=${f.id?"Edit vendor":"New vendor"} desc="NTN, bank account and cheque copy are mandatory before a vendor can receive an RFQ or PO.">
-      <div class="grid3"><${Field} label="Vendor name"><input class="input" value=${f.name} onInput=${e=>set("name",e.target.value)}/><//><${Field} label="NTN (1234567-8)"><input class="input" value=${f.ntn} onInput=${e=>set("ntn",e.target.value)} placeholder="1234567-8"/><//><${Field} label="Contact"><input class="input" value=${f.contact} onInput=${e=>set("contact",e.target.value)} placeholder="0300-0000000"/><//>
+      <div class="grid3"><${Field} label="Vendor name"><input class="input" value=${f.name} onInput=${e=>set("name",e.target.value)}/><//><${Field} label="NTN (1234567-8, G645842 or CNIC)"><input class="input" value=${f.ntn} onInput=${e=>set("ntn",e.target.value)} placeholder="1234567-8"/><//><${Field} label="Contact"><input class="input" value=${f.contact} onInput=${e=>set("contact",e.target.value)} placeholder="0300-0000000"/><//>
         <${Field} label="Bank & account"><input class="input" value=${f.bank} onInput=${e=>set("bank",e.target.value)} placeholder="HBL 1234-5678-9012"/><//><${Field} label="Supplies"><${Pick} value=${f.type} options=${["Goods","Services"]} onChange=${v=>set("type",v)}/><//><${Field} label="FBR income-tax status (WHT)"><select class="select" value=${f.filer?"Filer":"Non-Filer"} onChange=${e=>set("filer",e.target.value==="Filer")}><option>Filer</option><option>Non-Filer</option></select><//>
         <${Field} label="Sales tax (GST) registration"><select class="select" value=${f.gstRegistered===false?"No":"Yes"} onChange=${e=>set("gstRegistered",e.target.value==="Yes")}><option value="Yes">GST registered — add ${Math.round(SETTINGS.gst*100)}% when price excludes tax</option><option value="No">Not GST registered — no GST added</option></select><//>
         <${Field} label="Address"><input class="input" value=${f.address||""} onInput=${e=>set("address",e.target.value)}/><//><${Field} label="E-mail"><input class="input" type="email" value=${f.email||""} onInput=${e=>set("email",e.target.value)}/><//>
@@ -6099,9 +6101,9 @@ function SignatureModal({user,A,onClose}){
 const IMPORTS={
   register:{ title:"Stock register (AKF format)", roles:["super","store_officer"], custom:true, cols:[] },
   vendors:{ title:"Vendors", roles:["super","admin_officer"], cols:[["Vendor Name","Al-Shifa Traders"],["NTN","1234567-8"],["Contact","0300-1234567"],["Bank & Account","HBL 1234-5678-9012"],["Supplies (Goods/Services)","Goods"],["FBR Status (Filer/Non-Filer)","Filer"],["GST Registered (Yes/No)","Yes"],["Category","MED"],["Cheque Copy Received (Yes/No)","Yes"],["Address","Blue Area, Islamabad"],["E-mail","sales@example.com"]],
-    help:[["NTN","Format 1234567-8"],["FBR Status","Filer or Non-Filer — decides WHT"],["GST Registered","Yes = GST added automatically when a quotation excludes tax"]],
+    help:[["NTN","1234567-8, G645842 (letter + 6 digits) or a 13-digit CNIC"],["FBR Status","Filer or Non-Filer — decides WHT"],["GST Registered","Yes = GST added automatically when a quotation excludes tax"]],
     map:r=>({name:r["Vendor Name"],ntn:String(r["NTN"]||""),contact:String(r["Contact"]||""),bank:r["Bank & Account"]||"",type:r["Supplies (Goods/Services)"]||"Goods",filer:!/non/i.test(r["FBR Status (Filer/Non-Filer)"]||""),gstRegistered:!/^n/i.test(r["GST Registered (Yes/No)"]||"Yes"),category:String(r["Category"]||"OTHER").toUpperCase(),cheque:/^y/i.test(r["Cheque Copy Received (Yes/No)"]||""),address:r["Address"]||"",email:r["E-mail"]||""}),
-    check:r=>!r.name?"Vendor Name missing":!/^\d{7}-\d$/.test(r.ntn)?"NTN must look like 1234567-8":"" },
+    check:r=>!r.name?"Vendor Name missing":!ntnOk(r.ntn)?"NTN must look like 1234567-8, G645842 or a 13-digit CNIC":"" },
   budgets:{ title:"Budget lines", roles:["super","finance"], cols:[["Project Code","DIS-2026-FLD-02"],["Department","Health"],["Donor","Disaster"],["Allocated (PKR)",500000],["Note","Flood response phase 2"]],
     help:[["Project Code","Unique; an existing code is updated"]],
     map:r=>({code:String(r["Project Code"]||"").toUpperCase().trim(),dept:r["Department"]||"Admin",donor:r["Donor"]||"General Fund",allocated:Number(r["Allocated (PKR)"])||0,note:r["Note"]||""}),

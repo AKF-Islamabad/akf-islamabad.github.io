@@ -63,7 +63,7 @@
   /* ---- sheets ---- */
   const VENDOR_COLS = [
     { k: "name", h: "Vendor name", req: true, ex: "Al-Shifa Traders", note: "A row with a vendor name (or NTN) already in the portal updates that vendor" },
-    { k: "ntn", h: "NTN", req: true, ex: "1234567-8", pattern: /^\d{7}-\d$/, patternMsg: "must look like 1234567-8", aka: ["ntnno"] },
+    { k: "ntn", h: "NTN", req: true, ex: "1234567-8", pattern: /^(\d{7}(-?\d)?|[A-Za-z]\d{6}(-?\d)?|\d{5}-?\d{7}-?\d)$/, patternMsg: "must look like 1234567-8, G645842 or a 13-digit CNIC", aka: ["ntnno"] },
     { k: "contact", h: "Contact", ex: "0300-1234567", note: "Phone number" },
     { k: "bank", h: "Bank & account", ex: "HBL 1234-5678-9012", aka: ["bankaccount"] },
     { k: "type", h: "Supplies", list: ["Goods", "Services"], ex: "Goods", note: "Empty: Goods", aka: ["suppliesgoodsservices"] },
