@@ -179,6 +179,8 @@ html[data-jz-family="kit"] .ds.now{background:#FEF3E2;color:#B45309}
 html[data-jz-family="kit"] .ds.bad{background:#FDE8E8;color:#DC0505}
 
 /* the portal strip stays at the top while the page scrolls; each portal's own sticky header sits just below it */
-html[data-jz-shell="on"] .jz-topstrip{position:sticky;top:0;z-index:55}   /* above page headers (20–30), below pop-ups (60–100) */
+/* pinned, not sticky: every portal sets html, body { height: 100% }, so a sticky strip would scroll away after one screen */
+html[data-jz-shell="on"] .jz-topstrip{position:fixed;top:0;left:0;right:0;z-index:55}   /* above page headers (20–30), below pop-ups (60–100) */
+html[data-jz-shell="on"] body{padding-top:var(--jz-strip-h,46px);box-sizing:border-box}
 html[data-jz-shell="on"] .topbar{top:var(--jz-strip-h,46px)!important}
-@media print{html[data-jz-shell="on"] .topbar{top:0!important}}
+@media print{html[data-jz-shell="on"] .topbar{top:0!important} html[data-jz-shell="on"] body{padding-top:0}}

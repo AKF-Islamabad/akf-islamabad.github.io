@@ -26,6 +26,7 @@
   const proxy = (label, list) => () => { const o = list().find(b => labelOf(b) === label); if (o) o.click(); };
 
   let rail, mine, acct, strip, stripLinks, meBox, portals = [];
+  const sh = () => { if (strip) document.documentElement.style.setProperty("--jz-strip-h", strip.offsetHeight + "px"); };
   // the signed-in person, read from the portal's own account button: full name and designation / role
   const meOf = () => { const n = document.querySelector(".me-t b, #me-name"), r = document.querySelector(".me-t span, #me-role");
     return [(n && n.textContent || "").trim(), (r && r.textContent || "").trim()]; };
@@ -46,8 +47,8 @@
     strip.append(menu, home, stripLinks, meBox, find);
     document.body.prepend(rail); document.body.prepend(strip);
     // the strip's height (one or two rows of portal names): sticky page headers and the menu sit just below it
-    const sh = () => document.documentElement.style.setProperty("--jz-strip-h", strip.offsetHeight + "px"); sh();
-    if (window.ResizeObserver) new ResizeObserver(sh).observe(strip); else addEventListener("resize", sh);
+    sh(); addEventListener("resize", sh);
+    if (window.ResizeObserver) new ResizeObserver(sh).observe(strip);
     const setOpen = (on, focus = true) => { clearTimeout(hideT); document.documentElement.classList.toggle("jz-rail-open", on); menu.setAttribute("aria-expanded", String(on)); if (on && focus) rail.focus(); };
     // auto open / hide with a mouse: point at ☰ or the left edge to open, move away to hide (touch and keyboard: ☰ click)
     let hideT = 0;
@@ -84,7 +85,7 @@
       a.addEventListener("click", proxy(label, accountItems)); return a; }).filter(Boolean));
   }
   function paintPortals() {
-    stripLinks.replaceChildren(); if (!portals.length) return;
+    stripLinks.replaceChildren(); if (!portals.length) return sh();
     portals.forEach(p => { const href = safeLink(p.url); if (!href) return;
       const here = location.href.startsWith(href);
       const dot = el("span", "jz-rail-dot"); dot.style.background = /^#[0-9a-f]{6}$/i.test(p.color || "") ? p.color : "#0060AE";
@@ -92,6 +93,7 @@
       const s = el("a", "jz-ts-link" + (here ? " on" : "")); s.href = href; s.title = p.name; if (here) s.setAttribute("aria-current", "page");
       s.append(dot, el("span", "", p.name)); stripLinks.append(s);
     });
+    sh();   // the names may need a second row: move the page down to match
   }
 
   /* Ctrl/Cmd+K: this portal's pages, other portals, Ask Alkhidmat AI (opens the portal's own assistant) */
