@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-W/KEDlNCGHU4H3EHJ+GHnwlTbWtMBAaCbEdybqKGAN0='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-CQQZ0583EYERk2GZukrLQTqpMqrtv122Vx0yWW/Xsbc='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -883,9 +883,15 @@ function people() {
       el("ul", { style: "margin:6px 0 4px;padding-left:20px" }, roles.map(r => el("li", { text: `${label[r] || r}: ${[...new Set(need[r])].join(", ")}` }))),
       el("span", { class: "small", text: "Click Manage on the right person, choose their \"Role in approvals\", then tick that portal's Approvals tab." })));
   })().catch(() => {});
+  /* logins outside the organisation domain (old gmail accounts, duplicates): hidden in every portal list; listed here to delete */
+  const outside = CFG && CFG.emailDomain ? A.people.filter(p => !p.is_super && !String(p.email || "").toLowerCase().endsWith("@" + String(CFG.emailDomain).toLowerCase())) : [];
+  const outsideBox = outside.length ? el("div", { class: "notice info", style: "margin-bottom:12px" },
+    el("b", { text: `${outside.length} login${outside.length === 1 ? " is" : "s are"} not an @${CFG.emailDomain} address, so ${outside.length === 1 ? "it is" : "they are"} hidden in every portal list:` }),
+    el("ul", { style: "margin:6px 0 4px;padding-left:20px" }, outside.map(p => el("li", {}, el("b", { text: p.full_name }), " · " + p.email + " ", el("button", { class: "btn ghost sm", text: "Manage", onclick: () => managePerson(p) })))),
+    el("span", { class: "small", text: "If the person also has an @" + CFG.emailDomain + " login, open Manage on the outside one and click Delete. Records they created stay." })) : null;
   return el("section", {},
     el("div", { class: "bar" }, search, dept, el("div", { class: "grow" }), el("span", { class: "muted small", text: `${A.people.length} people` }), el("button", { class: "btn", onclick: addPerson }, icon("plus", 16), "Add person")),
-    gaps,
+    gaps, outsideBox,
     el("div", { class: "card tblwrap" }, el("table", {},
       el("thead", {}, el("tr", {}, el("th", { text: "Person" }), el("th", { text: "Status" }), mods.map(m => el("th", { text: m.name + (m.enabled ? "" : " (off)") })), el("th", {}))), tbody)),
     el("p", { class: "small muted", text: "Click a cell to choose exactly which tabs of that portal the person sees and what they may do on each (see, add, edit, delete, approve, export). Presets fill the ticks for you. Changes apply at once and are recorded in Activity." }));

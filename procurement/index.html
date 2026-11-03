@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-542/np+euOnsTrckPvFhsNfZOMBSWYJDkhVb2xv6eW0='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-edtbala9ndZybZDNt4emEs0zoT4TzmmGbTaKcbFoxPM='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -6786,7 +6786,9 @@ function tParseMin(v){ const s=String(v==null?"":v).trim().toLowerCase(); if(!s)
 const tToast=(m,t)=>window.__toast&&window.__toast(m,t);
 const tLS={ get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k,v){ try{ v==null?localStorage.removeItem(k):localStorage.setItem(k,v); }catch(e){} } };
 /* the Super Admin is never offered for work: hidden from every picker and team list (names in history still show) */
-const tPick=x=>!!x&&x.role!=="super";
+/* only @organisation logins are offered in people lists: old gmail / outside copies stay hidden (the Super Admin deletes them on the main page) */
+const orgLogin=x=>{ const d=SB_CONFIG&&SB_CONFIG.emailDomain; if(!d) return true; const e=emailFor(String(x.username||x.email||"")).toLowerCase(); return e.endsWith("@"+String(d).toLowerCase()); };
+const tPick=x=>!!x&&x.role!=="super"&&orgLogin(x);
 const tUser=(state,id)=>(state.users||[]).find(u=>u.id===id);
 const tName=(state,id)=>{ const u=tUser(state,id); return u?u.name:"Unassigned"; };
 const tOpen=t=>t.stage!=="06"&&t.stage!=="07";
