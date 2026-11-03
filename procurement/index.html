@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-nlb8kh/FtEUkPH0OG0EzSj3ufS7of6+4wHOWf0nSkHY='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-EY+6poYujc3zoOiqOxkJhbihfOs2+4dEyypfIx8XfyE='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -3748,7 +3748,7 @@ const ROLES = {
   admin_officer: { label:"Admin Officer",      short:"Admin Officer", desc:"Procurement & vendor management" },
   store_officer: { label:"Store Officer",      short:"Store Officer", desc:"Store management" },
   gen_sec:       { label:"General Secretary",  short:"Gen. Secretary",desc:"View only" },
-  finance:       { label:"Finance Department", short:"Finance",       desc:"Budget approval & payments" },
+  finance:       { label:"Sr. Manager Finance", short:"Finance",       desc:"Budget approval & payments" },
   manager_hr:    { label:"Manager Admin & HR", short:"Mgr Admin & HR",desc:"Recommendation & purchase committee" },
   regional_manager:{ label:"Regional Manager", short:"Regional Mgr",  desc:"Recommendation" },
   president:     { label:"President",          short:"President",     desc:"Final approval & dashboard" },
@@ -3806,7 +3806,7 @@ const FLOW_BUILTIN = {
   /* Procurement: HOD → Finance → Manager Admin & HR → Regional Manager → President → Admin Officer (execution) */
   procurement: [
     FS("submitted","Requested",         "HOD (Requester)",   "hod",             "fixed",   "Request submitted"),
-    FS("budget",   "Budget approved",   "Finance Department","finance",         "approval","Budget approved by Finance"),
+    FS("budget",   "Budget approved",   "Sr. Manager Finance","finance",         "approval","Budget approved by Finance"),
     FS("rec_hr",   "Recommended",       "Manager Admin & HR","manager_hr",      "approval","Recommended by Manager Admin & HR"),
     FS("rec_rm",   "Recommended",       "Regional Manager",  "regional_manager","approval","Recommended by Regional Manager"),
     FS("approved", "Approved",          "President",         "president",       "approval","Approved by President",{final:true}),
@@ -4494,16 +4494,21 @@ function TrackTable({req,state}){
   const n=nextStage(req);
   const evFor=s=>[...req.timeline].reverse().find(t=>t.stage===s.key&&!/sent back|amend/i.test(t.action)&&(t.role===s.owner||s.owner==="hod"||t.role==="super"||s.key==="committee"||(s.key==="approved"&&!!SETTINGS.actingApprover&&t.role===SETTINGS.actingApprover)));
   const userOf=e=>e&&((e.uid&&state.users.find(u=>u.id===e.uid))||state.users.find(u=>u.name===e.by));
-  const officers=s=>state.users.filter(u=>u.active&&u.role!=="super"&&(s.owner==="hod"?u.id===req.requesterId:u.role===s.owner)).map(u=>u.name);
+  // the real people who hold a step: their names and designations ("Taimoor Tahir · Sr. Manager Finance"), not the role's name
+  const holders=s=>state.users.filter(u=>u.active!==false&&u.role!=="super"&&(s.owner==="hod"?u.id===req.requesterId:u.role===s.owner));
+  const officers=s=>holders(s).map(u=>u.name);
+  const desigs=s=>[...new Set(holders(s).map(u=>u.designation||(ROLES[u.role]||{}).label||"").filter(Boolean))].join(", ");
+  const nobody=s=>`Nobody holds this step yet. Super Admin: main page → People → Manage the right person → Role in approvals: ${(ROLES[s.owner]||{}).label||s.who}.`;
   const rows=flow.map((s,i)=>{
     if(i<=idx){ const e=evFor(s); const u=userOf(e); return {s,i,kind:"done",name:e?e.by:"—",desig:(e&&e.desig)||(u&&u.designation)||(ROLES[s.owner]||{}).label||s.who,at:e&&e.at,remark:e&&e.comment,pill:e&&e.role==="super"&&/not required/i.test(e.action)?"Not required":s.label}; }
     if(i===idx+1){ if(dead){ const e=req.timeline[req.timeline.length-1]; return {s,i,kind:"bad",name:e.by,desig:e.desig||((userOf(e)||{}).designation)||s.who,at:e.at,remark:e.comment,pill:req.status==="cancelled"?"Cancelled":"Rejected"}; }
-      const list=officers(s); return {s,i,kind:"now",name:list.length?list.join(", "):s.who,desig:s.who,at:null,remark:isEscalated(req)?`Waiting ${Math.round(hoursSince(req.timeline[req.timeline.length-1].at))}h — escalated`:`Waiting since ${ago(req.timeline[req.timeline.length-1].at)}`,pill:"Pending"}; }
-    return {s,i,kind:"next",name:s.who,desig:"",at:null,remark:"",pill:dead?"—":"Not reached"};
+      const list=officers(s); if(!list.length&&s.owner&&s.owner!=="hod") return {s,i,kind:"bad",name:"Nobody assigned",desig:s.who,at:null,remark:nobody(s),pill:"No approver"};
+      return {s,i,kind:"now",name:list.length?list.join(", "):s.who,desig:desigs(s)||s.who,at:null,remark:isEscalated(req)?`Waiting ${Math.round(hoursSince(req.timeline[req.timeline.length-1].at))}h — escalated`:`Waiting since ${ago(req.timeline[req.timeline.length-1].at)}`,pill:"Pending"}; }
+    const list=officers(s); return {s,i,kind:"next",name:list.length?list.join(", "):s.who,desig:list.length?desigs(s):"",at:null,remark:list.length||!s.owner||s.owner==="hod"?"":"Nobody holds this step yet",pill:dead?"—":"Not reached"};
   });
   const tone={done:"ok",now:"warn",bad:"bad",next:"neutral"};
   return html`<div class="track">
-    <div class="track-head"><div class="grow"><div class="track-k">${dead?(req.status==="cancelled"?"Cancelled":"Rejected"):req.stage==="closed"?"Completed":`Step ${idx+2} of ${flow.length}`}</div><div class="track-t">${dead?`Stopped at ${n?n.label.toLowerCase():"—"}`:req.stage==="closed"?"All steps signed off":html`Now with <b>${n.who}</b> · ${n.label}`}</div></div><div class="track-pct"><b class="num">${pct}%</b><span>complete</span></div></div>
+    <div class="track-head"><div class="grow"><div class="track-k">${dead?(req.status==="cancelled"?"Cancelled":"Rejected"):req.stage==="closed"?"Completed":`Step ${idx+2} of ${flow.length}`}</div><div class="track-t">${dead?`Stopped at ${n?n.label.toLowerCase():"—"}`:req.stage==="closed"?"All steps signed off":html`Now with <b>${(()=>{ const l=n?officers(n):[]; return l.length?l.join(", ")+(desigs(n)?" ("+desigs(n)+")":""):n.who; })()}</b> · ${n.label}`}</div></div><div class="track-pct"><b class="num">${pct}%</b><span>complete</span></div></div>
     <div class="track-bar">${flow.map((s,i)=>html`<i class=${i<=idx?"d":i===idx+1?(dead?"x":"n"):""} title=${`${i+1}. ${s.label} — ${s.who}`}/>`)}</div>
     <div class="tbl-wrap track-tbl"><table class="tbl"><thead><tr><th>#</th><th>Step</th><th>Name</th><th>Designation</th><th>Date</th><th>Remarks</th><th class="c">Status</th></tr></thead><tbody>
       ${rows.map(r=>html`<tr class=${"tr-"+r.kind}><td data-l="#"><span class="tnum">${r.i+1}</span></td><td data-l="Step"><b>${r.s.label}</b></td><td data-l="Name">${r.name}</td><td data-l="Designation" class="muted">${r.desig||"—"}</td><td data-l="Date" class="nowrap">${r.at?fmtD(r.at):"—"}</td><td data-l="Remarks" class="sm">${r.remark||""}</td><td data-l="Status" class="c"><${Tag} tone=${tone[r.kind]}>${r.pill}</${Tag}></td></tr>`)}

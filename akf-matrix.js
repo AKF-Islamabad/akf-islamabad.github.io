@@ -20,7 +20,7 @@
     v: 1,
     procurement: { steps: [
       S("submitted", "Requested", "HOD (Requester)", "hod", "fixed"),
-      S("budget", "Budget approved", "Finance Department", "finance", "approval"),
+      S("budget", "Budget approved", "Sr. Manager Finance", "finance", "approval"),
       S("rec_hr", "Recommended", "Manager Admin & HR", "manager_hr", "approval"),
       S("rec_rm", "Recommended", "Regional Manager", "regional_manager", "approval"),
       S("approved", "Approved", "President", "president", "approval", { final: true }),
