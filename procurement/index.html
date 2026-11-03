@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-pNVAXsIOANlIvC7NanLcGfs9W7w/4vjRJOd9GhLBgBc='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-WOczeJRq+dLc5Y5gvD05n0ZEoLCIGF+P32C1Qkfcpq4='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -7724,6 +7724,7 @@ function TEngagements({state,user,A,open,f,setFilter}){
   return html`<div class="stack" style="gap:14px">
     <div class="row between wrap"><div><h3 style="margin:0">Engagement requests</h3><div class="sm muted">To give work to someone from another department: the requesting HOD sends it, that department's HOD recommends it (is the person free?), the Regional Manager approves it, and the task is then created for that person.</div></div>
       ${tCanEngage(user)&&!form&&html`<button class="btn btn-primary" onClick=${()=>setForm({employeeId:"",purpose:"",from:"",to:""})}><${Icon} name="plus"/>New engagement request</button>`}</div>
+    ${!tCanEngage(user)&&html`<div class="notice notice-info"><${Icon} name="shield"/><span>Only a Head of Department sends an engagement request (main page → People → Role in approvals: HOD). You are signed in as ${TROLE_LABEL[tRole(user)]}${tRole(user)==="RM"?": you approve the requests that reach you here.":"."}</span></div>`}
     ${form&&html`<${Card} title="New engagement request" desc=${`From ${tDept(tUDept(user)).name}. Path: you → HOD of the person's department → Regional Manager.`}><div class="stack">
       <div class="grid2"><${Field} label="Employee needed"><select class="select" value=${form.employeeId} onChange=${ev=>setForm(x=>({...x,employeeId:ev.target.value}))}><option value="">Choose…</option>${people.map(p=>html`<option value=${p.id}>${p.name} · ${tDept(tUDept(p)).name}${p.designation?" · "+p.designation:""}</option>`)}</select><//>
         <${Field} label="Their department"><input class="input" disabled value=${emp?tDept(tUDept(emp)).name+(tHodOf(state,tUDept(emp))?" · HOD "+tHodOf(state,tUDept(emp)).name:" · no HOD set"):""}/><//>
@@ -7964,12 +7965,10 @@ function EventModal({ekey,tab,setTab,state,user,A,open,onClose,onCreated,openNew
         </div>`; })}</div></div>`)}</div>
     <div class="mef-add"><div class="mef-sec-h dark"><span><i/>6. ADDITIONAL / SPECIAL REQUIREMENTS</span><small>ONE BIG SPACE</small></div>
       <textarea value=${d.additional} disabled=${dis} placeholder="Write any department-specific extra requirements here if not covered above..." onInput=${e=>set("additional",e.target.value)}/></div>
-    <div class="mef-signs">${evSteps().map(st=>{ const a=!isNew&&(orig.approvals||{})[st.id]; const can=!isNew&&TR.canSignEvent(orig,st.id,user);
-      return html`<div class="mef-sign"><small>${st.label}</small><b>${st.who}</b><span class="grow"/>
-        ${a?html`<div class="mef-signed"><${Icon} name="check"/>${tName(state,a.who)}<small>${fmtD(a.at)}</small></div>`:""}
-        ${!a&&st.id==="requested"&&!isNew&&orig.status==="draft"&&editable?html`<button type="button" class="btn btn-primary btn-sm no-print" onClick=${()=>A.eSubmit(orig.key,fields())}><${Icon} name="send"/>Send for approval</button>`:""}
-        ${!a&&can?html`<button type="button" class="btn btn-primary btn-sm no-print" onClick=${()=>A.eSign(orig.key,st.id)}><${Icon} name="approve"/>Sign</button>`:""}
-        <div class="mef-line">Signature: ${a?html`<b>${tName(state,a.who)}</b>`:"________________"}</div></div>`; })}</div>
+    <div class="row wrap no-print" style="gap:8px;margin:12px 0 4px">${evSteps().map(st=>{ const a=!isNew&&(orig.approvals||{})[st.id]; const can=!isNew&&TR.canSignEvent(orig,st.id,user);   /* approvals are recorded in the system: no signature boxes on the form */
+      return html`<${Tag} tone=${a?"ok":"neutral"}>${st.label} ${st.who}: ${a?tName(state,a.who)+" · "+fmtD(a.at):"pending"}</${Tag}>
+        ${!a&&st.id==="requested"&&!isNew&&orig.status==="draft"&&editable?html`<button type="button" class="btn btn-primary btn-sm" onClick=${()=>A.eSubmit(orig.key,fields())}><${Icon} name="send"/>Send for approval</button>`:""}
+        ${!a&&can?html`<button type="button" class="btn btn-primary btn-sm" onClick=${()=>A.eSign(orig.key,st.id)}><${Icon} name="approve"/>Sign</button>`:""}`; })}</div>
     <div class="mef-foot">Pakistan Centre for Philanthropy Certified | ISO 9001 | Bureau Veritas | UKAS Management Systems</div>
   </div>`;
 
