@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-fleet.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-6LZf1V2MTnp/oMbyQUv59X5MmrMWlabXpno+lXt0Ql4='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-tkrr3FX54gkRjQHLXLUEwNQG3KHHX1yoTRXqlWqYQmM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -2109,7 +2109,7 @@ async function erpLoadAll() {
   erpStatuses(); erpCkd();
 }
 async function erpOdometers() { try { const { data } = await SB.rpc('fleet_odometers'); ERP_ODO = {}; (data || []).forEach(r => { ERP_ODO[r.plate] = +r.odo || 0; }); } catch (e) { console.warn('[odo]', e); } }
-async function erpRefresh() { try { await erpLoadAll(); await erpOdometers(); } catch (e) { toast(String(e.message || e)); } if ($('modal').classList.contains('hidden')) render(); }
+async function erpRefresh() { try { await erpLoadAll(); await erpOdometers(); } catch (e) { toast(String(e.message || e)); } if ($('modal').classList.contains('hidden')) erpRender(true); }
 async function erpReload() { return { ok: true }; }
 let erpChan = null, erpRT = 0;
 function erpSubscribe() {
@@ -2119,7 +2119,7 @@ function erpSubscribe() {
       const r = p.eventType === 'DELETE' ? p.old : p.new; if (!r || !r.collection || ['uploads', 'notifications'].includes(r.collection)) return;
       if (p.eventType !== 'DELETE' && ERP_SAVED.get(ek(r.collection, r.id)) === stable(r.data)) return;
       erpApply(r.collection, r.id, p.eventType === 'DELETE' ? null : r.data);
-      clearTimeout(erpRT); erpRT = setTimeout(() => { if ($('modal').classList.contains('hidden') && !/INPUT|SELECT|TEXTAREA/.test((document.activeElement || {}).tagName || '') && PQ.view !== 'new' && !(PQ.view === 'triplog' && sel)) render(); else buildChrome(); }, 600);
+      clearTimeout(erpRT); erpRT = setTimeout(() => { if ($('modal').classList.contains('hidden') && !/INPUT|SELECT|TEXTAREA/.test((document.activeElement || {}).tagName || '') && PQ.view !== 'new' && !(PQ.view === 'triplog' && sel)) erpRender(true); else buildChrome(); }, 600);
     }).subscribe();
   };
   const off = () => { if (erpChan) { SB.removeChannel(erpChan); erpChan = null; } };
@@ -2507,17 +2507,21 @@ function erpHash() {
   if (/^#track/.test(h) && erpCan('requests')) PQ.view = 'track';
   else if (h === '#triplog' && erpCan('triplog')) PQ.view = 'triplog';
 }
-function erpRender() {
+/* quiet: a live update or the tab coming back. Charts keep their place instead of growing again, which looks like blinking */
+const settle = root => root.getAnimations({ subtree: true }).forEach(a => { if (a.effect && a.effect.getTiming().iterations !== Infinity) a.finish(); });
+function erpRender(quiet) {
   if (!ME) return;
+  quiet = quiet === true;
   if (!viewAllowed(PQ.view)) { const v = firstView(); if (!v) { $('app').innerHTML = `<div class="card fatal"><h2 class="text-xl font-extrabold">No page ticked</h2><p class="text-sm text-slate-600 mt-2">Ask the Super Admin to tick at least one tab of ${ERP_NAME} for you on the main page.</p><a class="btn g mt-4" href="${ERP_HOME}">Back to all portals</a></div>`; buildChrome(); return; } PQ.view = v; }
   if (PQ.view === 'home') tab = 'd';
   const app = $('app');
   let html = '';
   try { html = PV[PQ.view](); } catch (e) { console.error('[render]', e); html = `<div class="card">${empty('al', 'This page could not be shown (ref ' + errRef() + ').')}</div>`; }
   app.innerHTML = html;
+  if (quiet) settle(app);
   gateControls(app);
   buildChrome();
-  setTimeout(() => { try { if (PQ.view === 'home' || PQ.view === 'admin') post(); if ($('g1')) cdraw(); } catch (e) { console.warn('[charts]', e); } }, 0);
+  setTimeout(() => { try { if (window.Chart) Chart.defaults.animation.duration = quiet ? 0 : 1000; if (PQ.view === 'home' || PQ.view === 'admin') post(); if ($('g1')) cdraw(); } catch (e) { console.warn('[charts]', e); } }, 0);
 }
 
 /* =====================================================================================================

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-assistance.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-t5kEYnkVN4rG603o8TRaovL2aLN27ox6OujmmM2vN/w='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-T0xCFbztLIcbHGVO7lWs7APnHk7oUSURSCK8tO+V6rw='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1492,7 +1492,7 @@ function subscribe() {
       const r = p.eventType === "DELETE" ? p.old : p.new; if (!r || !r.collection) return;
       applyRow(r.collection, r.id, p.eventType === "DELETE" ? null : r.data);
       if (r.collection === "notifications") A.notes.sort((x, y) => String(y.at).localeCompare(String(x.at)));
-      clearTimeout(rtT); rtT = setTimeout(() => { const typing = /INPUT|SELECT|TEXTAREA/.test((document.activeElement || {}).tagName || "") || V.view === "new" || $("layer").classList.contains("open"); if (typing) buildChrome(); else render(); }, 600);
+      clearTimeout(rtT); rtT = setTimeout(() => { const typing = /INPUT|SELECT|TEXTAREA/.test((document.activeElement || {}).tagName || "") || V.view === "new" || $("layer").classList.contains("open"); if (typing) buildChrome(); else render(true); }, 600);
     }).subscribe();
   };
   const off = () => { if (chan) { SB.removeChannel(chan); chan = null; } };
@@ -1500,7 +1500,7 @@ function subscribe() {
   document.addEventListener("visibilitychange", () => { if (document.hidden) off(); else { on(); refresh(); } });
   if (!document.hidden) on();
 }
-async function refresh() { try { await loadAll(); } catch (e) { toast(String(e.message || e), "error"); } if (V.view !== "new") render(); else buildChrome(); }
+async function refresh() { try { await loadAll(); } catch (e) { toast(String(e.message || e), "error"); } if (V.view !== "new") render(true); else buildChrome(); }
 function audit(action, target, detail) {
   if (!SB) return;
   SB.from("assistance_rows").insert({ collection: "audit", id: "A" + Date.now() + rid().slice(0, 6), data: cleanDeep({ action: String(action).slice(0, 40), target: String(target || "").slice(0, 80), detail: String(detail || "").slice(0, 300) }) })
@@ -2228,12 +2228,15 @@ function hideLoader() { loaderN = Math.max(0, loaderN - 1); if (loaderN) return;
 const VIEWS = { dashboard: viewDashboard, inbox: viewInbox, all: viewAll, new: viewNew, submitted: () => viewSubmitted(V.id), case: () => viewCase(V.id), track: () => viewTrack(V.id),
   messages: viewMessages, notes: viewNotes, reports: viewReports, audit: viewAudit };
 function firstView() { const n = NAVX.find(navOK); return n ? n.v : null; }
-function render() {
+/* quiet: a live update or the tab coming back. Charts keep their place instead of growing again, which looks like blinking */
+const settle = root => root.getAnimations({ subtree: true }).forEach(a => { if (a.effect && a.effect.getTiming().iterations !== Infinity) a.finish(); });
+function render(quiet) {
   if (!ME) return;
   if (!viewAllowed(V.view)) { const v = firstView(); if (!v) { $("app").innerHTML = `<div class="card fatal"><h2>No page ticked</h2><p class="muted" style="margin-top:8px">Ask the Super Admin to tick at least one tab of ${esc(NAME)} for you on the main page.</p><a class="btn btn-primary" style="margin-top:16px" href="${esc(HOME)}">Back to all portals</a></div>`; buildChrome(); return; } V.view = v; }
   let html = "";
   try { html = VIEWS[V.view](); } catch (e) { console.error("[render]", e); html = `<div class="card">${emptyBox("alert", "This page could not be shown", "(ref " + errRef() + ")")}</div>`; }
   $("app").innerHTML = html;
+  if (quiet === true) settle($("app"));
   buildChrome();
   if (V.view === "new" && V.draft) { if (!V.flowPrev) flowPreview(); }
 }

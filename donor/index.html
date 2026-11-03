@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Foundation Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-ggEr7O0DPmjDGdLDeJ7qeXcQnIVUjDPEJMW6avS0LfI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-FaOA3hh6VIlfJtdpASadE626gkEenkzUA//91Kdxrag='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -2162,7 +2162,7 @@ function go(view, replace) {
   UI.view = view;
   const h = '#/' + view;
   if (location.hash !== h) { if (replace) history.replaceState(null, '', docURL(h)); else history.pushState(null, '', docURL(h)); }
-  forceRender = true; render();
+  forceRender = true; lastRenderedView = ''; render();   // a menu click plays the entry animation
   closeMenu();
   $('#view').focus({ preventScroll: true });
   window.scrollTo({ top: 0 });
@@ -2178,7 +2178,7 @@ function render() {
   dataVer++;
   // never wipe a half-filled New Receipt form because some other action re-rendered the page
   const keep = UI.view === 'new' && !UI.newDone && !forceRender && $('#f-new');
-  const navigated = forceRender || UI.view !== lastRenderedView;
+  const navigated = UI.view !== lastRenderedView;
   forceRender = false;
   if (keep) { buildChrome(); return; }
   $('#page-title').textContent = TITLES[UI.view] || '';
@@ -5601,6 +5601,8 @@ function countUp(el) {
   const step = now => { const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3); el.textContent = p < 1 ? fmt(target * e) : txt; if (p < 1 && document.body.contains(el)) requestAnimationFrame(step); };
   el.textContent = fmt(0); requestAnimationFrame(step);
 }
+/* a redraw of the same page (a colleague saved something, the tab came back) must not replay the fade-in and chart growth: it looks like blinking */
+const settle = root => root.getAnimations({ subtree: true }).forEach(a => { if (a.effect && a.effect.getTiming().iterations !== Infinity) a.finish(); });
 function animateView(root) {
   if (!motionOn()) return;
   root.classList.remove('view-enter'); void root.offsetWidth; root.classList.add('view-enter');
@@ -5682,7 +5684,7 @@ let lastRenderedView = '', lastDone = null;
 function afterRender(navigated) {
   const root = $('#view');
   const doneNow = UI.view === 'new' && UI.newDone && UI.newDone !== lastDone;
-  if (navigated || doneNow) animateView(root);
+  if (navigated || doneNow) animateView(root); else settle(root);
   if (doneNow) setTimeout(celebrate, 250);
   lastDone = UI.newDone; lastRenderedView = UI.view;
   moveNavInd(); bumpOnChange($('#sum-total'));

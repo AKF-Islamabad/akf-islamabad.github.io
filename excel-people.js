@@ -11,7 +11,7 @@
   const PRESET = { "viewer": "viewer", "staff": "staff", "manager": "manager", "admin": "admin" };
   const ROLES = [["staff", "Staff"], ["hod", "HOD (Head of Department)"], ["finance", "Finance Department"], ["manager_hr", "Manager Admin & HR"],
     ["regional_manager", "Regional Manager"], ["president", "President"], ["gen_sec", "General Secretary (view only)"], ["admin_officer", "Admin Officer (procurement)"],
-    ["store_officer", "Store Officer"], ["transport_officer", "Transport Officer (fleet)"], ["driver", "Driver (fleet)"],
+    ["store_officer", "Store Officer"], ["store_transport_officer", "Store & Transport Officer (both)"], ["transport_officer", "Transport Officer (fleet)"], ["driver", "Driver (fleet)"],
     ["front_desk", "Front Desk Officer (assistance)"], ["director", "Department Director"]];
   const low = s => String(s == null ? "" : s).trim().toLowerCase();
   const domain = () => (window.AKF_SUPABASE && window.AKF_SUPABASE.emailDomain) || "";

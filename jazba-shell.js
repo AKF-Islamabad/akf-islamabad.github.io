@@ -59,6 +59,9 @@
     if (!document.documentElement.dataset.jzFamily && document.querySelector(".shell")) document.documentElement.dataset.jzFamily = "app";
     // Donor/Fleet/Assistance share one design kit (#sidebar + .main)
     else if (!document.documentElement.dataset.jzFamily && document.getElementById("sidebar")) document.documentElement.dataset.jzFamily = "kit";
+    // the sign-out clock changes the page every second: rebuild only when the menu itself changed (no flicker, focus stays)
+    const sig = navItems().map(b => labelOf(b) + "|" + b.classList.contains("active") + "|" + countOf(b)).concat(accountItems().map(labelOf)).join("\n");
+    if (sig === paintMine.sig) return; paintMine.sig = sig;
     mine.replaceChildren(...navItems().map(b => {
       const label = labelOf(b); if (!label) return null;
       const a = el("button", "jz-rail-link" + (b.classList.contains("active") ? " on" : "")); a.type = "button"; a.title = label;
