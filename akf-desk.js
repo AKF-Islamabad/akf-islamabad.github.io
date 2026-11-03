@@ -147,8 +147,22 @@
   // the person may allow it in the browser's settings without reloading
   try { navigator.permissions && navigator.permissions.query({ name: "notifications" }).then((p) => { p.onchange = () => enforce(); }).catch(() => {}); } catch (_) {}
   // a new bell item: system notification when the page is in the background, the bell sound always
+  /* the page is open: the alert also shows ON the page (bottom right) and stays until the person closes it */
+  let pops = null;
+  function popUp(list) {
+    addCss();
+    if (!pops || !pops.isConnected) { pops = el("div", "akd-pops"); pops.setAttribute("role", "status"); pops.setAttribute("aria-live", "polite"); document.body.appendChild(pops); }
+    list.slice(0, 3).forEach((n) => {
+      const box = el("div", "akd-pop"), x = el("button", "akd-pop-x", "×"); x.type = "button"; x.setAttribute("aria-label", "Close this alert");
+      x.onclick = () => box.remove();
+      box.append(el("b", "", "🔔 " + n.title), n.body ? el("span", "", n.body) : "", x);
+      pops.prepend(box);
+    });
+    while (pops.children.length > 4) pops.lastChild.remove();
+  }
   async function notifyNow(list) {
     ding();
+    if (document.visibilityState === "visible") popUp(list);
     if (!("Notification" in window) || Notification.permission !== "granted" || document.visibilityState === "visible") return;
     const reg = await swReady; if (!reg || !reg.active) return;
     const shown = list.length > 3 ? [{ key: "akf-many", title: `${list.length} new notifications`, body: list.slice(0, 3).map((n) => n.title).join(" · "), url: location.href }] : list;
@@ -179,6 +193,10 @@
   const CSS = `
 .akd-help{max-width:min(440px,calc(100vw - 32px));border:0;border-radius:14px;padding:20px 22px;font:14px/1.5 Manrope,"Segoe UI",system-ui,sans-serif;color:#1d2433;background:#fff;box-shadow:0 20px 50px -20px rgba(0,0,0,.5)}
 .akd-help::backdrop{background:rgba(15,23,42,.45)}
+.akd-pops{position:fixed;right:16px;bottom:96px;z-index:2147482000;display:grid;gap:8px;width:min(340px,calc(100vw - 32px))}
+.akd-pop{position:relative;display:grid;gap:3px;padding:12px 34px 12px 14px;border-radius:12px;background:#fff;color:#1d2433;border-left:4px solid #0b5cad;box-shadow:0 12px 32px rgba(15,23,42,.22);font:14px/1.4 Manrope,"Segoe UI",system-ui,sans-serif}
+.akd-pop span{color:#4a5568;font-size:13px}
+.akd-pop-x{position:absolute;top:6px;right:8px;border:0;background:none;font-size:20px;line-height:1;cursor:pointer;color:#5b6475}
 .akd-gate::backdrop{background:rgba(4,20,40,.82);backdrop-filter:blur(3px)}
 .akd-gate h2{color:#B42318}
 .akd-bar{position:sticky;top:0;z-index:2147483000;background:#B42318;color:#fff;padding:8px 14px;font:600 14px/1.4 Manrope,"Segoe UI",system-ui,sans-serif;text-align:center}

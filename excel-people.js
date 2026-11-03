@@ -9,7 +9,7 @@
   window.AKF_EXCEL_PORTALS = window.AKF_EXCEL_PORTALS || {};
   const LEVELS = ["No access", "Viewer", "Staff", "Manager", "Admin"];
   const PRESET = { "viewer": "viewer", "staff": "staff", "manager": "manager", "admin": "admin" };
-  const ROLES = [["staff", "Staff"], ["hod", "HOD (Head of Department)"], ["finance", "Sr. Manager Finance / Finance (budget approval)"], ["manager_hr", "Manager Admin & HR"],
+  const ROLES = [["staff", "Staff"], ["hod", "HOD (Head of Department)"], ["finance", "Sr. Manager Finance / Finance (budget approval)"], ["finance_hod", "Sr. Manager Finance + HOD (both)"], ["manager_hr", "Manager Admin & HR"],
     ["regional_manager", "Regional Manager"], ["president", "President"], ["gen_sec", "General Secretary (view only)"], ["admin_officer", "Admin Officer (procurement)"],
     ["store_officer", "Store Officer"], ["store_transport_officer", "Store & Transport Officer (both)"], ["ambulance_driver", "Ambulance Driver (fleet)"], ["transport_officer", "Transport Officer (fleet)"], ["driver", "Driver (fleet)"],
     ["front_desk", "Front Desk Officer (assistance)"], ["director", "Department Director"]];

@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-DReAJJ/F7a7cPkVpcVr+4mfZuiiLJSeVBmK1irUSxyg='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-BjwBClw1C42z60FYc7ADNa4EwibhBnCKoV3PpSak4Aw='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -4341,7 +4341,10 @@ let SIG_CENTRAL={};
 const sigOf=u=>u?(u.signature||SIG_CENTRAL[String(u.email||"").toLowerCase()]||""):"";
 const safeUrl=u=>{ const s=String(u||"").trim(); return /^(data:(image\/(png|jpe?g|gif|webp)|application\/pdf|text\/plain|text\/csv|application\/(vnd\.[\w.+-]+|msword|octet-stream))[;,]|blob:|https:\/\/)/i.test(s)?s:"about:blank"; };
 /* errors from the database or other services: the user sees a generic message and a reference; the details go to this browser's console only */
-function errRef(e,what){ const ref=Math.random().toString(36).slice(2,8).toUpperCase(); try{ console.error(`[ref ${ref}]`,e); }catch(x){} return `${what||"Something went wrong"}. Reference ${ref} — please share it with the Super Admin.`; }
+function errRef(e,what){ const ref=Math.random().toString(36).slice(2,8).toUpperCase(); try{ console.error(`[ref ${ref}]`,e); }catch(x){}
+  // a rule of the database said no: show its reason (it names what is not allowed; never data or keys)
+  const why=e&&["42501","P0001","23514","22023"].includes(e.code)&&e.message&&e.message.length<200&&!/relation|column|function|syntax|policy/i.test(e.message)?": "+e.message:"";
+  return `${what||"Something went wrong"}${why}. Reference ${ref} — please share it with the Super Admin.`; }
 function secureToken(){ const a=new Uint8Array(18); (window.crypto||window.msCrypto).getRandomValues(a); return Array.from(a,b=>b.toString(16).padStart(2,"0")).join(""); }
 function portalBase(){ try{ if(/^https?:/.test(location.protocol)) return location.origin+location.pathname; }catch(e){} return ""; }
 const vendorLink=tk=>(portalBase()||"index.html")+"#rfq="+tk;
@@ -4499,13 +4502,13 @@ function TrackTable({req,state}){
     .filter((u,i,a)=>a.findIndex(x=>String(x.email||x.name).toLowerCase()===String(u.email||u.name).toLowerCase())===i);   // a person with two records is listed once
   const officers=s=>holders(s).map(u=>u.name);
   const desigs=s=>[...new Set(holders(s).map(u=>u.designation||(ROLES[u.role]||{}).label||"").filter(Boolean))].join(", ");
-  const nobody=s=>`Nobody holds this step yet. Super Admin: main page → People → Manage the right person → Role in approvals: ${(ROLES[s.owner]||{}).label||s.who}.`;
+  const nobody=s=>`Waiting for a person to be given this step: main page → People → Manage → Role in approvals: ${(ROLES[s.owner]||{}).label||s.who}.`;
   const rows=flow.map((s,i)=>{
     if(i<=idx){ const e=evFor(s); const u=userOf(e); return {s,i,kind:"done",name:e?e.by:"—",desig:(e&&e.desig)||(u&&u.designation)||(ROLES[s.owner]||{}).label||s.who,at:e&&e.at,remark:e&&e.comment,pill:e&&e.role==="super"&&/not required/i.test(e.action)?"Not required":s.label}; }
     if(i===idx+1){ if(dead){ const e=req.timeline[req.timeline.length-1]; return {s,i,kind:"bad",name:e.by,desig:e.desig||((userOf(e)||{}).designation)||s.who,at:e.at,remark:e.comment,pill:req.status==="cancelled"?"Cancelled":"Rejected"}; }
-      const list=officers(s); if(!list.length&&s.owner&&s.owner!=="hod") return {s,i,kind:"bad",name:"Nobody assigned",desig:s.who,at:null,remark:nobody(s),pill:"No approver"};
+      const list=officers(s); if(!list.length&&s.owner&&s.owner!=="hod") return {s,i,kind:"now",name:"Not assigned yet",desig:s.who,at:null,remark:nobody(s),pill:"Needs a person"};
       return {s,i,kind:"now",name:list.length?list.join(", "):s.who,desig:desigs(s)||s.who,at:null,remark:isEscalated(req)?`Waiting ${Math.round(hoursSince(req.timeline[req.timeline.length-1].at))}h — escalated`:`Waiting since ${ago(req.timeline[req.timeline.length-1].at)}`,pill:"Pending"}; }
-    const list=officers(s); return {s,i,kind:"next",name:list.length?list.join(", "):s.who,desig:list.length?desigs(s):"",at:null,remark:list.length||!s.owner||s.owner==="hod"?"":"Nobody holds this step yet",pill:dead?"—":"Not reached"};
+    const list=officers(s); return {s,i,kind:"next",name:list.length?list.join(", "):s.who,desig:list.length?desigs(s):"",at:null,remark:list.length||!s.owner||s.owner==="hod"?"":"Not assigned yet",pill:dead?"—":"Not reached"};
   });
   const tone={done:"ok",now:"warn",bad:"bad",next:"neutral"};
   return html`<div class="track">
