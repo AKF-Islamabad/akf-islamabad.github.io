@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-Gm1yxZrbYlhTEjzoYi31NMosLJJVVhfrJnj+U7CJNaU='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-quH7t7c7oUGK1H/KbiU+8eGJoQ2GltYGQRF3Dv/KRZM='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -333,6 +333,8 @@ body{background:radial-gradient(1200px 600px at 100% -10%,color-mix(in srgb,var(
 .track-bar i.n{background:var(--warn);animation:pulse 1.4s ease-in-out infinite}
 .track-bar i.x{background:var(--bad)}
 .track-tbl table{min-width:720px}
+.modal:has(.track){max-width:min(1180px,96vw)}   /* a request: room for every column of the step table */
+.track-tbl td{vertical-align:top}
 .track-tbl .tnum{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--ice);color:var(--brand-2);font-size:11px;font-weight:800}
 .track-tbl tr.tr-done .tnum{background:var(--ok-bg);color:var(--ok)}
 .track-tbl tr.tr-now td{background:color-mix(in srgb,var(--warn-bg) 70%,transparent)}
@@ -3896,7 +3898,7 @@ function statusLabel(req){
   if(req.status==="rejected") return "Rejected";
   if(req.status==="cancelled") return "Cancelled";
   if(req.stage==="closed") return "Completed";
-  const n=nextStage(req); return "Awaiting "+(n?n.who:"");
+  const n=nextStage(req); return "Awaiting "+(n?(n.owner&&n.owner!=="hod"&&ROLES[n.owner]?ROLES[n.owner].label:n.who):"");   // today's role name (e.g. "Sr. Manager Finance"), not the one saved on old requests
 }
 function statusTone(req){
   if(req.status==="rejected"||req.status==="cancelled") return "bad";
@@ -4499,7 +4501,7 @@ function TrackTable({req,state}){
   const userOf=e=>e&&((e.uid&&state.users.find(u=>u.id===e.uid))||state.users.find(u=>u.name===e.by));
   // the real people who hold a step: their names and designations ("Taimoor Tahir · Sr. Manager Finance"), not the role's name
   const holders=s=>state.users.filter(u=>u.active!==false&&u.role!=="super"&&(s.owner==="hod"?u.id===req.requesterId:u.role===s.owner))
-    .filter((u,i,a)=>a.findIndex(x=>String(x.email||x.name).toLowerCase()===String(u.email||u.name).toLowerCase())===i);   // a person with two records is listed once
+    .filter((u,i,a)=>a.findIndex(x=>String(x.name||x.email).trim().toLowerCase()===String(u.name||u.email).trim().toLowerCase())===i);   // a person with two records is listed once
   const officers=s=>holders(s).map(u=>u.name);
   const desigs=s=>[...new Set(holders(s).map(u=>u.designation||(ROLES[u.role]||{}).label||"").filter(Boolean))].join(", ");
   const nobody=s=>`Waiting for a person to be given this step: main page → People → Manage → Role in approvals: ${(ROLES[s.owner]||{}).label||s.who}.`;
@@ -4885,27 +4887,42 @@ function budgetLog(state,code){
     return {r,amount:po?po.net:reqTotal(r),kind:po?"Spent (PO "+po.id+")":r.status==="active"&&r.stage!=="closed"?"Committed":r.status==="active"?"Closed":"Not counted ("+r.status+")"}; })
     .sort((a,b)=>String(b.r.createdAt).localeCompare(String(a.r.createdAt)));
 }
-function BudgetLog({state,code,openReq,current}){
-  const log=budgetLog(state,code);
-  if(!log.length) return html`<div class="sm muted">No request has used ${code} yet.</div>`;
+function BudgetLog({state,code,log:given,openReq,current}){
+  const log=given||budgetLog(state,code);
+  if(!log.length) return html`<div class="sm muted">No request has used this budget yet.</div>`;
   return html`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Request</th><th>Date</th><th>Department</th><th>Purpose</th><th class="r">Amount</th><th>Counted as</th></tr></thead><tbody>
     ${log.slice(0,50).map(({r,amount,kind})=>html`<tr style=${r.id===current?"background:var(--brand-50,#EEF4FF)":""}><td>${openReq&&r.id!==current?html`<button class="btn btn-soft btn-sm id" onClick=${()=>openReq(r.id)}>${r.id}</button>`:html`<b class="id">${r.id}</b>`}</td><td class="sm">${fmtD(r.createdAt)}</td><td class="sm">${r.dept}</td><td class="sm">${String(r.purpose||"").slice(0,70)}</td><td class="r num">${fmt(amount)}</td><td class="sm">${kind}</td></tr>`)}
   </tbody></table></div>`;
 }
+/* a department's budget: all its budget lines together; what its purchase requisitions have spent (POs) or hold (open requests) */
+const sameDept=(a,b)=>String(a||"").trim().toLowerCase()===String(b||"").trim().toLowerCase();
+function deptBudget(state,dept){
+  const lines=state.budgets.filter(b=>sameDept(b.dept,dept)), reqs=state.requests.filter(r=>r.type==="procurement"&&sameDept(r.dept,dept));
+  const allocated=lines.reduce((s,b)=>s+(+b.allocated||0),0);
+  const spent=state.pos.filter(p=>reqs.some(r=>r.id===p.requestId)).reduce((s,p)=>s+p.net,0);
+  const committed=reqs.filter(r=>r.status==="active"&&!r.links.po&&r.stage!=="closed").reduce((s,r)=>s+reqTotal(r),0);
+  return {lines,allocated,spent,committed,remaining:allocated-spent-committed};
+}
+function deptLog(state,dept){
+  return state.requests.filter(r=>r.type==="procurement"&&sameDept(r.dept,dept)).map(r=>{ const po=state.pos.find(p=>p.requestId===r.id);
+    return {r,amount:po?po.net:reqTotal(r),kind:po?"Spent (PO "+po.id+")":r.status==="active"&&r.stage!=="closed"?"Committed":r.status==="active"?"Closed":"Not counted ("+r.status+")"}; })
+    .sort((a,b)=>String(b.r.createdAt).localeCompare(String(a.r.createdAt)));
+}
 function BudgetCard({req,state,user,A}){
-  const code=String(req.projectCode||"").toUpperCase().trim(), b=code&&state.budgets.find(x=>x.code===code), can=user.role==="super"||user.role==="finance";
+  const dept=req.dept, can=user.role==="super"||user.role==="finance";
   const [open,setOpen]=useState(false);
   const right=can&&html`<${BudgetUpload} A=${A}/>`;
-  if(!b) return html`<${Card} title="Budget" right=${right}><div class="notice notice-warn"><${Icon} name="alert"/><span>${code?html`No budget line for project code <b>${code}</b>.`:"This request has no project code."} Finance adds it under Finance → Budget lines, or uploads the budget sheet.</span></div><//>`;
-  const u=budgetUse(state,code), mine=reqTotal(req), counted=req.status==="active"&&!req.links.po&&req.stage!=="closed";
+  const u=deptBudget(state,dept), b={dept,donor:u.lines.map(l=>l.code).join(", "),note:""};
+  if(!u.lines.length) return html`<${Card} title=${"Budget · "+dept} right=${right}><div class="notice notice-info"><${Icon} name="shield"/><span>No budget is set for the <b>${dept}</b> department yet. Finance adds it under Budget & Payments → Budget lines (Department: ${dept}), or uploads the budget sheet.</span></div><//>`;
+  const mine=reqTotal(req), counted=req.status==="active"&&!req.links.po&&req.stage!=="closed";
   const before=u.remaining+(counted?mine:0), after=before-mine;
-  return html`<${Card} title=${"Budget · "+code} desc=${`${b.dept} · ${b.donor}${b.note?" · "+b.note:""}`} right=${right}>
+  return html`<${Card} title=${"Budget · "+dept+" department"} desc=${"Budget lines: "+b.donor} right=${right}>
     <div class="grid4"><${Kpi} label="Total budget" value=${html`<small>PKR</small>${fmt(u.allocated)}`}/><${Kpi} label="Spent (POs)" value=${html`<small>PKR</small>${fmt(u.spent)}`} tone="brand"/>
       <${Kpi} label="Committed (open requests)" value=${html`<small>PKR</small>${fmt(u.committed)}`} sub="this request included"/><${Kpi} label="Available" value=${html`<small>PKR</small>${fmt(u.remaining)}`} tone=${u.remaining<0?"bad":"ok"}/></div>
     ${counted?html`<div class=${"notice "+(after<0?"notice-bad":"notice-info")} style="margin-top:10px"><${Icon} name=${after<0?"alert":"shield"}/><span>This request: <b>PKR ${fmt(mine)}</b> · available before it PKR ${fmt(before)} · after it <b>PKR ${fmt(after)}</b>${after<0?" — over budget":""}.</span></div>`
-      :html`<div class="notice notice-info" style="margin-top:10px"><${Icon} name="shield"/><span>${(budgetLog(state,code).find(x=>x.r.id===req.id)||{}).kind||"Not counted"}: this request is already in the figures above (or not counted).</span></div>`}
-    <div class="row" style="margin-top:10px"><button class="btn btn-ghost btn-sm" onClick=${()=>setOpen(o=>!o)}><${Icon} name="log"/>${open?"Hide":"Show"} usage log (${budgetLog(state,code).length})</button></div>
-    ${open&&html`<div style="margin-top:8px"><${BudgetLog} state=${state} code=${code} current=${req.id}/></div>`}<//>`;
+      :html`<div class="notice notice-info" style="margin-top:10px"><${Icon} name="shield"/><span>${(deptLog(state,dept).find(x=>x.r.id===req.id)||{}).kind||"Not counted"}: this request is already in the figures above (or not counted).</span></div>`}
+    <div class="row" style="margin-top:10px"><button class="btn btn-ghost btn-sm" onClick=${()=>setOpen(o=>!o)}><${Icon} name="log"/>${open?"Hide":"Show"} usage log (${deptLog(state,dept).length})</button></div>
+    ${open&&html`<div style="margin-top:8px"><${BudgetLog} state=${state} log=${deptLog(state,dept)} current=${req.id}/></div>`}<//>`;
 }
 function RequestModal({req,state,user,A,onClose,openDoc,readOnly}){
   const [comment,setComment]=useState("");

@@ -184,3 +184,6 @@ html[data-jz-shell="on"] .jz-topstrip{position:fixed;top:0;left:0;right:0;z-inde
 html[data-jz-shell="on"] body{padding-top:var(--jz-strip-h,46px);box-sizing:border-box}
 html[data-jz-shell="on"] .topbar{top:var(--jz-strip-h,46px)!important}
 @media print{html[data-jz-shell="on"] .topbar{top:0!important} html[data-jz-shell="on"] body{padding-top:0}}
+
+/* a request opens as a wide side panel: the whole step table (name, designation, date, remarks, status) fits without scrolling */
+html[data-jz-family="app"] .overlay > .modal:has(.track){width:min(1120px,100vw)!important;max-width:none!important}
