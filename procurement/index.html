@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-WOczeJRq+dLc5Y5gvD05n0ZEoLCIGF+P32C1Qkfcpq4='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-ZmXQ7kr9QlkO3Vw56XguHm23d6uRleKEx/Sz3q9ogmM='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -4092,8 +4092,9 @@ function seedState(){
 
 /* ===== Budget helpers ===== */
 function budgetUse(state, code){
-  const reqs=state.requests.filter(r=>r.projectCode===code&&r.status==="active");
-  const poSpend=state.pos.filter(p=>(state.requests.find(r=>r.id===p.requestId)||{}).projectCode===code).reduce((s,p)=>s+p.net,0);
+  const same=c=>String(c||"").toUpperCase().trim()===String(code||"").toUpperCase().trim();   // project codes match whatever the capitals
+  const reqs=state.requests.filter(r=>same(r.projectCode)&&r.status==="active");
+  const poSpend=state.pos.filter(p=>same((state.requests.find(r=>r.id===p.requestId)||{}).projectCode)).reduce((s,p)=>s+p.net,0);
   const committed=reqs.filter(r=>!r.links.po&&r.stage!=="closed").reduce((s,r)=>s+reqTotal(r),0);
   const b=state.budgets.find(b=>b.code===code);
   const allocated=b?b.allocated:0;
@@ -4859,6 +4860,44 @@ function visibleRequestsAll(user, requests){
 /* ---------- Request detail: the tracking view ---------- */
 const ActBox=({next,children})=>html`<div class="actions no-print"><h4>Your action · ${next?next.label:""} (${next?next.who:""}${next&&next.key==="approved"&&SETTINGS.actingApprover&&next.owner!==SETTINGS.actingApprover?" · or acting approver":""}${next&&next.hours?` · time limit ${next.hours}h`:""})</h4>${children}</div>`;
 const CommentArea=({ph,value,onInput})=>html`<textarea class="textarea" placeholder=${ph||"Comment (optional, saved to the log with date & time)"} value=${value} onInput=${e=>onInput(e.target.value)} style="min-height:56px"/>`;
+/* ---------- budget: total − spent − available, the usage log, and the budget sheet upload (Finance / Super Admin) ---------- */
+function BudgetUpload({A}){
+  const ref=useRef();
+  const onFile=async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return;
+    try{ const {rows,missing}=await readExcel(f,"budgets"); if(missing.length){ window.__toast(`Wrong sheet: column "${missing[0]}" is missing. Use Download template.`,"bad"); return; }
+      const bad=rows.filter(r=>r.error); if(bad.length){ window.__toast(`Row ${bad[0].row}: ${bad[0].error}. Nothing was saved.`,"bad"); return; }
+      if(!rows.length){ window.__toast("The sheet has no budget rows","bad"); return; }
+      A.importRows("budgets",rows.map(r=>r.data)); }catch(x){ window.__toast(x.message||"The sheet could not be read","bad"); } };
+  return html`<span class="row" style="gap:6px"><input type="file" class="hidden" accept=".xlsx,.xls,.csv" ref=${ref} onChange=${onFile}/><button class="btn btn-ghost btn-sm" onClick=${()=>ref.current.click()}><${Icon} name="upload"/>Upload budget sheet</button><button class="btn btn-ghost btn-sm" onClick=${()=>downloadTemplate("budgets")}><${Icon} name="download"/>Template</button></span>`;
+}
+/* every request that draws on this project code: what is spent (PO issued), committed (open) or released (rejected / cancelled) */
+function budgetLog(state,code){
+  return (state.requests||[]).filter(r=>r.projectCode&&String(r.projectCode).toUpperCase().trim()===code).map(r=>{ const po=state.pos.find(p=>p.requestId===r.id);
+    return {r,amount:po?po.net:reqTotal(r),kind:po?"Spent (PO "+po.id+")":r.status==="active"&&r.stage!=="closed"?"Committed":r.status==="active"?"Closed":"Not counted ("+r.status+")"}; })
+    .sort((a,b)=>String(b.r.createdAt).localeCompare(String(a.r.createdAt)));
+}
+function BudgetLog({state,code,openReq,current}){
+  const log=budgetLog(state,code);
+  if(!log.length) return html`<div class="sm muted">No request has used ${code} yet.</div>`;
+  return html`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Request</th><th>Date</th><th>Department</th><th>Purpose</th><th class="r">Amount</th><th>Counted as</th></tr></thead><tbody>
+    ${log.slice(0,50).map(({r,amount,kind})=>html`<tr style=${r.id===current?"background:var(--brand-50,#EEF4FF)":""}><td>${openReq&&r.id!==current?html`<button class="btn btn-soft btn-sm id" onClick=${()=>openReq(r.id)}>${r.id}</button>`:html`<b class="id">${r.id}</b>`}</td><td class="sm">${fmtD(r.createdAt)}</td><td class="sm">${r.dept}</td><td class="sm">${String(r.purpose||"").slice(0,70)}</td><td class="r num">${fmt(amount)}</td><td class="sm">${kind}</td></tr>`)}
+  </tbody></table></div>`;
+}
+function BudgetCard({req,state,user,A}){
+  const code=String(req.projectCode||"").toUpperCase().trim(), b=code&&state.budgets.find(x=>x.code===code), can=user.role==="super"||user.role==="finance";
+  const [open,setOpen]=useState(false);
+  const right=can&&html`<${BudgetUpload} A=${A}/>`;
+  if(!b) return html`<${Card} title="Budget" right=${right}><div class="notice notice-warn"><${Icon} name="alert"/><span>${code?html`No budget line for project code <b>${code}</b>.`:"This request has no project code."} Finance adds it under Finance → Budget lines, or uploads the budget sheet.</span></div><//>`;
+  const u=budgetUse(state,code), mine=reqTotal(req), counted=req.status==="active"&&!req.links.po&&req.stage!=="closed";
+  const before=u.remaining+(counted?mine:0), after=before-mine;
+  return html`<${Card} title=${"Budget · "+code} desc=${`${b.dept} · ${b.donor}${b.note?" · "+b.note:""}`} right=${right}>
+    <div class="grid4"><${Kpi} label="Total budget" value=${html`<small>PKR</small>${fmt(u.allocated)}`}/><${Kpi} label="Spent (POs)" value=${html`<small>PKR</small>${fmt(u.spent)}`} tone="brand"/>
+      <${Kpi} label="Committed (open requests)" value=${html`<small>PKR</small>${fmt(u.committed)}`} sub="this request included"/><${Kpi} label="Available" value=${html`<small>PKR</small>${fmt(u.remaining)}`} tone=${u.remaining<0?"bad":"ok"}/></div>
+    ${counted?html`<div class=${"notice "+(after<0?"notice-bad":"notice-info")} style="margin-top:10px"><${Icon} name=${after<0?"alert":"shield"}/><span>This request: <b>PKR ${fmt(mine)}</b> · available before it PKR ${fmt(before)} · after it <b>PKR ${fmt(after)}</b>${after<0?" — over budget":""}.</span></div>`
+      :html`<div class="notice notice-info" style="margin-top:10px"><${Icon} name="shield"/><span>${(budgetLog(state,code).find(x=>x.r.id===req.id)||{}).kind||"Not counted"}: this request is already in the figures above (or not counted).</span></div>`}
+    <div class="row" style="margin-top:10px"><button class="btn btn-ghost btn-sm" onClick=${()=>setOpen(o=>!o)}><${Icon} name="log"/>${open?"Hide":"Show"} usage log (${budgetLog(state,code).length})</button></div>
+    ${open&&html`<div style="margin-top:8px"><${BudgetLog} state=${state} code=${code} current=${req.id}/></div>`}<//>`;
+}
 function RequestModal({req,state,user,A,onClose,openDoc,readOnly}){
   const [comment,setComment]=useState("");
   const [mode,setMode]=useState(null); // sub-forms: rfq | quote | po | grn | issue
@@ -4915,6 +4954,7 @@ function RequestModal({req,state,user,A,onClose,openDoc,readOnly}){
     ${req.status==="rejected"&&html`<div class="notice notice-bad"><${Icon} name="x"/><span><b>Rejected.</b> ${(req.timeline[req.timeline.length-1]||{}).comment||""}</span></div>`}
     ${actionBlock}
     <${TrackTable} req=${req} state=${state}/>
+    ${req.type==="procurement"&&user.role!=="staff"&&html`<${BudgetCard} req=${req} state=${state} user=${user} A=${A}/>`}
     <div class="split">
       <div class="stack">
         <div class="kv"><dt>Purpose</dt><dd>${req.purpose}</dd><dt>Donor / project</dt><dd>${req.donor} · ${req.projectCode}</dd><dt>Urgency</dt><dd>${req.urgency==="Emergency"?html`<${Tag} tone="bad">Emergency</${Tag}>`:"Normal"}</dd><dt>Submitted</dt><dd>${fmtDT(req.createdAt)}</dd>
@@ -5889,17 +5929,17 @@ function Users({state,A,me}){
 /* ---------- Budget & Payments ---------- */
 function Finance({state,user,A,openReq,openDoc,readOnly}){
   const isSuper=user.role==="super"||user.role==="finance"; const canPay=!readOnly&&(isSuper||user.role==="admin_officer");
-  const [bf,setBf]=useState(null); const [inv,setInv]=useState(null); const [pay,setPay]=useState({}); const [tab,setTab]=useState("budgets");
+  const [bf,setBf]=useState(null); const [inv,setInv]=useState(null); const [pay,setPay]=useState({}); const [tab,setTab]=useState("budgets"); const [logCode,setLog]=useState(null);
   const vendor=id=>(state.vendors.find(v=>v.id===id)||{}).name||id;
   const rows=state.budgets.map(b=>({b,u:budgetUse(state,b.code)}));
   const totals=rows.reduce((a,{u})=>({alloc:a.alloc+u.allocated,spent:a.spent+u.spent,comm:a.comm+u.committed}),{alloc:0,spent:0,comm:0});
   const unpaid=state.pos.filter(p=>!state.invoices.some(i=>i.poId===p.id&&i.status==="Paid"));
   return html`<div class="stack" style="gap:16px">
     <div class="grid4"><${Kpi} label="Allocated" value=${html`<small>PKR</small>${fmt(totals.alloc)}`} sub=${`${state.budgets.length} budget lines`}/><${Kpi} label="Spent (POs)" value=${html`<small>PKR</small>${fmt(totals.spent)}`} tone="brand"/><${Kpi} label="Committed (open requests)" value=${html`<small>PKR</small>${fmt(totals.comm)}`} tone="warn"/><${Kpi} label="Awaiting payment" value=${unpaid.length} sub=${pkr(unpaid.reduce((s,p)=>s+p.net,0))} tone=${unpaid.length?"bad":"ok"}/></div>
-    <div class="row between wrap"><div class="seg">${[["budgets","Budget lines"],["payments","Invoices & payments"]].map(([k,l])=>html`<button class=${tab===k?"active":""} onClick=${()=>setTab(k)}>${l}</button>`)}</div>${tab==="budgets"&&isSuper&&!bf&&html`<button class="btn btn-primary" onClick=${()=>setBf({code:"",dept:DEPTS[0],donor:DONORS[0],allocated:0,note:""})}><${Icon} name="plus"/>Add budget line</button>`}</div>
+    <div class="row between wrap"><div class="seg">${[["budgets","Budget lines"],["payments","Invoices & payments"]].map(([k,l])=>html`<button class=${tab===k?"active":""} onClick=${()=>setTab(k)}>${l}</button>`)}</div>${tab==="budgets"&&isSuper&&!bf&&html`<span class="row wrap" style="gap:8px"><${BudgetUpload} A=${A}/><button class="btn btn-primary" onClick=${()=>setBf({code:"",dept:DEPTS[0],donor:DONORS[0],allocated:0,note:""})}><${Icon} name="plus"/>Add budget line</button></span>`}</div>
     ${tab==="budgets"&&bf&&html`<${Card} title=${bf.editing?"Revise budget":"New budget line"} desc="Project codes used on requests draw from these lines. Revisions are logged old → new."><div class="grid4"><${Field} label="Project code"><input class="input" value=${bf.code} disabled=${bf.editing} onInput=${e=>setBf({...bf,code:e.target.value.toUpperCase()})} placeholder="DIS-2026-FLD-02"/><//><${Field} label="Department"><select class="select" value=${bf.dept} onChange=${e=>setBf({...bf,dept:e.target.value})}>${DEPTS.map(d=>html`<option>${d}</option>`)}</select><//><${Field} label="Donor"><select class="select" value=${bf.donor} onChange=${e=>setBf({...bf,donor:e.target.value})}>${DONORS.map(d=>html`<option>${d}</option>`)}</select><//><${Field} label="Allocated (PKR)"><input class="input" type="number" min="0" value=${bf.allocated} onInput=${e=>setBf({...bf,allocated:Number(e.target.value)})}/><//></div><div class="row" style="margin-top:10px"><input class="input" placeholder="Note" value=${bf.note} onInput=${e=>setBf({...bf,note:e.target.value})}/><button class="btn btn-ghost" onClick=${()=>setBf(null)}>Cancel</button><button class="btn btn-primary" disabled=${!bf.code.trim()||bf.allocated<=0} onClick=${()=>{const {editing,...b}=bf;A.saveBudget(b);setBf(null);}}>Save</button></div><//>`}
-    ${tab==="budgets"&&html`<${Card} title="Budget utilisation" desc="Spent = issued POs · Committed = open requests not yet ordered · Remaining = allocated − spent − committed"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Project</th><th>Department · donor</th><th class="r">Allocated</th><th class="r">Spent</th><th class="r">Committed</th><th class="r">Remaining</th><th style="width:160px">Use</th>${isSuper&&html`<th/>`}</tr></thead><tbody>
-      ${rows.map(({b,u})=>{ const pct=Math.min(100,Math.round((u.spent+u.committed)/u.allocated*100)); return html`<tr><td><b class="id">${b.code}</b><div class="xs faint">${b.note}</div></td><td class="sm">${b.dept} · ${b.donor}</td><td class="r num">${fmt(u.allocated)}</td><td class="r num">${fmt(u.spent)}</td><td class="r num">${fmt(u.committed)}</td><td class="r num bold" style=${u.remaining<0?"color:var(--bad)":""}>${fmt(u.remaining)}</td><td><div class="bar"><i style=${`width:${pct}%;background:${u.remaining<0?"var(--bad)":pct>80?"var(--warn)":"var(--brand-2)"}`}/></div><div class="xs faint">${pct}%</div></td>${isSuper&&html`<td><button class="btn btn-ghost btn-sm" onClick=${()=>setBf({...b,editing:true})}>Revise</button></td>`}</tr>`; })}
+    ${tab==="budgets"&&html`<${Card} title="Budget utilisation" desc="Spent = issued POs · Committed = open requests not yet ordered · Remaining = allocated − spent − committed"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Project</th><th>Department · donor</th><th class="r">Allocated</th><th class="r">Spent</th><th class="r">Committed</th><th class="r">Remaining</th><th style="width:160px">Use</th><th/></tr></thead><tbody>
+      ${rows.map(({b,u})=>{ const pct=Math.min(100,Math.round((u.spent+u.committed)/u.allocated*100)); return html`<tr><td><b class="id">${b.code}</b><div class="xs faint">${b.note}</div></td><td class="sm">${b.dept} · ${b.donor}</td><td class="r num">${fmt(u.allocated)}</td><td class="r num">${fmt(u.spent)}</td><td class="r num">${fmt(u.committed)}</td><td class="r num bold" style=${u.remaining<0?"color:var(--bad)":""}>${fmt(u.remaining)}</td><td><div class="bar"><i style=${`width:${pct}%;background:${u.remaining<0?"var(--bad)":pct>80?"var(--warn)":"var(--brand-2)"}`}/></div><div class="xs faint">${pct}%</div></td><td class="row" style="gap:4px"><button class="btn btn-ghost btn-sm" onClick=${()=>setLog(b.code)}>Usage</button>${isSuper&&html`<button class="btn btn-ghost btn-sm" onClick=${()=>setBf({...b,editing:true})}>Revise</button>`}</td></tr>`; })}
     </tbody></table></div><//>`}
     ${tab==="payments"&&html`<${Card} title="Purchase orders · 3-way match" desc="Payment is released only when PO, goods receipt and vendor invoice agree.">
       <div class="tbl-wrap"><table class="tbl"><thead><tr><th>PO</th><th>Vendor</th><th class="r">PO net</th><th class="r">GRN value</th><th class="r">Invoiced</th><th>Match</th><th>Payment</th>${canPay&&html`<th/>`}</tr></thead><tbody>
@@ -5911,6 +5951,7 @@ function Finance({state,user,A,openReq,openDoc,readOnly}){
       </tbody></table></div>
       ${inv&&html`<div class="actions" style="margin-top:12px"><h4>Record vendor invoice for ${inv.poId}</h4><div class="grid3"><${Field} label="Vendor invoice no."><input class="input" value=${inv.vendorRef} onInput=${e=>setInv({...inv,vendorRef:e.target.value})} placeholder="AST/2026/119"/><//><${Field} label="Invoice amount (PKR, net)"><input class="input" type="number" value=${inv.amount} onInput=${e=>setInv({...inv,amount:Number(e.target.value)})}/><//><div class="row" style="align-self:end"><button class="btn btn-ghost" onClick=${()=>setInv(null)}>Cancel</button><button class="btn btn-primary" disabled=${!inv.vendorRef.trim()||inv.amount<=0} onClick=${()=>{A.recordInvoice(inv);setInv(null);}}>Save invoice</button></div></div></div>`}
     <//>`}
+      ${logCode&&html`<${Modal} title=${"Budget usage · "+logCode} sub="Every request that drew on this project code" onClose=${()=>setLog(null)}><${BudgetLog} state=${state} code=${logCode} openReq=${id=>{ setLog(null); openReq(id); }}/><//>`}
   </div>`;
 }
 
@@ -6035,7 +6076,7 @@ const IMPORTS={
     help:[["NTN","Format 1234567-8"],["FBR Status","Filer or Non-Filer — decides WHT"],["GST Registered","Yes = GST added automatically when a quotation excludes tax"]],
     map:r=>({name:r["Vendor Name"],ntn:String(r["NTN"]||""),contact:String(r["Contact"]||""),bank:r["Bank & Account"]||"",type:r["Supplies (Goods/Services)"]||"Goods",filer:!/non/i.test(r["FBR Status (Filer/Non-Filer)"]||""),gstRegistered:!/^n/i.test(r["GST Registered (Yes/No)"]||"Yes"),category:String(r["Category"]||"OTHER").toUpperCase(),cheque:/^y/i.test(r["Cheque Copy Received (Yes/No)"]||""),address:r["Address"]||"",email:r["E-mail"]||""}),
     check:r=>!r.name?"Vendor Name missing":!/^\d{7}-\d$/.test(r.ntn)?"NTN must look like 1234567-8":"" },
-  budgets:{ title:"Budget lines", roles:["super"], cols:[["Project Code","DIS-2026-FLD-02"],["Department","Health"],["Donor","Disaster"],["Allocated (PKR)",500000],["Note","Flood response phase 2"]],
+  budgets:{ title:"Budget lines", roles:["super","finance"], cols:[["Project Code","DIS-2026-FLD-02"],["Department","Health"],["Donor","Disaster"],["Allocated (PKR)",500000],["Note","Flood response phase 2"]],
     help:[["Project Code","Unique; an existing code is updated"]],
     map:r=>({code:String(r["Project Code"]||"").toUpperCase().trim(),dept:r["Department"]||"Admin",donor:r["Donor"]||"General Fund",allocated:Number(r["Allocated (PKR)"])||0,note:r["Note"]||""}),
     check:r=>!r.code?"Project Code missing":!(r.allocated>0)?"Allocated must be more than 0":"" },
