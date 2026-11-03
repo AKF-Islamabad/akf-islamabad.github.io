@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-Up4JXPIhiPmX3HYS7JIkfF7XCipFlYS8tsc6WahwB7k='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-P9uYnDFZ6jbWvY5CSmM62EoybE5CwcRbczaYRC8Iy4Y='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -4493,7 +4493,7 @@ function TrackTable({req,state}){
   const n=nextStage(req);
   const evFor=s=>[...req.timeline].reverse().find(t=>t.stage===s.key&&!/sent back|amend/i.test(t.action)&&(t.role===s.owner||s.owner==="hod"||t.role==="super"||s.key==="committee"||(s.key==="approved"&&!!SETTINGS.actingApprover&&t.role===SETTINGS.actingApprover)));
   const userOf=e=>e&&((e.uid&&state.users.find(u=>u.id===e.uid))||state.users.find(u=>u.name===e.by));
-  const officers=s=>state.users.filter(u=>u.active&&(s.owner==="hod"?u.id===req.requesterId:u.role===s.owner)).map(u=>u.name);
+  const officers=s=>state.users.filter(u=>u.active&&u.role!=="super"&&(s.owner==="hod"?u.id===req.requesterId:u.role===s.owner)).map(u=>u.name);
   const rows=flow.map((s,i)=>{
     if(i<=idx){ const e=evFor(s); const u=userOf(e); return {s,i,kind:"done",name:e?e.by:"—",desig:(e&&e.desig)||(u&&u.designation)||(ROLES[s.owner]||{}).label||s.who,at:e&&e.at,remark:e&&e.comment,pill:e&&e.role==="super"&&/not required/i.test(e.action)?"Not required":s.label}; }
     if(i===idx+1){ if(dead){ const e=req.timeline[req.timeline.length-1]; return {s,i,kind:"bad",name:e.by,desig:e.desig||((userOf(e)||{}).designation)||s.who,at:e.at,remark:e.comment,pill:req.status==="cancelled"?"Cancelled":"Rejected"}; }
@@ -6265,7 +6265,7 @@ function buildInsights(state,user){
     const exp=state.stock.filter(s=>s.expiry&&(new Date(s.expiry)-Date.now())/864e5<30&&s.qty>0); if(exp.length) out.push({tone:"warn",t:`${exp.length} item${exp.length>1?"s":""} expiring within 30 days`,d:exp.map(s=>s.name).join(", ")+" — issue first (FEFO) or plan disposal.",tab:"store"}); }
   if(["super","finance","president","regional_manager","manager_hr","gen_sec"].includes(user.role)) state.budgets.forEach(b=>{ const u=budgetUse(state,b.code); if(u.allocated&&u.remaining<0) out.push({tone:"bad",t:`Budget ${b.code} is over by ${pkr(-u.remaining)}`,d:"Finance should revise the line or hold new requests.",tab:"finance"}); else if(u.allocated&&(u.spent+u.committed)/u.allocated>0.85) out.push({tone:"info",t:`Budget ${b.code} is ${Math.round((u.spent+u.committed)/u.allocated*100)}% used`,d:`${pkr(u.remaining)} left.`,tab:"finance"}); });
   const openRfq=state.rfqs.filter(r=>r.status==="Open"&&new Date(r.deadline)<new Date()); if(openRfq.length&&["super","admin_officer"].includes(user.role)) out.push({tone:"warn",t:`${openRfq.length} RFQ${openRfq.length>1?"s":""} past deadline still open`,d:"Close them and send the comparative statement to the committee.",id:openRfq[0].requestId});
-  const noSig=state.users.filter(u=>u.active&&(APPROVER_ROLES.includes(u.role)||["store_officer","admin_officer"].includes(u.role))&&!sigOf(u)); if(user.role==="super"&&noSig.length) out.push({tone:"info",t:`${noSig.length} signing officer${noSig.length>1?"s have":" has"} no signature on file`,d:noSig.map(u=>u.name).join(", "),tab:"users"});
+  const noSig=state.users.filter(u=>u.active&&u.role!=="super"&&(APPROVER_ROLES.includes(u.role)||["store_officer","admin_officer"].includes(u.role))&&!sigOf(u)); if(user.role==="super"&&noSig.length) out.push({tone:"info",t:`${noSig.length} signing officer${noSig.length>1?"s have":" has"} no signature on file`,d:noSig.map(u=>u.name).join(", "),tab:"users"});
   const vend=state.vendors.filter(v=>!(v.ntn&&v.bank&&v.cheque)); if(vend.length&&["super","admin_officer"].includes(user.role)) out.push({tone:"info",t:`${vend.length} vendor${vend.length>1?"s":""} with incomplete documents`,d:"They cannot receive RFQs until NTN, bank and cheque copy are recorded.",tab:"vendors"});
   if(!out.length) out.push({tone:"ok",t:"Everything is on track",d:"No delays, stock alerts or budget risks right now."});
   return out;
@@ -6696,6 +6696,8 @@ function tParseMin(v){ const s=String(v==null?"":v).trim().toLowerCase(); if(!s)
   return ok&&!rest.trim()?Math.round(tot):NaN; }
 const tToast=(m,t)=>window.__toast&&window.__toast(m,t);
 const tLS={ get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k,v){ try{ v==null?localStorage.removeItem(k):localStorage.setItem(k,v); }catch(e){} } };
+/* the Super Admin is never offered for work: hidden from every picker and team list (names in history still show) */
+const tPick=x=>!!x&&x.role!=="super";
 const tUser=(state,id)=>(state.users||[]).find(u=>u.id===id);
 const tName=(state,id)=>{ const u=tUser(state,id); return u?u.name:"Unassigned"; };
 const tOpen=t=>t.stage!=="06"&&t.stage!=="07";
@@ -6781,7 +6783,7 @@ const TR={
    Event tasks: RM, Manager Admin and HR can assign anyone in any department; a HOD assigns within their own department. */
 const tCanAssignOthers=u=>["RM",...T_MGR].includes(tRole(u));
 function tAssignable(state,deptId,u,eventId){
-  const act=(state.users||[]).filter(x=>x.active!==false); const r=tRole(u);
+  const act=(state.users||[]).filter(x=>x.active!==false&&(tPick(x)||x.id===u.id)); const r=tRole(u);
   if(r==="RM"||(eventId&&["MA","HR"].includes(r))) return act.filter(x=>tRole(x)!=="President");
   // a HOD assigns only in their OWN department; someone from another department
   // comes through an Engagement request (HOD → that HOD → Regional Manager), which creates the task when approved
@@ -6797,7 +6799,7 @@ const tCanEngage=u=>T_MGR.includes(tRole(u));
 const tHodOf=(state,dept)=>(state.users||[]).find(x=>x.active!==false&&tRole(x)==="HOD"&&tUDept(x)===dept);
 const tEngMine=(e,u)=>e.status==="hod"?tRole(u)==="HOD"&&tUDept(u)===e.empDept:e.status==="rm"&&tRole(u)==="RM";   // is the next decision mine?
 const tEngSees=(e,u)=>["RM","President","GS"].includes(tRole(u))||e.requesterId===u.id||e.employeeId===u.id||(T_MGR.includes(tRole(u))&&[e.reqDept,e.empDept].includes(tUDept(u)));
-const tEngPeople=(state,u)=>(state.users||[]).filter(x=>x.active!==false&&tUDept(x)!==tUDept(u)&&!["President","GS","RM"].includes(tRole(x)));
+const tEngPeople=(state,u)=>(state.users||[]).filter(x=>x.active!==false&&tPick(x)&&tUDept(x)!==tUDept(u)&&!["President","GS","RM"].includes(tRole(x)));
 const tEngWhen=s=>s?fmtD(s.slice(0,10)+"T12:00:00")+" "+s.slice(11,16):"";
 const tAssignError=(state,u,c)=>!tCanAssignOthers(u)&&c.assigneeId!==u.id
   ?"Only the HOD, Manager Admin, HR or the Regional Manager can assign tasks to other people. You can create tasks for yourself."
@@ -7380,7 +7382,7 @@ function TList({state,user,A,open,filtered}){
   /* bulk edit: tick rows, then change priority / due date / assignee / stage in one go (each task still checked against the rules) */
   const [picked,setPicked]=useState({}); const [bp,setBp]=useState({priority:"",plannedDate:"",assigneeId:"",stage:""});
   const keys=Object.keys(picked).filter(k=>picked[k]&&filtered.some(t=>t.key===k));
-  const people=(state.users||[]).filter(x=>x.active!==false&&tRole(x)!=="President").sort((a,b)=>a.name.localeCompare(b.name));
+  const people=(state.users||[]).filter(x=>x.active!==false&&tPick(x)&&tRole(x)!=="President").sort((a,b)=>a.name.localeCompare(b.name));
   const applyBulk=()=>{ const patch={}; Object.entries(bp).forEach(([k,v])=>{ if(v) patch[k]=v; }); if(!Object.keys(patch).length){ tToast("Choose what to change first","bad"); return; } if(A.tBulk(keys,patch)){ setPicked({}); setBp({priority:"",plannedDate:"",assigneeId:"",stage:""}); } };
   const V={id:tNum,title:t=>t.title.toLowerCase(),dept:t=>tDept(t.dept).code,assignee:t=>tName(state,t.assigneeId).toLowerCase(),stage:t=>t.stage,priority:t=>TPRI_RANK[t.priority],plannedDate:t=>t.plannedDate||""};
   const rows=filtered.slice().sort((a,b)=>{ const x=V[sort.k](a), y=V[sort.k](b); return (x>y?1:x<y?-1:0)*sort.d; });
@@ -7439,7 +7441,7 @@ function TPlanner(P){
 /* ---------- Workload ---------- */
 function TWorkload(P){
   const {state,user,filtered,setFilter,go,A}=P; const r=tRole(user); const [jdFor,setJdFor]=useState(null);
-  const people=(state.users||[]).filter(p=>p.active!==false&&!["President","GS"].includes(tRole(p))&&(!T_MGR.includes(r)||tUDept(p)===tUDept(user)||filtered.some(t=>t.assigneeId===p.id))&&(r!=="Staff"||p.id===user.id));
+  const people=(state.users||[]).filter(p=>p.active!==false&&tPick(p)&&!["President","GS"].includes(tRole(p))&&(!T_MGR.includes(r)||tUDept(p)===tUDept(user)||filtered.some(t=>t.assigneeId===p.id))&&(r!=="Staff"||p.id===user.id));
   const stats=l=>({total:l.length,prog:l.filter(t=>t.stage==="02").length,review:l.filter(t=>["03","04","05"].includes(t.stage)).length,newc:l.filter(t=>t.stage==="01").length,done:l.filter(t=>t.stage==="06").length,over:l.filter(tOverdue).length,hours:l.filter(tOpen).reduce((a,t)=>a+(t.estimate||0),0)});
   const rows=people.map(p=>({p,s:stats(filtered.filter(t=>t.assigneeId===p.id))})).sort((a,b)=>b.s.total-a.s.total);
   const groups=[["RM","Regional Manager"],["MA","Manager Admin"],["HR","HR"],["HOD","Heads of Department"],["Staff","Staff"]].map(([k,l])=>({l,rows:rows.filter(x=>tRole(x.p)===k)})).filter(g=>g.rows.length);
@@ -7518,7 +7520,7 @@ function TTraining(P){
   const {state,user,A}=P; const [months,setMonths]=useState(3); const [topic,setTopic]=useState(""); const [busy,setBusy]=useState("");
   const to=tToday(), from=tAddDays(to,-Math.round(months*30.4)), q=tnaQuarter(new Date());
   const tasks=state.tasks||[], recs=state.tna||[];
-  const people=(state.users||[]).filter(p=>p.active!==false&&!["President","GS"].includes(tRole(p))&&tnaScope(user,p));
+  const people=(state.users||[]).filter(p=>p.active!==false&&tPick(p)&&!["President","GS"].includes(tRole(p))&&tnaScope(user,p));
   const rows=people.flatMap(p=>{ const s=tnaSignals(tasks,p,from,to); return tnaNeeds(s).map(n=>({p,s,...n,rec:recs.find(r=>r.id===`${p.id}|${n.k}|${q}`)})); });
   // trainings marked done (any quarter): the same signal 90 days before and after
   const doneRecs=recs.filter(r=>r.status==="done"&&r.doneAt).map(r=>{ const p=(state.users||[]).find(u=>u.id===r.personId); if(!p||!tnaScope(user,p)) return null;
@@ -7579,7 +7581,7 @@ function TPerformance(P){
   const maxV=Math.max(1,...dd.map(x=>x.done+x.open)); const W=640,H=220,pl=28,pb=34; const bw=dd.length?Math.min(44,(W-pl-10)/dd.length-10):0;
   const t0=tToday(); const weeks=[]; for(let i=7;i>=0;i--){ const end=tAddDays(t0,-7*i), start=tAddDays(end,-6); weeks.push({end,n:tasks.filter(t=>{ const c=tLocalDay(t.completedAt); return c&&c>=start&&c<=end; }).length}); }
   const mw=Math.max(1,...weeks.map(w=>w.n));
-  const people=(state.users||[]).filter(p=>!["President","GS"].includes(tRole(p))).map(p=>{ const l=tasks.filter(t=>t.assigneeId===p.id); const dn=l.filter(t=>t.stage==="06"); const rr=dn.filter(t=>t.rating);
+  const people=(state.users||[]).filter(p=>tPick(p)&&!["President","GS"].includes(tRole(p))).map(p=>{ const l=tasks.filter(t=>t.assigneeId===p.id); const dn=l.filter(t=>t.stage==="06"); const rr=dn.filter(t=>t.rating);
     return {p,done:dn.length,total:l.length,over:l.filter(tOverdue).length,rating:rr.length?rr.reduce((a,t)=>a+t.rating,0)/rr.length:0,hrs:dn.reduce((a,t)=>a+(t.timeLogged||0),0)}; }).filter(x=>x.total).sort((a,b)=>b.done-a.done||b.rating-a.rating||a.over-b.over).slice(0,10);
   return html`<div class="stack" style="gap:14px">
     <div class="row wrap" style="gap:10px"><label class="row" style="gap:8px"><span class="xs bold faint">Month</span><input type="month" class="input" style="width:170px" value=${mk} onChange=${e=>{ if(e.target.value) setPerfMonth(e.target.value); }}/></label><span class="grow"/><span class="xs faint">${inMonth.length} tasks in ${tFmtMonth(mk)}</span></div>
@@ -7626,7 +7628,7 @@ function TAssistant({state,user,A,open,vis,openEvent}){
   sc.filter(t=>t.priority==="Urgent"&&t.stage==="01").forEach(t=>risks.push({t,why:"urgent but not started",fix:TR.canEdit(t,user)?{label:"Start",fn:()=>A.tMove(t.key,"02")}:null}));
   sc.filter(t=>tOpen(t)&&t.estimate&&(t.timeLogged||0)>t.estimate*1.3).forEach(t=>risks.push({t,why:`already ${Math.round(t.timeLogged/t.estimate*100)}% of its estimate`}));
   const wait=vis.filter(t=>t.stage==="04"&&TR.canApprove(t,user));
-  const people=(state.users||[]).filter(p=>p.active!==false&&!["President","GS"].includes(tRole(p))&&(r!=="HOD"||tUDept(p)===tUDept(user))).map(p=>{ const l=sc.filter(t=>t.assigneeId===p.id&&tOpen(t)); return {p,n:l.length,h:l.reduce((a,t)=>a+rem(t),0),over:l.filter(tOverdue).length}; }).filter(x=>x.n||r==="HOD");
+  const people=(state.users||[]).filter(p=>p.active!==false&&tPick(p)&&!["President","GS"].includes(tRole(p))&&(r!=="HOD"||tUDept(p)===tUDept(user))).map(p=>{ const l=sc.filter(t=>t.assigneeId===p.id&&tOpen(t)); return {p,n:l.length,h:l.reduce((a,t)=>a+rem(t),0),over:l.filter(tOverdue).length}; }).filter(x=>x.n||r==="HOD");
   const avg=people.length?people.reduce((a,x)=>a+x.h,0)/people.length:0;
   const heavy=people.filter(x=>x.h>avg*1.5&&x.h>240).sort((a,b)=>b.h-a.h), light=people.filter(x=>x.h<avg*.5).sort((a,b)=>a.h-b.h);
   const wk=tAddDays(t0,-7); const doneWk=sc.filter(t=>tLocalDay(t.completedAt)>=wk), newWk=sc.filter(t=>tLocalDay(t.createdAt)>=wk);
@@ -7914,7 +7916,7 @@ function EventModal({ekey,tab,setTab,state,user,A,open,onClose,onCreated,openNew
   const editable=isNew||TR.canEditEvent(orig,user); const canAssign=!isNew&&TR.canAssignEvent(orig,user); const dis=!editable;
   const et=isNew?[]:tEvTasks(state,orig).sort(tByPri); const [label,tone]=tEvStatus(isNew?{status:"draft"}:orig);
   const sel=Object.keys(d.checklist).filter(k=>d.checklist[k].checked); const pctSel=Math.round(sel.length/EV_TOTAL_ITEMS*100);
-  const people=(state.users||[]).filter(x=>x.active!==false&&tRole(x)!=="President");
+  const people=(state.users||[]).filter(x=>x.active!==false&&tPick(x)&&tRole(x)!=="President");
   const fields=()=>({title:d.title,date:d.date,time:d.time,venue:d.venue,types:d.types,otherType:d.otherType,expected:d.expected,coordinator:d.coordinator,topic:d.topic,collab:d.collab,additional:d.additional,checklist:d.checklist});
   const create=send=>{ const e=A.eCreate(fields()); if(!e) return; if(send) A.eSubmit(e.key); onCreated(e); };
   const save=()=>{ if(isNew) return create(false); if(A.eSave(orig.key,fields())) onClose(); };
@@ -8033,7 +8035,7 @@ function TaskModal({isNew,preset,tkey,state,user,A,timer,onClose,open,onCreated,
   const openFile=async f=>{ try{ let url=f.data; if(f.path){ const { data, error } = await sb.storage.from("task-files").createSignedUrl(f.path,600); if(error) throw error; url=data.signedUrl; } if(!url) throw new Error("This file was not stored."); const a=document.createElement("a"); a.href=url; a.target="_blank"; a.rel="noopener"; if(f.data) a.download=f.name; a.click(); }catch(err){ tToast(errRef(err,"Could not open the file"),"bad"); } };
   const delFile=async f=>{ if(!confirm(`Remove ${f.name}?`)) return; if(f.path&&sb){ try{ await sb.storage.from("task-files").remove([f.path]); }catch(e){} } A.tRemoveFile(orig.key,f.id); };
   const logTime=()=>{ const v=tParseMin(logv); if(isNaN(v)||!v){ tToast("Write the time like 45m, 1h 30m or 90 (minutes)","bad"); return; } if(A.tLogTime(orig.key,v)) setLogv(""); };
-  const mentionables=(state.users||[]).filter(u=>u.active!==false&&u.id!==user.id&&u.username);
+  const mentionables=(state.users||[]).filter(u=>u.active!==false&&tPick(u)&&u.id!==user.id&&u.username);
   const onCmt=e=>{ const v=e.target.value; setCmt(v); const m=/(^|\s)@([\w.-]*)$/.exec(v.slice(0,e.target.selectionStart)); setMent(m?m[2].toLowerCase():null); };
   const pickMent=u=>{ setCmt(c=>c.replace(/(^|\s)@([\w.-]*)$/,(_,s)=>`${s}@${u.username} `)); setMent(null); };
   const mList=ment===null?[]:mentionables.filter(u=>u.username.toLowerCase().includes(ment)||(u.name||"").toLowerCase().includes(ment)).slice(0,6);
