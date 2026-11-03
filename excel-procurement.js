@@ -64,6 +64,7 @@
   const VENDOR_COLS = [
     { k: "name", h: "Vendor name", req: true, ex: "Al-Shifa Traders", note: "A row with a vendor name (or NTN) already in the portal updates that vendor" },
     { k: "ntn", h: "NTN", req: true, ex: "1234567-8", pattern: /^(\d{7}(-?\d)?|[A-Za-z]\d{6}(-?\d)?|\d{5}-?\d{7}-?\d)$/, patternMsg: "must look like 1234567-8, G645842 or a 13-digit CNIC", aka: ["ntnno"] },
+    { k: "owner", h: "Owner name", ex: "Muhammad Ali", note: "Owner / proprietor full name", aka: ["ownername", "proprietor"] },
     { k: "contact", h: "Contact", ex: "0300-1234567", note: "Phone number" },
     { k: "bank", h: "Bank & account", ex: "HBL 1234-5678-9012", aka: ["bankaccount"] },
     { k: "type", h: "Supplies", list: ["Goods", "Services"], ex: "Goods", note: "Empty: Goods", aka: ["suppliesgoodsservices"] },
@@ -79,12 +80,12 @@
     { k: "donor", h: "Donor", list: DONORS, ex: "Disaster", note: "Empty: General Fund" },
     { k: "allocated", h: "Allocated (PKR)", req: true, type: "number", min: 1, ex: 500000, aka: ["allocated"] },
     { k: "note", h: "Note", ex: "Flood response phase 2" }];
-  const vendorRow = v => ({ name: v.name, ntn: v.ntn, contact: v.contact, bank: v.bank, type: v.type, filer: v.filer === false ? "Non-Filer" : "Filer", gst: v.gstRegistered !== false, category: v.category, cheque: !!v.cheque, address: v.address, email: v.email });
+  const vendorRow = v => ({ name: v.name, owner: v.owner || "", ntn: v.ntn, contact: v.contact, bank: v.bank, type: v.type, filer: v.filer === false ? "Non-Filer" : "Filer", gst: v.gstRegistered !== false, category: v.category, cheque: !!v.cheque, address: v.address, email: v.email });
   /* the record the portal keeps; an update keeps every field the file does not have */
   function vendorRec(x, base) {
     const d = x.data, has = k => k in d && d[k] !== "" && d[k] != null, o = base ? { ...base } : { name: "", ntn: "", bank: "", contact: "", type: "Goods", filer: true, gstRegistered: true, cheque: false, category: "OTHER", rating: 3, address: "", email: "" };
     o.name = d.name; o.ntn = d.ntn;
-    ["contact", "bank", "address", "email"].forEach(k => { if (k in d) o[k] = d[k] || (base ? "" : o[k]); });
+    ["owner", "contact", "bank", "address", "email"].forEach(k => { if (k in d) o[k] = d[k] || (base ? "" : o[k]); });
     if (has("type")) o.type = d.type;
     if (has("filer")) o.filer = d.filer !== "Non-Filer";
     if (has("gst")) o.gstRegistered = d.gst !== false;
