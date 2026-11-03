@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-80/ArGtwh5GzQls+N0w0i5EGvc76pV5h+W3/58e/B4A='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-4K3FmMNk7ZlSopsFICvODhTuiaQFP08zLjZKoQ71pa0='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -861,8 +861,27 @@ function people() {
     if (!list.length) tbody.append(el("tr", {}, el("td", { colspan: mods.length + 3, class: "empty", text: "Nobody matches." })));
   }
   drawRows();
+  /* an approval step whose role nobody holds: its requests would wait for ever, unseen. Warn the Super Admin here. */
+  const gaps = el("div", { role: "status" });
+  (async () => {
+    const M = window.AKF_MATRIX; if (!M) return;
+    const mx = M.get({ approvalMatrix: (((await q(sb.rpc("core_get_settings"))) || {}).approvalMatrix) || {} });
+    const held = new Set(); A.people.filter(p => p.active && !p.is_super).forEach(p => { const r = p.org_role || "staff"; held.add(r);
+      if (r === "store_transport_officer") { held.add("store_officer"); held.add("transport_officer"); } if (r === "ambulance_driver") held.add("driver"); });
+    const need = {};   // role → ["Procurement · Budget approved", …]
+    [["procurement", "Procurement"], ["store", "Store"], ["fleet", "Fleet & Ambulances"], ["assistance", "Assistance"]].forEach(([k, name]) =>
+      ((mx[k] || {}).steps || []).filter(s => s.owner && s.owner !== "hod" && (s.kind === "fixed" || s.on)).forEach(s => {
+        if (!held.has(s.owner)) (need[s.owner] = need[s.owner] || []).push(`${name} · ${s.label}`); }));
+    const roles = Object.keys(need); if (!roles.length) return;
+    const label = Object.fromEntries(ORG_ROLES);
+    gaps.replaceChildren(el("div", { class: "notice bad", style: "margin-bottom:12px" },
+      el("b", { text: "Nobody can act on these approval steps: requests reaching them wait and nobody sees them." }),
+      el("ul", { style: "margin:6px 0 4px;padding-left:20px" }, roles.map(r => el("li", { text: `${label[r] || r}: ${[...new Set(need[r])].join(", ")}` }))),
+      el("span", { class: "small", text: "Fix: click Manage on the right person and set \"Role in approvals\", then give them that portal's Approvals tab." })));
+  })().catch(() => {});
   return el("section", {},
     el("div", { class: "bar" }, search, dept, el("div", { class: "grow" }), el("span", { class: "muted small", text: `${A.people.length} people` }), el("button", { class: "btn", onclick: addPerson }, icon("plus", 16), "Add person")),
+    gaps,
     el("div", { class: "card tblwrap" }, el("table", {},
       el("thead", {}, el("tr", {}, el("th", { text: "Person" }), el("th", { text: "Status" }), mods.map(m => el("th", { text: m.name + (m.enabled ? "" : " (off)") })), el("th", {}))), tbody)),
     el("p", { class: "small muted", text: "Click a cell to choose exactly which tabs of that portal the person sees and what they may do on each (see, add, edit, delete, approve, export). Presets fill the ticks for you. Changes apply at once and are recorded in Activity." }));
