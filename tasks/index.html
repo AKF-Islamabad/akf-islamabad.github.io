@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-gkZs1F8z7GKIeAbxl9uUWE9fm4Lr8IRIk2kWdJ4nUGM='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-Bgr7YB6lHrQKolvNRs3je+qr+9zcExnGulDs5BdURWk='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -4134,10 +4134,10 @@ function NoPortalAccess({user}){ return html`<div class="auth"><div class="auth-
   <h2 style="margin:0">No access to ${PORTAL_NAME}</h2><p class="muted" style="margin:0">${user?"Ask the Super Admin to tick at least one tab of this portal for you on the main page.":"Your login has no profile in this portal yet. Ask the Super Admin to give you access on the main page."}</p>
   <a class="btn btn-primary" href=${PORTAL_HOME}>Back to all portals</a></div></div></div>`; }
 
-const COLLECTIONS = ["users","vendors","stock","ledger","docs","requests","rfqs","pos","audit","smsLog","budgets","invoices","assets","beneficiaries","tasks","events","notes","tna"];
+const COLLECTIONS = ["users","vendors","stock","ledger","docs","requests","rfqs","pos","audit","smsLog","budgets","invoices","assets","beneficiaries","tasks","events","notes","tna","engagements"];
 /* tasks, events and notes use a random key as the row id, so two people creating one at the same moment never overwrite each other */
-const KEY_FIELD = { assets:"tag", tasks:"key", events:"key", notes:"key" };
-const NEWEST_FIRST = { ledger:"at", docs:"at", requests:"createdAt", rfqs:"at", pos:"at", audit:"at", smsLog:"at", beneficiaries:"at", assets:"at", invoices:"at", tasks:"createdAt", events:"createdAt" };
+const KEY_FIELD = { assets:"tag", tasks:"key", events:"key", notes:"key", engagements:"key" };
+const NEWEST_FIRST = { ledger:"at", docs:"at", requests:"createdAt", rfqs:"at", pos:"at", audit:"at", smsLog:"at", beneficiaries:"at", assets:"at", invoices:"at", tasks:"createdAt", events:"createdAt", engagements:"createdAt" };
 function rowKey(col,item){ const k=KEY_FIELD[col]||"id"; if(!item[k]) item[k]=(col==="budgets"&&item.code)?item.code:uid(); return String(item[k]); }
 function emailFor(username){ return username.includes("@")?username:`${username}@${(SB_CONFIG&&SB_CONFIG.emailDomain)||"akf.local"}`; }
 
@@ -4510,6 +4510,11 @@ function Timeline({events}){
 }
 
 /* ---------- Items editor ---------- */
+/* a photo of the item on a purchase requisition: made smaller here (longest side 900 px, JPEG) so the request stays light */
+function itemPhoto(file,done){ if(!file||!String(file.type).startsWith("image/")){ window.__toast&&window.__toast("Choose a photo (JPG, PNG or WebP).","bad"); return; }
+  const url=URL.createObjectURL(file), img=new Image(); img.onload=()=>{ const k=Math.min(1,900/Math.max(img.width,img.height)), c=document.createElement("canvas"); c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url); const d=c.toDataURL("image/jpeg",0.72); if(d.length>350000){ window.__toast&&window.__toast("That photo is too detailed. Take it closer, with a plain background.","bad"); return; } done(d); };
+  img.onerror=()=>{ URL.revokeObjectURL(url); window.__toast&&window.__toast("That photo could not be opened.","bad"); }; img.src=url; }
 function ItemsEditor({items,onChange,stock,storeMode}){
   const set=(i,k,v)=>onChange(items.map((it,j)=>j===i?{...it,[k]:v}:it));
   const pick=(i,id)=>{ const s=stock.find(x=>x.id===id); if(!s){set(i,"itemId","");return;} onChange(items.map((it,j)=>j===i?{...it,itemId:id,name:s.name,category:s.category,uom:s.uom,price:s.price}:it)); };
@@ -4523,6 +4528,8 @@ function ItemsEditor({items,onChange,stock,storeMode}){
       <input class="input" type="number" min="1" value=${it.qty} onInput=${e=>set(i,"qty",Number(e.target.value))}/>
       <input class="input" type="number" min="0" placeholder="PKR" value=${it.price} disabled=${storeMode} onInput=${e=>set(i,"price",Number(e.target.value))}/>
       <button class="iconbtn" style="width:32px;height:32px" title="Remove row" onClick=${()=>onChange(items.filter((_,j)=>j!==i))} disabled=${items.length===1}><${Icon} name="trash"/></button>
+      ${!storeMode&&html`<div class="wide row" style="grid-column:1 / -1;gap:8px">${it.photo?html`<img src=${safeUrl(it.photo)} alt=${"Photo of "+(it.name||"item")} style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line)"/><button class="btn btn-ghost btn-sm" onClick=${()=>set(i,"photo","")}>Remove photo</button>`
+        :html`<label class="btn btn-ghost btn-sm"><${Icon} name="upload"/>Add item photo (optional)<input type="file" accept="image/*" capture="environment" class="hidden" onChange=${e=>{ const fl=e.target.files[0]; e.target.value=""; itemPhoto(fl,d=>set(i,"photo",d)); }}/></label>`}</div>`}
     </div>`)}
     <div class="row between wrap"><div class="row wrap"><button class="btn btn-ghost btn-sm" onClick=${()=>onChange([...items,{name:"",category:"MED",uom:"Pcs",qty:1,price:0}])}><${Icon} name="plus"/>Add item</button>${!storeMode&&html`<${ExcelItemsButton} onRows=${rows=>onChange([...items.filter(i=>i.name),...rows])}/>`}</div>
       <span class="sm muted">Estimated total <b class="num">${pkr(items.reduce((s,i)=>s+(i.qty||0)*(i.price||0),0))}</b></span></div>
@@ -4908,7 +4915,7 @@ function RequestModal({req,state,user,A,onClose,openDoc,readOnly}){
         <div class="kv"><dt>Purpose</dt><dd>${req.purpose}</dd><dt>Donor / project</dt><dd>${req.donor} · ${req.projectCode}</dd><dt>Urgency</dt><dd>${req.urgency==="Emergency"?html`<${Tag} tone="bad">Emergency</${Tag}>`:"Normal"}</dd><dt>Submitted</dt><dd>${fmtDT(req.createdAt)}</dd>
           ${Object.keys(req.links).length>0&&html`<dt>Linked documents</dt><dd class="row wrap">${Object.values(req.links).map(l=>html`<button class="btn btn-soft btn-sm id" onClick=${()=>openDoc(l)}>${l}</button>`)}</dd>`}</div>
         <div class="tbl-wrap"><table class="tbl" style="min-width:420px"><thead><tr><th>Item</th><th>Cat.</th><th class="r">Qty</th><th class="r">Est. price</th><th class="r">Amount</th></tr></thead><tbody>
-          ${req.items.map(i=>html`<tr><td><b>${i.name}</b>${i.itemId&&html`<div class="xs faint id">${i.itemId}</div>`}</td><td>${i.category}</td><td class="r num">${i.qty} ${i.uom}</td><td class="r num">${fmt(i.price)}</td><td class="r num bold">${fmt(i.qty*i.price)}</td></tr>`)}
+          ${req.items.map(i=>html`<tr><td><b>${i.name}</b>${i.itemId&&html`<div class="xs faint id">${i.itemId}</div>`}${i.photo&&safeUrl(i.photo)&&html`<div><img src=${safeUrl(i.photo)} alt=${"Photo of "+i.name} loading="lazy" style="width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--line);margin-top:6px"/></div>`}</td><td>${i.category}</td><td class="r num">${i.qty} ${i.uom}</td><td class="r num">${fmt(i.price)}</td><td class="r num bold">${fmt(i.qty*i.price)}</td></tr>`)}
           <tr><td colspan="4" class="r bold">Total</td><td class="r num bold">${pkr(total)}</td></tr></tbody></table></div>
         ${rfq&&html`<${RfqSummary} rfq=${rfq} state=${state}/>`}
         <div class="card" style="box-shadow:none"><div class="card-b stack" style="gap:8px"><div class="row between wrap"><b>Attachments <span class="faint" style="font-weight:600">${(req.attachments||[]).length}</span></b>${canAttach&&html`<div class="row no-print"><select class="select" style="width:auto;padding:5px 28px 5px 9px;font-size:12px" value=${attLabel} onChange=${e=>setAttLabel(e.target.value)}>${["Quotation","Photo","Approval note","Invoice","Delivery challan","Other"].map(x=>html`<option>${x}</option>`)}</select><input type="file" ref=${fileRef} class="hidden" accept="image/*,.pdf" onChange=${onFile}/><button class="btn btn-ghost btn-sm" onClick=${()=>fileRef.current.click()}><${Icon} name="plus"/>Add file</button></div>`}</div>
@@ -6229,14 +6236,15 @@ function BlankForm({form}){
 }
 function Forms({state,user,A,openReq,readOnly}){
   const [open,setOpen]=useState(null); const [blank,setBlank]=useState(null);
+  const vendorForms=!["hod","staff"].includes(user.role);   // vendors and quotations are the Admin Officer's work, not a department head's
   return html`<div class="stack page-body" style="gap:16px">
     <div class="notice notice-info"><${Icon} name="shield"/><span>Every request follows its approval matrix in order — it only appears to the next approver after the previous one has recommended it. No step can be skipped.</span></div>
     <div class="grid3">
       ${[["procurement","Purchase Requisition","Items not available in store — HOD → Finance → Manager Admin & HR → Regional Manager → President → Admin Officer","cart"],["store","Store Requisition","Items available in store — HOD → Store Officer → Manager Admin & HR → Regional Manager → President → GIN","box"]].filter(f=>f[0]===PORTAL).map(([t,ti,d,ic])=>html`<button class=${"card formcard"+(open===t?" on":"")} disabled=${readOnly} onClick=${()=>setOpen(o=>o===t?null:t)}><span class="ric"><${Icon} name=${ic}/></span><b>${ti}</b><span class="sm muted">${d}</span><span class="link">${readOnly?"View-only account":open===t?"Close form":"Fill online →"}</span></button>`)}
-      ${PORTAL==="procurement"&&html`<button class="card formcard" onClick=${()=>setBlank("vr")}><span class="ric"><${Icon} name="store"/></span><b>Vendor Registration</b><span class="sm muted">Printable form for new suppliers; Admin Officer enters it under Vendors.</span><span class="link">Open printable form →</span></button>`}
+      ${vendorForms&&html`${PORTAL==="procurement"&&html`<button class="card formcard" onClick=${()=>setBlank("vr")}><span class="ric"><${Icon} name="store"/></span><b>Vendor Registration</b><span class="sm muted">Printable form for new suppliers; Admin Officer enters it under Vendors.</span><span class="link">Open printable form →</span></button>`}`}
     </div>
     ${open&&!readOnly&&html`<${NewRequest} key=${open} type=${open} user=${user} state=${state} A=${A} onDone=${id=>{ setOpen(null); openReq(id); }}/>`}
-    <${Card} title="Printable blank forms" desc="For offices without the portal at hand: print, fill and sign on paper, then enter it in the portal so the approval chain is followed."><div class="row wrap">${BLANK_FORMS.map(fm=>html`<button class="btn btn-ghost" onClick=${()=>setBlank(fm.id)}><${Icon} name="print"/>${fm.title}</button>`)}</div><//>
+    <${Card} title="Printable blank forms" desc="For offices without the portal at hand: print, fill and sign on paper, then enter it in the portal so the approval chain is followed."><div class="row wrap">${BLANK_FORMS.filter(fm=>vendorForms||!["vr","cs"].includes(fm.id)).map(fm=>html`<button class="btn btn-ghost" onClick=${()=>setBlank(fm.id)}><${Icon} name="print"/>${fm.title}</button>`)}</div><//>
     ${blank&&html`<${Modal} title=${BLANK_FORMS.find(x=>x.id===blank).title} sub="Blank form — print only this form" onClose=${()=>setBlank(null)} footer=${html`<span class="grow"/><button class="btn btn-primary" onClick=${printOpenArea}><${Icon} name="print"/>Print form</button>`}><${BlankForm} form=${BLANK_FORMS.find(x=>x.id===blank)}/><//>`}
   </div>`;
 }
@@ -6276,7 +6284,7 @@ function builtinAnswer(q,state,user){
   if(/tax|gst|wht|filer/.test(s)) return `GST ${Math.round(SETTINGS.gst*100)}% is added to quotations that exclude tax (only for GST-registered vendors). WHT at payment: goods ${SETTINGS.whtGoodsFiler*100}% filer / ${SETTINGS.whtGoodsNonFiler*100}% non-filer; services ${SETTINGS.whtServicesFiler*100}% / ${SETTINGS.whtServicesNonFiler*100}%.`;
   if(/how|process|flow|step|matrix|approv/.test(s)) return "**Procurement:** "+matrixChain("procurement").map(x=>x.who+" ("+x.label+stepAmt(x)+")").join(" → ")+`.\nAbove ${pkr(SETTINGS.directPurchaseLimit||100000)}: RFQ to vendors → committee selects one vendor (comparative statement) → PO + regret letters → GRN-P → GIN to HOD or place in store.\n\n**Store:** `+matrixChain("store").map(x=>x.who+" ("+x.label+stepAmt(x)+")").join(" → ")+".\nSteps marked “from PKR …” apply only to requests of that amount or more; each request keeps the path it was submitted with. Raise either one from **Request Forms**.";
   if(/suggest|recommend|improve|better|tip/.test(s)) return "Recommendations right now:\n"+buildInsights(state,user).map(i=>`• **${i.t}** — ${i.d}`).join("\n");
-  if(/hello|hi|salam|assalam/.test(s)) return `Wa alaikum assalam ${user.name.split(" ")[0]}! Ask me about pending approvals, a request ID, stock, budgets, vendors, taxes or the approval process.`;
+  if(/hello|hi|salam|assalam/.test(s)) return `Wa alaikum assalam ${user.name}! Ask me about pending approvals, a request ID, stock, budgets, vendors, taxes or the approval process.`;
   return "I can answer from live portal data: try **What is pending for me?**, **Any delays?**, **Stock alerts**, **Budget status**, **Vendors**, **How does approval work?**, **Recommendations**, or type a request ID like AKF-MR-2026-0003."+"\n\nFor any other question, just ask in your own words.";
 }
 function aiContext(state,user){
@@ -6308,7 +6316,7 @@ async function runAiAction(a){
 const mdLite=t=>String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\n/g,"<br>");
 function Assistant({state,user,openReq}){
   const [open,setOpen]=useState(false); const [q,setQ]=useState(""); const [busy,setBusy]=useState(false);
-  const [msgs,setMsgs]=useState(()=>[{me:false,text:user.role==="staff"?`Assalam o Alaikum ${user.name.split(" ")[0]}! I'm your portal assistant. Ask me to plan your day, show overdue tasks, upcoming events or any task number like AK-101.`:`Assalam o Alaikum ${user.name.split(" ")[0]}! I'm your portal assistant. I read live portal data to tell you what's pending, your tasks and events, where delays are, stock and budget risks, and how to improve the process.`}]);
+  const [msgs,setMsgs]=useState(()=>[{me:false,text:user.role==="staff"?`Assalam o Alaikum ${user.name}! I'm your portal assistant. Ask me to plan your day, show overdue tasks, upcoming events or any task number like AK-101.`:`Assalam o Alaikum ${user.name}! I'm your portal assistant. I read live portal data to tell you what's pending, your tasks and events, where delays are, stock and budget risks, and how to improve the process.`}]);
   const box=useRef(); useEffect(()=>{ if(box.current) box.current.scrollTop=box.current.scrollHeight; },[msgs,open]);
   const ask=async text=>{ const t=(text||q).trim(); if(!t||busy) return; setQ(""); const hist=msgs; setMsgs(m=>[...m,{me:true,text:t}]); setBusy(true);
     let a, act=null; if(SB_MODE&&sb){ try{ ({text:a,action:act}=await askServer(t,hist,state,user)); }catch(e){ a=builtinAnswer(t,state,user)+`\n\n_(${e.code==="not_configured"?"Alkhidmat AI is not switched on yet: the Super Admin adds the Gemini key on the main page → Settings → All portals. This answer comes from the portal's own data.":"The AI service did not answer"+(e.ref?" (ref "+e.ref+")":"")+", so this answer comes from the portal's own data."})_`; } } else a=builtinAnswer(t,state,user);
@@ -6422,7 +6430,7 @@ function App(){
   if(dqN>0) counts.store=(counts.store||0)+dqN;
   if(user.role==="hod"){ counts.procurement=visibleRequests(user,state.requests).filter(r=>r.type==="procurement"&&canAct(user,r)).length||0; counts.store=visibleRequests(user,state.requests).filter(r=>r.type==="store"&&canAct(user,r)).length||0; }
   const T=tabs.find(t=>t.id===activeTab)||tabs[0];
-  const titles={dashboard:["Dashboard",`Good ${new Date().getHours()<12?"morning":new Date().getHours()<17?"afternoon":"evening"}, ${user.name.split(" ")[0]} · ${user.designation}`],approvals:["Approvals",user.role==="super"?"All approval queues (view only — no bypass)":`Requests waiting for your ${[...new Set(matrixChain("procurement").concat(matrixChain("store")).filter(s=>s.owner===user.role).map(s=>s.label.toLowerCase()))].join(" / ")||"decision"}`],forms:["Request Forms","Purchase & store requisitions online, plus printable blank forms"],imports:["Excel Import","Download a template, fill it, upload it"],procurement:["Procurement",user.role==="hod"?"Request items not in store and track them to delivery":"Verify requests, run RFQs, issue purchase orders"],vendors:["Vendors & RFQ","Vendor database, magic links, competitive statements"],store:["Store",user.role==="hod"?"Request items from store and track issue":"Stock ledger, receipts, issues and movements"],reports:["Reports","Spend, cycle time, budgets and stock, filterable by month and department"],finance:["Budget & Payments","Budget lines, utilisation and 3-way matched vendor payments"],settings:["Settings","Policy, approval rules and tax rates"],log:["Tracking log","Every request and every action, with a search for any document ID"],users:["Users & roles","Accounts, access matrix and demo reset"],tasks:["Tasks","Plan, assign, approve and track work across departments"],tasksettings:["Task settings","Task departments and stages"]};
+  const titles={dashboard:["Dashboard",`Good ${new Date().getHours()<12?"morning":new Date().getHours()<17?"afternoon":"evening"}, ${user.name} · ${user.designation}`],approvals:["Approvals",user.role==="super"?"All approval queues (view only — no bypass)":`Requests waiting for your ${[...new Set(matrixChain("procurement").concat(matrixChain("store")).filter(s=>s.owner===user.role).map(s=>s.label.toLowerCase()))].join(" / ")||"decision"}`],forms:["Request Forms","Purchase & store requisitions online, plus printable blank forms"],imports:["Excel Import","Download a template, fill it, upload it"],procurement:["Procurement",user.role==="hod"?"Request items not in store and track them to delivery":"Verify requests, run RFQs, issue purchase orders"],vendors:["Vendors & RFQ","Vendor database, magic links, competitive statements"],store:["Store",user.role==="hod"?"Request items from store and track issue":"Stock ledger, receipts, issues and movements"],reports:["Reports","Spend, cycle time, budgets and stock, filterable by month and department"],finance:["Budget & Payments","Budget lines, utilisation and 3-way matched vendor payments"],settings:["Settings","Policy, approval rules and tax rates"],log:["Tracking log","Every request and every action, with a search for any document ID"],users:["Users & roles","Accounts, access matrix and demo reset"],tasks:["Tasks","Plan, assign, approve and track work across departments"],tasksettings:["Task settings","Task departments and stages"]};
   const page=({tasks:Tasks,dashboard:Dashboard,approvals:Approvals,forms:Forms,procurement:Procurement,vendors:Vendors,store:Store,reports:Reports,imports:Imports,log:LogPage,users:Users,finance:Finance,settings:Settings,tasksettings:({state,user,A})=>html`<div class="stack page-body">${h(TSettings,{state,user,A})}</div>`})[activeTab];
   const meRec=state.users.find(u=>u.id===user.id)||user;
   /* sidebar items: the portal's tabs; in Tasks & Events the task sections themselves, as in every other portal */
@@ -6767,12 +6775,26 @@ const tCanAssignOthers=u=>["RM",...T_MGR].includes(tRole(u));
 function tAssignable(state,deptId,u,eventId){
   const act=(state.users||[]).filter(x=>x.active!==false); const r=tRole(u);
   if(r==="RM"||(eventId&&["MA","HR"].includes(r))) return act.filter(x=>tRole(x)!=="President");
-  if(T_MGR.includes(r)) return act.filter(x=>(tUDept(x)===deptId||x.id===u.id)&&!["President","GS"].includes(tRole(x)));   // as in the planner file
+  // a HOD assigns only in their OWN department; someone from another department
+  // comes through an Engagement request (HOD → that HOD → Regional Manager), which creates the task when approved
+  if(T_MGR.includes(r)) return r==="HOD"&&deptId!==tUDept(u)?act.filter(x=>x.id===u.id):act.filter(x=>(tUDept(x)===deptId||x.id===u.id)&&!["President","GS"].includes(tRole(x)));
   return act.filter(x=>x.id===u.id);   // staff: only themselves (your instruction)
 }
+/* ---------- engagement requests: a HOD asks for someone from ANOTHER department ----------
+   path: requesting HOD → that department's HOD recommends (is the person free then?) → Regional Manager approves;
+   the approval creates the task for that person (makeTaskActions → engDecide) */
+const ENG_STATUS={hod:["Waiting for the department HOD","warn"],rm:["Waiting for the Regional Manager","warn"],approved:["Approved · task created","ok"],
+  declined:["Not recommended by the HOD","bad"],rejected:["Rejected by the Regional Manager","bad"],cancelled:["Cancelled","neutral"]};
+const tCanEngage=u=>T_MGR.includes(tRole(u));
+const tHodOf=(state,dept)=>(state.users||[]).find(x=>x.active!==false&&tRole(x)==="HOD"&&tUDept(x)===dept);
+const tEngMine=(e,u)=>e.status==="hod"?tRole(u)==="HOD"&&tUDept(u)===e.empDept:e.status==="rm"&&tRole(u)==="RM";   // is the next decision mine?
+const tEngSees=(e,u)=>["RM","President","GS"].includes(tRole(u))||e.requesterId===u.id||e.employeeId===u.id||(T_MGR.includes(tRole(u))&&[e.reqDept,e.empDept].includes(tUDept(u)));
+const tEngPeople=(state,u)=>(state.users||[]).filter(x=>x.active!==false&&tUDept(x)!==tUDept(u)&&!["President","GS","RM"].includes(tRole(x)));
+const tEngWhen=s=>s?fmtD(s.slice(0,10)+"T12:00:00")+" "+s.slice(11,16):"";
 const tAssignError=(state,u,c)=>!tCanAssignOthers(u)&&c.assigneeId!==u.id
   ?"Only the HOD, Manager Admin, HR or the Regional Manager can assign tasks to other people. You can create tasks for yourself."
-  :`${tName(state,c.assigneeId)} is not in ${tDept(c.dept).name}. Choose someone from that department.`;
+  :tRole(u)==="HOD"&&c.dept!==tUDept(u)?`You assign tasks only in your own department (${tDept(tUDept(u)).name}). For someone from another department, send an Engagement request.`
+  :`${tName(state,c.assigneeId)} is not in ${tDept(c.dept).name}. Choose someone from that department, or send an Engagement request.`;
 /* why a stage change is not allowed (null = allowed) */
 const tCanEditJD=(u,p)=>!!u&&!!p&&(u.role==="super"||tRole(u)==="RM"||(T_MGR.includes(tRole(u))&&tUDept(u)===tUDept(p)&&u.id!==p.id));
 /* a self task = created by the person doing it; governance: their HOD sees it and signs it off */
@@ -6839,7 +6861,55 @@ function makeTaskActions(commit,user,toast){
       expected:f.expected===""||f.expected==null?"":Math.max(0,Number(f.expected)||0),coordinator:f.coordinator||"",topic:String(f.topic||"").slice(0,500),collab:String(f.collab||"").slice(0,200),
       additional:String(f.additional||"").slice(0,5000),checklist:tEvNormalize(f.checklist)};
     c.type=tEvTypeLabel(c); return c; };
+  const engAudit=(d,e,u,action,comment,dept)=>d.audit.unshift({id:uid(),at:nowISO(),doc:e.id,action,comment,dept:tDept(dept).name,by:u.name,role:u.role,uid:u.id,desig:u.designation||""});
   return {
+    engCreate(f){
+      return run((d,u)=>{
+        if(!tCanEngage(u)) fail("Only a HOD (or Manager Admin / HR) can send an engagement request.");
+        const emp=tUser(d,f.employeeId); if(!emp||emp.active===false) fail("Choose the employee you need.");
+        const empDept=tUDept(emp), reqDept=tUDept(u); if(empDept===reqDept) fail(`${emp.name} is in your own department: assign the task directly.`);
+        const purpose=String(f.purpose||"").trim(); if(purpose.length<8) fail("Write the purpose (8 or more characters).");
+        const ok=s=>/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(s||""); if(!ok(f.from)||!ok(f.to)) fail("Choose the date and time they are needed, from and to.");
+        if(f.to<=f.from) fail("The end time must be after the start time."); if(f.from.slice(0,10)<tToday()) fail("The date cannot be in the past.");
+        d.engagements=d.engagements||[];
+        const hod=tHodOf(d,empDept);
+        const e={key:newKey(),id:"EN-"+(Math.max(100,...d.engagements.map(x=>+(String(x.id).replace(/\D/g,""))||0))+1),requesterId:u.id,reqDept,employeeId:emp.id,empDept,
+          purpose:purpose.slice(0,1000),from:f.from,to:f.to,status:hod?"hod":"rm",steps:[{step:"request",uid:u.id,by:u.name,at:nowISO(),ok:true,note:""}],createdAt:nowISO(),updatedAt:nowISO()};
+        if(!hod) e.steps.push({step:"hod",by:"—",at:nowISO(),ok:true,note:`No HOD is set for ${tDept(empDept).name}, so it went straight to the Regional Manager.`});
+        d.engagements.unshift(e); engAudit(d,e,u,"Engagement requested",`${emp.name} (${tDept(empDept).name}) · ${purpose.slice(0,80)}`,reqDept);
+        return e;
+      },e=>`Sent ${e.id}`);
+    },
+    engDecide(key,yes,note){
+      return run((d,u)=>{
+        const e=(d.engagements||[]).find(x=>x.key===key); if(!e) fail("This request no longer exists.");
+        if(!tEngMine(e,u)) fail(e.status==="hod"?`Only the HOD of ${tDept(e.empDept).name} recommends this.`:e.status==="rm"?"Only the Regional Manager approves this.":"This request is already decided.");
+        note=String(note||"").trim().slice(0,500); if(!yes&&note.length<3) fail("Write the reason.");
+        const step=e.status; e.steps.push({step,uid:u.id,by:u.name,at:nowISO(),ok:!!yes,note}); e.updatedAt=nowISO();
+        if(step==="hod") e.status=yes?"rm":"declined";
+        else if(!yes) e.status="rejected";
+        else {
+          e.status="approved";
+          const mins=Math.max(15,Math.round((Date.parse(e.to)-Date.parse(e.from))/6e4));
+          const t={key:newKey(),v:2,id:nextNo(d),title:("Engagement: "+e.purpose).slice(0,200),
+            description:`Requested by ${tName(d,e.requesterId)} (${tDept(e.reqDept).name}) through ${e.id}.\nNeeded from ${tEngWhen(e.from)} to ${tEngWhen(e.to)}.\n\n${e.purpose}`,
+            dept:e.empDept,assigneeId:e.employeeId,plannedDate:e.to.slice(0,10),startDate:e.from.slice(0,10),priority:"Medium",tags:["Engagement"],estimate:Math.min(mins,5*480),recurring:"none",
+            subtasks:[],dependencies:[],customFields:[],repeatDay:+e.from.slice(8,10),eventId:null,checkItem:null,stage:"01",creatorId:e.requesterId,engagementId:e.id,
+            timeLogged:0,timeLog:[],attachments:[],comments:[],activity:[],rating:null,completedAt:"",createdAt:nowISO(),updatedAt:nowISO()};
+          act(t,`created from engagement ${e.id}, approved by ${u.name}`,u); act(t,`assigned to ${tName(d,t.assigneeId)}`,u);
+          d.tasks.unshift(t); e.taskKey=t.key; e.taskId=t.id; audit(d,t,u,"Task created",`${t.title} → ${tName(d,t.assigneeId)} (engagement ${e.id})`);
+        }
+        engAudit(d,e,u,step==="hod"?(yes?"Engagement recommended":"Engagement not recommended"):(yes?"Engagement approved":"Engagement rejected"),note||e.purpose.slice(0,80),e.empDept);
+        return e;
+      },e=>e.status==="approved"?`Approved · task ${e.taskId} created`:e.status==="rm"?"Recommended · sent to the Regional Manager":"Saved");
+    },
+    engCancel(key){
+      return run((d,u)=>{
+        const e=(d.engagements||[]).find(x=>x.key===key); if(!e) fail("This request no longer exists.");
+        if(e.requesterId!==u.id||!["hod","rm"].includes(e.status)) fail("Only the requester can cancel it, before it is decided.");
+        e.status="cancelled"; e.steps.push({step:"cancel",uid:u.id,by:u.name,at:nowISO(),ok:false,note:""}); e.updatedAt=nowISO(); engAudit(d,e,u,"Engagement cancelled",e.purpose.slice(0,80),e.reqDept);
+      },"Cancelled");
+    },
     tCreate(f){
       return run((d,u)=>{
         if(!TR.canCreate(u)) fail("Your role can view tasks but not create them.");
@@ -7014,6 +7084,7 @@ function taskNotifications(state,user){
     (t.comments||[]).forEach(c=>{ if(c.uid===user.id||tTs(c.at)<=weekAgo) return; const m=(c.mentions||[]).includes(user.id)||(handle&&c.text.toLowerCase().includes("@"+handle));
       if(m||t.assigneeId===user.id||t.creatorId===user.id) out.push({tone:"info",icon:"msg",t:`${c.by} commented${m?" and mentioned you":""} · ${t.id}`,d:c.text.slice(0,90),at:c.at,task:t.key,key:"tcm|"+c.id}); });
   });
+  (state.engagements||[]).filter(e=>tEngMine(e,user)).forEach(e=>out.push({tone:"info",icon:"send",t:`Engagement ${e.id} needs your ${e.status==="hod"?"recommendation":"approval"}`,d:`${tName(state,e.employeeId)} · ${e.purpose.slice(0,80)}`,at:e.updatedAt,taskView:"engagements",key:"eng|"+e.key+"|"+e.status}));
   /* job-description duties: a reminder when each duty's period starts — weekly on Monday, monthly on the 1st, quarterly on
      1 Jul / Oct / Jan / Apr, yearly on 1 July (the fiscal year). It stays in the bell for a few days, then the next period brings a new one. */
   { const me=tUser(state,user.id)||user, t0=tToday(), d0=new Date(t0+"T12:00:00");
@@ -7135,7 +7206,7 @@ function TRow({t,state,user,A,open,who=true}){
 
 /* ===================== the Tasks page ===================== */
 /* Task sections. In the Tasks & Events portal they are the sidebar items (like every other portal); in the all-in-one demo they are a strip on the Tasks page. */
-const TASK_VIEWS=()=>[["home","Home","home"],["eagle","Eagle view","grid"],["board","Board","board"],["events","Events","flag"],["tracking","Tracking","log"],["planner","Planner","cal"],["workload","Workload","users"],["performance","Performance","chart"],["training","Training needs","users"],["myspace","To-Do & Notes","note"]].filter(v=>portalTab(v[0]));
+const TASK_VIEWS=()=>[["home","Home","home"],["eagle","Eagle view","grid"],["board","Board","board"],["events","Events","flag"],["tracking","Tracking","log"],["planner","Planner","cal"],["workload","Workload","users"],["performance","Performance","chart"],["training","Training needs","users"],["engagements","Engagements","send"],["myspace","To-Do & Notes","note"]].filter(v=>portalTab(v[0]));
 const isTasksPortal=()=>typeof PORTAL!=="undefined"&&PORTAL==="tasks";
 const portalName=()=>typeof PORTAL_NAME!=="undefined"?PORTAL_NAME:"Procurement & Store Portal";
 function Tasks({state,user,A,taskOpen,setTaskOpen,onView}){
@@ -7177,6 +7248,7 @@ function Tasks({state,user,A,taskOpen,setTaskOpen,onView}){
       <span class="grow"/>
       ${running&&html`<span class="tk-timer"><${Icon} name="clock"/>${running.id} · ${timer.label}<button onClick=${()=>open(running.key)}>Open</button><button onClick=${()=>stopTimer(timer,A)}>Stop & log</button></span>`}
       ${TR.canCreateEvent(user)&&html`<button class="btn btn-soft" onClick=${newEvent}><${Icon} name="flag"/>New event request</button>`}
+      ${tCanEngage(user)&&html`<button class="btn btn-soft" onClick=${()=>go("engagements",{engNew:Date.now()})}><${Icon} name="send"/>Engagement request</button>`}
       ${TR.canCreate(user)&&html`<button class="btn btn-primary" onClick=${()=>openNew()}><${Icon} name="plus"/>New task</button>`}
     </div>
     <div class="xs faint row" style="gap:6px;margin-top:-6px"><${Icon} name=${SB_READY?"shield":"alert"} cls="icon" style="width:13px"/>${SB_READY?"Saved in Supabase, shared with all staff":"Offline mode: saved in this browser only"} · ${(state.tasks||[]).length} task${(state.tasks||[]).length===1?"":"s"} in the database · ${vis.length} visible to you as ${TROLE_LABEL[tRole(user)]}${tRole(user)==="HOD"?" of "+tDept(tUDept(user)).name:""}</div>
@@ -7191,6 +7263,7 @@ function Tasks({state,user,A,taskOpen,setTaskOpen,onView}){
     ${view==="performance"&&html`<${TPerformance} ...${P} perfMonth=${perfMonth} setPerfMonth=${setPerfMonth}/>`}
     ${view==="events"&&html`<${TEvents} ...${P}/>`}
     ${view==="tracking"&&html`<${TTracking} ...${P}/>`}
+    ${view==="engagements"&&html`<${TEngagements} ...${P}/>`}
   </div>
   ${modal&&modal.kind==="new"&&html`<${TaskModal} isNew preset=${modal.preset} state=${state} user=${user} A=${A} timer=${timer} open=${open} openEvent=${openEvent}
     onClose=${()=>{ const back=modal.returnEvent; setModal(null); if(back) openEvent(back,"checklist"); }}
@@ -7222,7 +7295,7 @@ function THome({state,user,A,open,vis,openNew,go,openEvent}){
   const RowP=t=>html`<${TRow} t=${t} state=${state} user=${user} A=${A} open=${open}/>`;
   return html`<div class="stack" style="gap:16px">
     <section class="tk-hero"><div>
-      <h2>${greet}, ${(user.name||"").split(" ")[0]}</h2>
+      <h2>${greet}, ${user.name||""}</h2>
       <p>${todayAll.length?`${todayDone} of ${todayAll.length} tasks planned for today are done.`:"Nothing is planned for today yet."} ${overdue.length?`${overdue.length} overdue need attention.`:"Nothing is overdue."}</p>
       <div class="tk-chips"><span class="tk-chip2"><${Icon} name="board"/>${openT.length} open</span>
         ${overdue.length>0&&html`<button class="tk-chip2 alert" onClick=${()=>go("board",{who:r==="Staff"?"me":"all"})}><${Icon} name="alert"/>${overdue.length} overdue</button>`}
@@ -7551,12 +7624,12 @@ function TAssistant({state,user,A,open,vis,openEvent}){
   const wk=tAddDays(t0,-7); const doneWk=sc.filter(t=>tLocalDay(t.completedAt)>=wk), newWk=sc.filter(t=>tLocalDay(t.createdAt)>=wk);
   const byP={}; doneWk.forEach(t=>byP[t.assigneeId]=(byP[t.assigneeId]||0)+1); const top=Object.entries(byP).sort((a,b)=>b[1]-a[1])[0]; const ratedWk=doneWk.filter(t=>t.rating);
   return html`<div class="stack" style="gap:14px">
-    <div class="tk-ai-hero"><span class="tk-ai-ico lg"><${Icon} name="zap"/></span><div><h2>Your assistant, ${(user.name||"").split(" ")[0]}</h2><p>Works from what you can see as ${TROLE_LABEL[r]}${r==="HOD"?" of "+tDept(tUDept(user)).name:""}. It plans, flags risks and — within your rights — reschedules, approves and starts tasks. For questions in your own words, use the <b>Ask Alkhidmat AI</b> button at the bottom right.</p></div></div>
+    <div class="tk-ai-hero"><span class="tk-ai-ico lg"><${Icon} name="zap"/></span><div><h2>Your assistant, ${user.name||""}</h2><p>Works from what you can see as ${TROLE_LABEL[r]}${r==="HOD"?" of "+tDept(tUDept(user)).name:""}. It plans, flags risks and — within your rights — reschedules, approves and starts tasks. For questions in your own words, use the <b>Ask Alkhidmat AI</b> button at the bottom right.</p></div></div>
     <div class="grid2">
       ${mine.length>0&&html`<${Card} title="Your plan for today">${todayList.length?html`<p class="xs faint" style="margin:0 0 6px">${fit.length} task${fit.length!==1?"s":""} fit an 8-hour day (${tMin(used)} of work). ${spill.length?`${spill.length} won't fit — move them to tomorrow.`:"Everything due fits."}</p>${fit.map(t=>RowP(t,false))}${spill.length>0&&html`<div class="tk-spill"><b class="xs">Won't fit today</b>${spill.map(t=>html`<div class="row" style="gap:6px"><div style="flex:1;min-width:0">${RowP(t,false)}</div>${TR.canEdit(t,user)&&html`<button class="btn btn-ghost btn-sm" onClick=${()=>A.tReschedule(t.key,tAddDays(t0,1))}>Tomorrow</button>`}</div>`)}</div>`}`:html`<${TEmpty} title="Nothing due today">Pull something forward from the planner if you have capacity.<//>`}<//>`}
       <${Card} title="At risk">${risks.length?risks.slice(0,8).map(x=>html`<div class="tk-risk"><div style="flex:1;min-width:0">${RowP(x.t,r!=="Staff")}<span class="xs tk-bad">${x.why}</span></div>${x.fix&&html`<button class="btn btn-ghost btn-sm" onClick=${x.fix.fn}>${x.fix.label}</button>`}</div>`):html`<${TEmpty} title="No risks found">Nothing overdue, blocked or stalled in your scope.<//>`}<//>
       ${tMx().approvers.includes(r)&&html`<${Card} title="Waiting for your approval">${wait.length?wait.map(t=>html`<div class="row" style="gap:6px"><div style="flex:1;min-width:0">${RowP(t)}</div><button class="btn btn-ok btn-sm" onClick=${()=>A.tMove(t.key,"05")}>Approve</button></div>`):html`<${TEmpty} title="Nothing to approve"><//>`}<//>`}
-      ${r!=="Staff"&&html`<${Card} title="Workload balance">${people.length?html`<p class="xs faint" style="margin:0 0 8px">Average open work per person: ${tMin(avg)}.</p>${heavy.length?heavy.map(x=>html`<div class="tk-row"><span class="avatar tk-av">${initials(x.p.name)}</span><span class="g"><b>${x.p.name}</b><small class="tk-bad">${tMin(x.h)} open · ${x.n} tasks${x.over?` · ${x.over} overdue`:""}</small></span>${light[0]&&html`<span class="xs faint">→ consider moving one to ${light[0].p.name.split(" ")[0]} (${tMin(light[0].h)})</span>`}</div>`):html`<div class="xs faint">No one is overloaded. Nice.</div>`}${!heavy.length&&light.length>0&&html`<div class="xs faint" style="margin-top:6px">Has capacity: ${light.map(x=>x.p.name).join(", ")}</div>`}`:html`<${TEmpty} title="No team data"><//>`}<//>`}
+      ${r!=="Staff"&&html`<${Card} title="Workload balance">${people.length?html`<p class="xs faint" style="margin:0 0 8px">Average open work per person: ${tMin(avg)}.</p>${heavy.length?heavy.map(x=>html`<div class="tk-row"><span class="avatar tk-av">${initials(x.p.name)}</span><span class="g"><b>${x.p.name}</b><small class="tk-bad">${tMin(x.h)} open · ${x.n} tasks${x.over?` · ${x.over} overdue`:""}</small></span>${light[0]&&html`<span class="xs faint">→ consider moving one to ${light[0].p.name} (${tMin(light[0].h)})</span>`}</div>`):html`<div class="xs faint">No one is overloaded. Nice.</div>`}${!heavy.length&&light.length>0&&html`<div class="xs faint" style="margin-top:6px">Has capacity: ${light.map(x=>x.p.name).join(", ")}</div>`}`:html`<${TEmpty} title="No team data"><//>`}<//>`}
       ${(()=>{ const evs=tVisibleEvents(state,user).filter(e=>!["cancelled","completed"].includes(e.status)&&tDaysUntil(e.date)>=-1).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,4); if(!evs.length) return "";
         return html`<${Card} title="Upcoming events">${evs.map(e=>{ const et=tEvTasks(state,e); const op=et.filter(tOpen); const unassigned=tEvSelectedKeys(e).filter(k=>!et.some(t=>tCheckKey(t.checkItem)===k)).length; const dd=tDaysUntil(e.date);
           return html`<button class="tk-row" style="width:100%" onClick=${()=>openEvent(e.key)}><span class="tk-evdate"><b>${+e.date.slice(8)}</b><small>${T_MONTHS[+e.date.slice(5,7)-1].slice(0,3)}</small></span><span class="g"><b>${e.title}</b><small>${dd===0?"Today":dd===1?"Tomorrow":dd>1?`In ${dd} days`:"Yesterday"} · ${op.length} open task${op.length===1?"":"s"}${et.filter(tOverdue).length?` · ${et.filter(tOverdue).length} overdue`:""}${unassigned?` · ${unassigned} checklist item${unassigned===1?"":"s"} not assigned`:""}</small></span><${Tag} tone=${tEvStatus(e)[1]}>${tEvStatus(e)[0]}</${Tag}></button>`; })}<//>`; })()}
@@ -7616,6 +7689,43 @@ function TEagle({state,user,A,open,vis,go,setFilter}){
 }
 
 /* ---------- Self tasks: governance of work people set for themselves ---------- */
+/* ---------- Engagements: borrowing someone from another department for a time ---------- */
+function TEngagements({state,user,A,open,f,setFilter}){
+  const all=(state.engagements||[]).filter(e=>tEngSees(e,user));
+  const mine=all.filter(e=>tEngMine(e,user)), rest=all.filter(e=>!tEngMine(e,user));
+  const [form,setForm]=useState(null); const [notes,setNotes]=useState({});
+  useEffect(()=>{ if(f.engNew&&tCanEngage(user)){ setForm({employeeId:"",purpose:"",from:"",to:""}); setFilter("engNew",0); } },[f.engNew]);
+  const people=tEngPeople(state,user), emp=form&&tUser(state,form.employeeId);
+  const send=()=>{ const e=A.engCreate(form); if(e) setForm(null); };
+  const decide=(e,yes)=>{ if(A.engDecide(e.key,yes,notes[e.key]||"")) setNotes(n=>({...n,[e.key]:""})); };
+  const STEP={request:"Requested",hod:"Department HOD",rm:"Regional Manager",cancel:"Cancelled by requester"};
+  const card=e=>{ const st=ENG_STATUS[e.status]||[e.status,"neutral"]; const my=tEngMine(e,user);
+    return html`<div class="card" key=${e.key}><div class="card-b stack" style="gap:8px">
+      <div class="row between wrap"><b><span class="id">${e.id}</span> · ${tName(state,e.employeeId)} <span class="faint" style="font-weight:600">(${tDept(e.empDept).name})</span></b><${Tag} tone=${st[1]}>${st[0]}</${Tag}></div>
+      <div class="sm">${e.purpose}</div>
+      <div class="xs muted">Needed ${tEngWhen(e.from)} → ${tEngWhen(e.to)} · requested by ${tName(state,e.requesterId)} (${tDept(e.reqDept).name})</div>
+      <div class="xs faint">Path: ${tName(state,e.requesterId)} (HOD, requester) → HOD of ${tDept(e.empDept).name} (recommends) → Regional Manager (approves)</div>
+      <ol class="xs" style="margin:0;padding-left:18px">${e.steps.map(s=>html`<li>${STEP[s.step]||s.step}: <b>${s.by}</b>${s.step!=="request"&&s.step!=="cancel"?(s.ok?(s.step==="hod"?" · recommended":" · approved"):(s.step==="hod"?" · not available":" · rejected")):""} · ${fmtDT(s.at)}${s.note?html` · “${s.note}”`:""}</li>`)}</ol>
+      ${my&&html`<div class="stack" style="gap:6px"><textarea class="textarea" rows="2" placeholder=${e.status==="hod"?"Is the person free at that time? (required if not)":"Remarks (required to reject)"} value=${notes[e.key]||""} onInput=${ev=>setNotes(n=>({...n,[e.key]:ev.target.value}))}/>
+        <div class="row" style="gap:8px"><button class="btn btn-primary btn-sm" onClick=${()=>decide(e,true)}>${e.status==="hod"?"Recommend":"Approve"}</button><button class="btn btn-ghost btn-sm" onClick=${()=>decide(e,false)}>${e.status==="hod"?"Not available":"Reject"}</button></div></div>`}
+      <div class="row" style="gap:8px">${e.taskKey&&html`<button class="btn btn-ghost btn-sm" onClick=${()=>open(e.taskKey)}>Open task ${e.taskId}</button>`}
+        ${e.requesterId===user.id&&["hod","rm"].includes(e.status)&&html`<button class="btn btn-ghost btn-sm" onClick=${()=>A.engCancel(e.key)}>Cancel request</button>`}</div>
+    </div></div>`; };
+  return html`<div class="stack" style="gap:14px">
+    <div class="row between wrap"><div><h3 style="margin:0">Engagement requests</h3><div class="sm muted">To give work to someone from another department: the requesting HOD sends it, that department's HOD recommends it (is the person free?), the Regional Manager approves it, and the task is then created for that person.</div></div>
+      ${tCanEngage(user)&&!form&&html`<button class="btn btn-primary" onClick=${()=>setForm({employeeId:"",purpose:"",from:"",to:""})}><${Icon} name="plus"/>New engagement request</button>`}</div>
+    ${form&&html`<${Card} title="New engagement request" desc=${`From ${tDept(tUDept(user)).name}. Path: you → HOD of the person's department → Regional Manager.`}><div class="stack">
+      <div class="grid2"><${Field} label="Employee needed"><select class="select" value=${form.employeeId} onChange=${ev=>setForm(x=>({...x,employeeId:ev.target.value}))}><option value="">Choose…</option>${people.map(p=>html`<option value=${p.id}>${p.name} · ${tDept(tUDept(p)).name}${p.designation?" · "+p.designation:""}</option>`)}</select><//>
+        <${Field} label="Their department"><input class="input" disabled value=${emp?tDept(tUDept(emp)).name+(tHodOf(state,tUDept(emp))?" · HOD "+tHodOf(state,tUDept(emp)).name:" · no HOD set"):""}/><//>
+        <${Field} label="Available from"><input class="input" type="datetime-local" value=${form.from} onInput=${ev=>setForm(x=>({...x,from:ev.target.value}))}/><//>
+        <${Field} label="Available until"><input class="input" type="datetime-local" value=${form.to} min=${form.from} onInput=${ev=>setForm(x=>({...x,to:ev.target.value}))}/><//></div>
+      <${Field} label="Purpose"><textarea class="textarea" placeholder="What they will do, where and why…" value=${form.purpose} onInput=${ev=>setForm(x=>({...x,purpose:ev.target.value}))}/><//>
+      <div class="row" style="gap:8px"><button class="btn btn-primary" onClick=${send}><${Icon} name="send"/>Send request</button><button class="btn btn-ghost" onClick=${()=>setForm(null)}>Close</button></div>
+    </div><//>`}
+    ${mine.length>0&&html`<div class="stack" style="gap:8px"><b>Waiting for your decision <span class="faint">${mine.length}</span></b>${mine.map(card)}</div>`}
+    <div class="stack" style="gap:8px"><b>All requests you can see <span class="faint">${rest.length}</span></b>${rest.length?rest.map(card):html`<${TEmpty} title="No engagement requests yet">${tCanEngage(user)?"Use New engagement request to ask for someone from another department.":"Requests that involve you or your department appear here."}<//>`}</div>
+  </div>`;
+}
 function TSelfTasks({state,user,A,open,vis}){
   const r=tRole(user); const self=vis.filter(tIsSelf);
   const scope=r==="Staff"?self.filter(t=>t.assigneeId===user.id):self.filter(t=>t.assigneeId!==user.id||r==="RM");
@@ -7893,7 +8003,7 @@ function TaskModal({isNew,preset,tkey,state,user,A,timer,onClose,open,onCreated,
   const ev=tEventOf(state,d);
   const deps=(d.dependencies||[]).map(k=>(state.tasks||[]).find(x=>x.key===k)).filter(Boolean);
   const depOptions=(state.tasks||[]).filter(t=>t.v===2&&TR.canSee(t,user)&&t.key!==(orig&&orig.key)&&!(d.dependencies||[]).includes(t.key)&&tOpen(t));
-  const deptLocked=!editable||(!isNew&&!T_EVMGR.includes(tRole(user)));
+  const deptLocked=!editable||(!isNew&&!T_EVMGR.includes(tRole(user)))||(!["RM","MA","HR"].includes(tRole(user))&&!d.eventId);   // a HOD's or staff member's task stays in their own department
   const mine=!isNew&&timer.tm&&timer.tm.key===orig.key;
   const save=()=>{
     if(!String(d.title||"").trim()){ tToast("Give the task a title — type it in the first box (\"What needs to be done?\").","bad"); if(titleRef.current) titleRef.current.focus(); return; }

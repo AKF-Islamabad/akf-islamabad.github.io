@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-Cl24peMrm/Sr+yeLXnjcgcewYvnfGbGjh3qUD0FGSb4='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-op06k/Bd2NbxMWv/djGv/tZ0IlJddf8V1moZIC3j4y0='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -463,7 +463,7 @@ async function loadMe() {
     S.portals = await q(sb.rpc("core_my_portals"));
     S.view = "home"; render(); loadToday();
     /* Alkhidmat AI on the main page too (every page has it); it knows which portals this person has, nothing personal */
-    if (window.AKF_ASSISTANT) AKF_ASSISTANT({ sb, portal: "Jazba (main page)", user: S.me.full_name.split(" ")[0],
+    if (window.AKF_ASSISTANT) AKF_ASSISTANT({ sb, portal: "Jazba (main page)", user: S.me.full_name,
       context: () => JSON.stringify({ today: new Date().toISOString().slice(0, 10), page: "Main page: sign-in and the list of portals", isSuperAdmin: !!S.me.is_super,
         myPortals: S.portals.map(p => ({ name: p.name, what: p.description, myAccess: ROLE_LABEL[p.role] || p.role })),
         superAdminTabs: S.me.is_super ? ["People & access (add people, tick tabs and actions per portal)", "Portals & departments", "Settings (one place for every portal)", "Activity & usage"] : [] }),

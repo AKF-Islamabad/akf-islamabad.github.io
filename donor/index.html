@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Foundation Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-FaOA3hh6VIlfJtdpASadE626gkEenkzUA//91Kdxrag='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-7GR3WT8zZcfq0JeRmPY37GsK1BULQ86+v0vNNjXGUMY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -2324,7 +2324,7 @@ VIEWS.dashboard = {
     return `
     <section class="hero"><span class="blob b1"></span><span class="blob b2"></span><span class="pattern"></span>
       <div class="hero-in"><div>
-        <h2>${esc(hello)}, ${esc(ME.name.split(' ')[0])}</h2>
+        <h2>${esc(hello)}, ${esc(ME.name)}</h2>
         <p>${esc(new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Karachi' }))} · ${esc(ROLES[ME.role].label)}</p>
         <div class="hero-stats">
           <div class="hs"><b data-count>${esc(compact(sumAmt(todayList)))}</b><span>Recorded today · ${todayList.length}</span></div>
@@ -5142,7 +5142,7 @@ function rmoDashboardHTML() {
   const tasks = myDue.slice(0, 6).map(({ p, s, state }) => ({ tone: state === 'Overdue' ? 'b-bad' : 'b-warn', icon: 'bell', title: `${state === 'Overdue' ? 'Overdue' : 'Due ' + fmtDate(s.due)}: ${donorName(donorById(p.donorId))} · installment ${s.n}/${p.count}`, text: `${money(pledgeStats(p).remaining[p.schedule.indexOf(s)] || s.amount)} · ${pledgePurpose(p)}`, actions: [['inst-remind', 'Remind', { id: p.id, n: s.n }], ['inst-record', 'Record payment', { id: p.id, n: s.n }]] }))
     .concat(q.slice(0, 6).map(m => ({ tone: m.type === 'thanks' ? 'b-ok' : 'b-info', icon: m.type === 'thanks' ? 'heart' : 'msg', title: `${MSG_TYPES[m.type]} for ${m.to.name}`, text: m.type === 'thanks' ? 'Verified: send the receipt' : 'Tell the donor it was received', actions: [['msg-open', 'Send', { id: m.id }]] })));
   const recent = mine.slice().sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 8);
-  return heroHTML(`My workspace · ${esc(ME.name.split(' ')[0])}`, `${esc(todayLong())} · ${esc(ROLES[ME.role].label)}`, [[compact(mtd), 'My verified collections this month'], [NUM.format(today.length), 'Receipts today'], [NUM.format(pend.length), 'Waiting for verification'], [NUM.format(myDue.length), 'My installments due']],
+  return heroHTML(`My workspace · ${esc(ME.name)}`, `${esc(todayLong())} · ${esc(ROLES[ME.role].label)}`, [[compact(mtd), 'My verified collections this month'], [NUM.format(today.length), 'Receipts today'], [NUM.format(pend.length), 'Waiting for verification'], [NUM.format(myDue.length), 'My installments due']],
     `<button class="btn btn-white btn-lg" data-act="new-again">${ic('plus')}New receipt</button><button class="btn btn-glass" data-act="my-receipts">${ic('receipt')}My receipts</button><button class="btn btn-glass" data-act="my-donors">${ic('users')}My donors</button>`)
   + `<div class="card attention"><div class="card-h"><h3>${ic('check')}My tasks <span class="count-pill">${tasks.length}</span></h3></div><div class="tasks">${notifHTML(tasks)}</div></div>
     <div class="kpis">
@@ -5210,7 +5210,7 @@ const goodsTable = (list, actions) => `<div class="tbl-wrap"><table class="tbl">
 function storeDashboardHTML() {
   const t = todayISO(), pend = goodsPending(), rec = goodsReceived(), today = rec.filter(x => (x.vGoods.at || '').slice(0, 10) === t), mo = rec.filter(x => (x.vGoods.at || '').slice(0, 7) === t.slice(0, 7));
   const notes = computeNotifications();
-  return heroHTML(`Store desk · ${esc(ME.name.split(' ')[0])}`, `${esc(todayLong())} · ${esc(ROLES[ME.role].label)} · in-kind goods only`, [[NUM.format(pend.length), 'Waiting to be received'], [compact(pend.reduce((s, x) => s + goodsTotal(x), 0)), 'Est. value waiting'], [NUM.format(today.length), 'Received today'], [NUM.format(mo.length), 'Received this month']],
+  return heroHTML(`Store desk · ${esc(ME.name)}`, `${esc(todayLong())} · ${esc(ROLES[ME.role].label)} · in-kind goods only`, [[NUM.format(pend.length), 'Waiting to be received'], [compact(pend.reduce((s, x) => s + goodsTotal(x), 0)), 'Est. value waiting'], [NUM.format(today.length), 'Received today'], [NUM.format(mo.length), 'Received this month']],
     `<button class="btn btn-white btn-lg" data-act="goods-tab" data-tab="pending">${ic('box')}Goods to receive</button><button class="btn btn-glass" data-act="goods-tab" data-tab="received">${ic('check')}Received</button>`)
   + (notes.length ? `<div class="card attention"><div class="card-h"><h3>${ic('bell')}Needs your attention <span class="count-pill">${notes.length}</span></h3></div><div class="tasks">${notifHTML(notes.slice(0, 4))}</div></div>` : '')
   + `<div class="card"><div class="card-h"><div><h3>Goods to receive</h3><div class="sub">Oldest first. Count the items, then press Receive.</div></div><button class="btn btn-ghost btn-sm" data-act="goods-tab" data-tab="pending">View all</button></div>
@@ -5933,7 +5933,7 @@ async function erpBoot() {
   enterApp();
   erpSubscribe();
   /* Alkhidmat AI — every portal has it; it gets only figures, never donor names, CNIC or phone numbers */
-  if (window.AKF_ASSISTANT) AKF_ASSISTANT({ sb: erpSb, portal: PORTAL_TITLE, user: ME.name.split(' ')[0], context: erpAiContext,
+  if (window.AKF_ASSISTANT) AKF_ASSISTANT({ sb: erpSb, portal: PORTAL_TITLE, user: ME.name, context: erpAiContext,
     hints: ['What needs my attention today?', 'How much did we collect this month?', 'Explain how a receipt gets verified', 'How do I record an in-kind donation?'] });
   await audit('LOGIN', ME.email, 'Opened Donor Management'); await persist();
   await erpReconcile();
