@@ -14,7 +14,7 @@
   const SVG = d => { const ns = "http://www.w3.org/2000/svg", s = document.createElementNS(ns, "svg"); s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("fill", "none");
     s.setAttribute("stroke", "currentColor"); s.setAttribute("stroke-width", "2"); s.setAttribute("stroke-linecap", "round"); s.setAttribute("stroke-linejoin", "round"); s.setAttribute("aria-hidden", "true");
     const p = document.createElementNS(ns, "path"); p.setAttribute("d", d); s.append(p); return s; };
-  const ICON = { home: "M3 11l9-8 9 8M5 10v10h14V10", search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3", spark: "M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z", dot: "M12 12h.01" };
+  const ICON = { home: "M3 11l9-8 9 8M5 10v10h14V10", search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3", spark: "M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8z", dot: "M12 12h.01", bell: "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0" };
   const safeLink = u => { try { const x = new URL(String(u || ""), BASE); return x.origin === location.origin ? x.href : null; } catch (e) { return null; } };
 
   /* the portal's own menu: Procurement/Store/Tasks (aside.side nav.nav) or Donor/Fleet/Assistance (#nav .nav-item) */
@@ -44,7 +44,14 @@
     stripLinks = el("div", "jz-ts-portals");
     const find = el("button", "jz-ts-search"); find.type = "button"; find.title = "Search (Ctrl K)"; find.setAttribute("aria-label", "Search and ask Alkhidmat AI"); find.append(SVG(ICON.search)); find.addEventListener("click", openPalette);
     meBox = el("div", "jz-ts-me"); meBox.setAttribute("aria-label", "Signed in as");
-    strip.append(menu, home, stripLinks, meBox, find);
+    // one bell for every portal: what is waiting for me anywhere; a click opens that portal and record (akf-desk.js)
+    const bell = el("button", "jz-ts-search jz-ts-bell"); bell.type = "button"; bell.title = "All notifications"; bell.setAttribute("aria-label", "All notifications from every portal");
+    const badge = el("span", "jz-ts-badge"); badge.hidden = true; bell.append(SVG(ICON.bell), badge);
+    bell.addEventListener("click", () => window.AKF_DESK && AKF_DESK.openInbox && AKF_DESK.openInbox(bell));
+    const count = n => { badge.hidden = !n; badge.textContent = n > 99 ? "99+" : String(n); bell.setAttribute("aria-label", n + " notifications from every portal"); };
+    document.addEventListener("akf-inbox", e => count(e.detail.count || 0));
+    if (window.AKF_DESK && AKF_DESK.inbox) count(AKF_DESK.inbox().length);   // the list may have arrived before this strip
+    strip.append(menu, home, stripLinks, meBox, bell, find);
     document.body.prepend(rail); document.body.prepend(strip);
     // the strip's height (one or two rows of portal names): sticky page headers and the menu sit just below it
     sh(); addEventListener("resize", sh);

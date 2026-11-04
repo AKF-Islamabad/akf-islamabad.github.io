@@ -124,6 +124,7 @@
   .jz-app *,.jz-app *::before,.jz-app *::after,.jz-scrim,.jz-palette,.jz-icon3d,.jz-icon3d::after,.jz-rail{animation-duration:.01ms!important;animation-iteration-count:1!important;animation-delay:0s!important;transition-duration:.01ms!important}
 }
 .jz-iconbtn.on{color:var(--jz-green);border-color:color-mix(in srgb,var(--jz-green) 40%,var(--jz-line))}
+.jz-bell{position:relative}.jz-bell-n{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:#D23B3B;color:#fff;font:700 11px/18px Manrope,"Segoe UI",system-ui,sans-serif;text-align:center}.jz-bell-n[hidden]{display:none}
 
 /* ---------- Today screen ---------- */
 .jz-today{display:grid;gap:18px}

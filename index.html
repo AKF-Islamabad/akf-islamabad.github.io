@@ -6,12 +6,12 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-qn0jtvaIThIHAdOAPgsT4gjT3CZIjc0DEWhqo6rXq5Q='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-aXsjGjHe+5Bb6nb2B5hTzvvj7gSoeyA/6oERpYnOFIU='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <link rel="stylesheet" href="fonts/manrope.css">
-<link rel="stylesheet" href="jazba.css?v=5">
+<link rel="stylesheet" href="jazba.css?v=6">
 <link rel="icon" href="icon.jpg">
 <style>
 :root{
@@ -713,8 +713,12 @@ function topBar() {
     el("button", { class: "jz-search", type: "button", "aria-label": "Search or ask Alkhidmat AI", onclick: () => window.openPalette && openPalette() }, icon("search", 18), el("span", { text: "Search portals and pages… or ask Alkhidmat AI" }), el("kbd", { class: "jz-kbd", text: "Ctrl K" })),
     el("div", { class: "grow" }),
     el("div", { class: "who" }, el("div", { class: "t", style: "text-align:right" }, el("b", { text: S.me.full_name }), el("span", { text: S.me.is_super ? "Super Admin" : (S.me.designation || S.me.email) })), el("div", { class: "avatar", text: initials(S.me.full_name) })),
-    (() => { const on = !!(window.AKF_DESK && AKF_DESK.isOn()); return el("button", { class: "jz-iconbtn" + (on ? " on" : ""), title: on ? "Notifications are on" : "Turn on notifications", "aria-label": on ? "Notifications are on" : "Turn on notifications",
-      onclick: async () => { if (!window.AKF_DESK) return toast("Notifications are still loading. Try again in a moment."); if (!AKF_DESK.isOn()) { await AKF_DESK.turnOn(); render(); } else toast("Notifications are on for this device"); } }, icon("bell", 18)); })(),
+    // one bell for every portal (akf-desk.js): the list of what waits for me anywhere; "Turn on alerts" sits inside it
+    (() => { const n = window.AKF_DESK && AKF_DESK.inbox ? AKF_DESK.inbox().length : 0;
+      const b = el("button", { class: "jz-iconbtn jz-bell" + (window.AKF_DESK && AKF_DESK.isOn() ? " on" : ""), title: "All notifications", "aria-label": n + " notifications from every portal",
+        onclick: () => { if (!window.AKF_DESK || !AKF_DESK.openInbox) return toast("Notifications are still loading. Try again in a moment."); AKF_DESK.openInbox(b); } },
+        icon("bell", 18), el("span", { class: "jz-bell-n", text: n > 99 ? "99+" : String(n), hidden: !n }));
+      return b; })(),
     theme,
     el("button", { class: "jz-iconbtn", title: "Sign out of every portal", "aria-label": "Sign out", onclick: async () => { await sb.auth.signOut({ scope: "global" }); } }, icon("logout", 18)));
 }
@@ -737,10 +741,7 @@ async function loadToday() {
   const before = JSON.stringify([S.today, S.todayErr]);
   try { S.today = await q(sb.rpc("core_my_today")); S.todayErr = false; }
   catch (e) { S.todayErr = true; }
-  // a new approval or task on the main page rings the bell too, with an alert on screen (akf-desk.js)
-  if (S.today && window.AKF_NOTIFY) AKF_NOTIFY([
-    ...(S.today.actions || []).map(a => ({ key: `td|${a.portal}|${a.ref}|${a.sub || ""}`, title: `Waiting for you · ${a.ref}`, body: [a.title, a.sub].filter(Boolean).join(" · ") })),
-    ...(S.today.tasks || []).map(t => ({ key: `tt|${t.id}`, title: "Task for you", body: [t.title, t.due ? "due " + t.due : ""].filter(Boolean).join(" · ") }))]);
+  // the bell (ring + list) for every portal, this page included, is akf-desk.js (core_my_inbox)
   // repaint only when something changed and nobody is working inside the Today screen (keeps keyboard focus and scroll)
   const busy = document.activeElement && document.activeElement.closest && document.activeElement.closest(".jz-today");
   if (S.view === "home" && (S.tab === "portals" || !S.me.is_super) && JSON.stringify([S.today, S.todayErr]) !== before && !busy) render();
@@ -788,6 +789,7 @@ function waitingChart(A) {
     items: Object.keys(n).map(k => { const p = S.portals.find(x => x.key === k); return { key: k, label: p ? p.name : k, value: n[k], color: p ? portalColor(p) : "" }; }) });
   box.append(chart); return box;
 }
+document.addEventListener("akf-inbox", e => { const n = e.detail.count || 0; document.querySelectorAll(".jz-bell").forEach(b => { b.setAttribute("aria-label", n + " notifications from every portal"); const x = b.querySelector(".jz-bell-n"); if (x) { x.hidden = !n; x.textContent = n > 99 ? "99+" : String(n); } }); });
 document.addEventListener("akf-chart-pick", e => { if (e.detail.chart !== "today-portals") return; const p = (S.portals || []).find(x => x.key === e.detail.key); if (p) location.href = safeHref(p.url); });
 const TODAY_ICON = { procurement: "cart", store: "box", assistance: "helping", fleet: "truck", donor: "heart" };
 const daysWaiting = s => { const d = Math.floor((Date.now() - new Date(s).getTime()) / 864e5); return isFinite(d) ? d : 0; };

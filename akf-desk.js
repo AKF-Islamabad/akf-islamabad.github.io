@@ -15,13 +15,13 @@
   const SCRIPT = document.currentScript && document.currentScript.src;
   const BASE = new URL(".", SCRIPT || location.href).href;          // the main site folder (/ live, /portal-staging/ staging)
   // Jazba UI (the official design system) on every page, existing and future, even before sign-in
-  if (!document.querySelector('link[href*="jazba.css"]')) { const jz = document.createElement("link"); jz.rel = "stylesheet"; jz.href = BASE + "jazba.css?v=5"; document.head.append(jz); }
+  if (!document.querySelector('link[href*="jazba.css"]')) { const jz = document.createElement("link"); jz.rel = "stylesheet"; jz.href = BASE + "jazba.css?v=6"; document.head.append(jz); }
   // Jazba charts (3D, animated, clickable) on every page, existing and future portals: akf-charts.js
   if (!window.AKF_CHARTS && !document.querySelector('script[src*="akf-charts.js"]')) { const ck = document.createElement("script"); ck.src = BASE + "akf-charts.js"; document.head.append(ck); }
   // one date style everywhere (03-Oct-2026): akf-dates.js rewrites dates as they appear on screen
   if (!window.AKF_DATES && !document.querySelector('script[src*="akf-dates.js"]')) { const dj = document.createElement("script"); dj.src = BASE + "akf-dates.js"; document.head.append(dj); }
   // the Jazba look on every portal: maps the portal's own colour/font settings (never on the main page)
-  if (document.documentElement.dataset.jzPage !== "hub" && !document.querySelector('link[href*="jazba-portals.css"]')) { const jp = document.createElement("link"); jp.rel = "stylesheet"; jp.href = BASE + "jazba-portals.css?v=7"; document.head.append(jp); }
+  if (document.documentElement.dataset.jzPage !== "hub" && !document.querySelector('link[href*="jazba-portals.css"]')) { const jp = document.createElement("link"); jp.rel = "stylesheet"; jp.href = BASE + "jazba-portals.css?v=8"; document.head.append(jp); }
   // the same Jazba frame on every portal (Jazba Portal Standard): top strip + menu + Ctrl+K; the sticky note shows on every page
   if (document.documentElement.dataset.jzPage !== "hub" && !window.JAZBA_SHELL) {
     document.documentElement.dataset.jzShell = "on";
@@ -189,8 +189,76 @@
     if (ring.length) notifyNow(ring.map((n) => ({ key: n.key, title: String(n.title || "New notification").slice(0, 120), body: String(n.body || "").slice(0, 240), url: n.url })));
   };
 
+  /* ---------- one bell for every portal (035_all_notifications.sql: core_my_inbox) ----------
+     The list is the same on the main page and in every portal; a click opens the portal and the record it is about.
+     Items of the portal on screen ring through that portal's own AKF_NOTIFY (same keys), so nothing rings twice. */
+  let inbox = [], inboxP = null, myPortals = null, panel = null;
+  const here = () => { const p = location.href.startsWith(BASE) ? location.href.slice(BASE.length).split(/[/?#]/)[0] : ""; return p; };
+  async function loadInbox() {
+    if (!me) return;
+    if (!myPortals) myPortals = await sb.rpc("core_my_portals").then(r => r.data || null).catch(() => null);
+    const { data, error } = await sb.rpc("core_my_inbox");
+    if (error || !Array.isArray(data)) return;
+    const has = k => !myPortals || myPortals.some(p => p.key === k);
+    inbox = data.filter(n => n && n.key && has(n.portal));
+    const cur = here();
+    window.AKF_NOTIFY(inbox.filter(n => n.portal !== cur).map(n => ({ key: n.key, title: n.title, body: n.body, url: linkOf(n) })));
+    document.dispatchEvent(new CustomEvent("akf-inbox", { detail: { count: inbox.length } }));
+    if (panel && panel.isConnected) drawPanel();
+  }
+  // only links inside this site: the portal's own address from core_my_portals, plus the record's page link
+  function linkOf(n) {
+    const p = myPortals && myPortals.find(x => x.key === n.portal);
+    try { const u = new URL(p ? p.url : n.portal + "/", BASE); if (u.origin !== location.origin) return BASE;
+      const h = String(n.open || ""); return u.href.split("#")[0] + (/^#[\w=:%.\-]*$/.test(h) ? h : ""); } catch (_) { return BASE; }
+  }
+  function go(n) {
+    const url = linkOf(n), same = url.split("#")[0] === location.href.split("#")[0];
+    closePanel();
+    // Tasks opens #task= on the spot; the other portals read the link when the page loads
+    if (same) { location.hash = url.split("#")[1] || ""; if (!/#task=/.test(url)) location.reload(); } else location.href = url;
+  }
+  function closePanel() { if (panel) { panel.remove(); panel = null; } removeEventListener("keydown", panelKeys, true); document.removeEventListener("pointerdown", panelOut, true); }
+  function panelKeys(e) { if (e.key === "Escape") { e.preventDefault(); const b = panel && panel._back; closePanel(); if (b && b.focus) b.focus(); } }
+  function panelOut(e) { if (panel && !panel.contains(e.target) && !(panel._back && panel._back.contains(e.target))) closePanel(); }
+  const ago = s => { const m = Math.round((Date.now() - Date.parse(s)) / 6e4); if (!isFinite(m)) return ""; if (m < 1) return "now"; if (m < 60) return m + " min"; const h = Math.round(m / 60); return h < 24 ? h + " h" : Math.round(h / 24) + " d"; };
+  function drawPanel() {
+    const nameOf = k => { const p = myPortals && myPortals.find(x => x.key === k); return p ? p.name : k; };
+    const list = el("div", "akd-in-list");
+    if (!inbox.length) list.append(el("p", "akd-in-empty", "All clear. Nothing is waiting for you in any portal."));
+    inbox.slice(0, 60).forEach(n => {
+      const b = el("button", "akd-in-row"); b.type = "button";
+      b.append(el("span", "akd-in-p", nameOf(n.portal)), el("b", "", n.title), n.body ? el("span", "akd-in-b", n.body) : "", el("small", "", ago(n.at)));
+      b.onclick = () => go(n); list.append(b);
+    });
+    const head = el("div", "akd-in-h"); head.append(el("b", "", `All notifications (${inbox.length})`));
+    if (!("Notification" in window) || Notification.permission !== "granted") { const t = el("button", "akd-in-on", "🔕 Turn on alerts"); t.type = "button"; t.onclick = () => turnOn(); head.append(t); }
+    panel.replaceChildren(head, list);
+  }
+  function openInbox(anchor) {
+    if (panel) { closePanel(); return; }
+    addCss(); panel = el("div", "akd-in"); panel.setAttribute("role", "dialog"); panel.setAttribute("aria-label", "All notifications from every portal"); panel._back = anchor;
+    const r = anchor && anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : null;
+    panel.style.top = Math.round(r ? r.bottom + 8 : 70) + "px";
+    document.body.append(panel); drawPanel(); addEventListener("keydown", panelKeys, true); document.addEventListener("pointerdown", panelOut, true);
+    loadInbox().catch(() => {});
+  }
+  window.AKF_DESK.inbox = () => inbox;
+  window.AKF_DESK.openInbox = openInbox;
+
   /* ---------- the sticky note ---------- */
   const CSS = `
+.akd-in{position:fixed;right:16px;z-index:2147482500;width:min(420px,calc(100vw - 32px));max-height:min(70vh,640px);display:flex;flex-direction:column;background:#fff;color:#1d2433;border-radius:14px;box-shadow:0 20px 50px -16px rgba(15,23,42,.45);font:14px/1.4 Manrope,"Segoe UI",system-ui,sans-serif;overflow:hidden}
+.akd-in-h{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid #E6EAF0}.akd-in-h b{flex:1}
+.akd-in-on{border:1px solid #D9C35A;background:#FFF8D6;border-radius:99px;padding:4px 10px;cursor:pointer;font:inherit;font-size:12px;font-weight:600}
+.akd-in-list{overflow:auto;padding:6px}
+.akd-in-row{display:grid;gap:2px;width:100%;text-align:left;border:0;background:none;padding:10px;border-radius:10px;cursor:pointer;font:inherit;color:inherit}
+.akd-in-row:hover,.akd-in-row:focus-visible{background:#EEF4FC;outline:none}.akd-in-row:focus-visible{box-shadow:inset 0 0 0 2px #0B51A7}
+.akd-in-p{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#0B51A7}
+.akd-in-b{color:#4a5568;font-size:13px}.akd-in-row small{color:#5b6475;font-size:11.5px}
+.akd-in-empty{padding:18px;color:#4a5568;text-align:center}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .akd-in{background:#162033;color:#E8EDF5}:root:not([data-theme="light"]) .akd-in-h{border-color:#2A3650}:root:not([data-theme="light"]) .akd-in-row:hover{background:#20304A}:root:not([data-theme="light"]) .akd-in-b,:root:not([data-theme="light"]) .akd-in-row small,:root:not([data-theme="light"]) .akd-in-empty{color:#B7C2D3}:root:not([data-theme="light"]) .akd-in-p{color:#7FB2F0}}
+:root[data-theme="dark"] .akd-in{background:#162033;color:#E8EDF5}:root[data-theme="dark"] .akd-in-h{border-color:#2A3650}:root[data-theme="dark"] .akd-in-row:hover{background:#20304A}:root[data-theme="dark"] .akd-in-b,:root[data-theme="dark"] .akd-in-row small,:root[data-theme="dark"] .akd-in-empty{color:#B7C2D3}:root[data-theme="dark"] .akd-in-p{color:#7FB2F0}
 .akd-help{max-width:min(440px,calc(100vw - 32px));border:0;border-radius:14px;padding:20px 22px;font:14px/1.5 Manrope,"Segoe UI",system-ui,sans-serif;color:#1d2433;background:#fff;box-shadow:0 20px 50px -20px rgba(0,0,0,.5)}
 .akd-help::backdrop{background:rgba(15,23,42,.45)}
 .akd-pops{position:fixed;right:16px;bottom:96px;z-index:2147482000;display:grid;gap:8px;width:min(340px,calc(100vw - 32px))}
@@ -405,11 +473,12 @@
   async function tick() {
     const { data: s } = await sb.auth.getSession().catch(() => ({ data: {} }));
     const u = s && s.session && s.session.user;
-    if (!u) { me = null; paint(); enforce(); return; }
+    if (!u) { me = null; inbox = []; paint(); enforce(); return; }
     if (expired(s.session, Date.now())) { signOutNow(s.session); return; }
     if (!me || me.id !== u.id) { me = { id: u.id, email: String(u.email || "").toLowerCase() }; data = null; paint(); }
     enforce();
     load().catch(() => {});
+    loadInbox().catch(() => {});
     if (!saved && canPush && Notification.permission === "granted") { saved = true; subscribe().catch(() => { saved = false; }); }
   }
   // every 5 s until someone signs in, then every 2 minutes (only while the page is on screen)
