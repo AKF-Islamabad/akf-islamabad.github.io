@@ -177,8 +177,12 @@
     signatures: () => sigP || (sigP = sb.rpc("core_signatures_all").then(r => { const m = {}; (r.data || []).forEach(x => { m[String(x.email).toLowerCase()] = x.image; }); return m; }).catch(() => { sigP = null; return {}; })),
     saveSignature: img => sb.rpc("core_signature_save", { p_image: img || "" }).then(r => { sigP = null; if (r.error) throw r.error; }) };
   let sigP = null;
+  // a portal hands over its whole bell list: keep a copy for the bell on every page (036), then ring the new ones
   window.AKF_NOTIFY = function (items) {
     if (!me || !Array.isArray(items)) return;
+    saveBell(items); ring(items);
+  };
+  function ring(items) {
     const k = "akf-seen-" + me.id; const seen = store.get(k, null); const first = seen === null; const s = seen || {};
     const fresh = items.filter((n) => n && n.key && !s[n.key]);
     if (!fresh.length) return;
@@ -187,7 +191,14 @@
     if (first) return;                                               // the first visit on this device: no flood of old items
     const ring = fresh.filter((n) => !(n.pushed && document.visibilityState !== "visible"));
     if (ring.length) notifyNow(ring.map((n) => ({ key: n.key, title: String(n.title || "New notification").slice(0, 120), body: String(n.body || "").slice(0, 240), url: n.url })));
-  };
+  }
+  let bellSig = "", bellT = 0;
+  function saveBell(items) {
+    const cur = here(); if (!cur) return;                              // the main page has no bell list of its own
+    const list = items.filter(n => n && n.key).slice(0, 150).map(n => ({ key: String(n.key), title: n.title || "", body: n.body || "", open: n.open || "", at: n.at ? String(n.at) : "", read: !!n.read }));
+    const sig = JSON.stringify(list); if (sig === bellSig) return; bellSig = sig;
+    clearTimeout(bellT); bellT = setTimeout(() => { sb.rpc("core_bell_save", { p_portal: cur, p_items: list }).then(() => loadInbox()).catch(() => { bellSig = ""; }); }, 1500);
+  }
 
   /* ---------- one bell for every portal (035_all_notifications.sql: core_my_inbox) ----------
      The list is the same on the main page and in every portal; a click opens the portal and the record it is about.
@@ -197,13 +208,17 @@
   async function loadInbox() {
     if (!me) return;
     if (!myPortals) myPortals = await sb.rpc("core_my_portals").then(r => r.data || null).catch(() => null);
-    const { data, error } = await sb.rpc("core_my_inbox");
-    if (error || !Array.isArray(data)) return;
-    const has = k => !myPortals || myPortals.some(p => p.key === k);
-    inbox = data.filter(n => n && n.key && has(n.portal));
+    // each portal's own bell list (saved by that portal, 036) plus the live list of steps waiting for me (035)
+    const [live, saved] = await Promise.all([sb.rpc("core_my_inbox"), sb.rpc("core_bell_all")]);
+    if (live.error && saved.error) return;
+    const has = k => !myPortals || myPortals.some(p => p.key === k), keys = new Set(), all = [];
+    (Array.isArray(saved.data) ? saved.data : []).forEach(b => (b.items || []).forEach(n => { if (n && n.key && !keys.has(n.key)) { keys.add(n.key); all.push({ ...n, portal: b.portal, at: n.at || b.at }); } }));
+    (Array.isArray(live.data) ? live.data : []).forEach(n => { if (n && n.key && !keys.has(n.key)) { keys.add(n.key); all.push(n); } });
+    const rd = store.get("akf-inread-" + me.id, {});
+    inbox = all.filter(n => has(n.portal)).map(n => ({ ...n, read: !!(n.read || rd[n.key]) }));
     const cur = here();
-    window.AKF_NOTIFY(inbox.filter(n => n.portal !== cur).map(n => ({ key: n.key, title: n.title, body: n.body, url: linkOf(n) })));
-    document.dispatchEvent(new CustomEvent("akf-inbox", { detail: { count: inbox.length } }));
+    ring(inbox.filter(n => n.portal !== cur && !n.read).map(n => ({ key: n.key, title: n.title, body: n.body, url: linkOf(n) })));
+    document.dispatchEvent(new CustomEvent("akf-inbox", { detail: { count: inbox.filter(n => !n.read).length } }));
     if (panel && panel.isConnected) drawPanel();
   }
   // only links inside this site: the portal's own address from core_my_portals, plus the record's page link
@@ -213,6 +228,8 @@
       const h = String(n.open || ""); return u.href.split("#")[0] + (/^#[\w=:%.\-]*$/.test(h) ? h : ""); } catch (_) { return BASE; }
   }
   function go(n) {
+    const rd = store.get("akf-inread-" + me.id, {}); rd[n.key] = Date.now();
+    store.set("akf-inread-" + me.id, Object.fromEntries(Object.entries(rd).sort((a, b) => b[1] - a[1]).slice(0, 400)));
     const url = linkOf(n), same = url.split("#")[0] === location.href.split("#")[0];
     closePanel();
     // Tasks opens #task= on the spot; the other portals read the link when the page loads
@@ -224,14 +241,24 @@
   const ago = s => { const m = Math.round((Date.now() - Date.parse(s)) / 6e4); if (!isFinite(m)) return ""; if (m < 1) return "now"; if (m < 60) return m + " min"; const h = Math.round(m / 60); return h < 24 ? h + " h" : Math.round(h / 24) + " d"; };
   function drawPanel() {
     const nameOf = k => { const p = myPortals && myPortals.find(x => x.key === k); return p ? p.name : k; };
-    const list = el("div", "akd-in-list");
-    if (!inbox.length) list.append(el("p", "akd-in-empty", "All clear. Nothing is waiting for you in any portal."));
-    inbox.slice(0, 60).forEach(n => {
-      const b = el("button", "akd-in-row"); b.type = "button";
-      b.append(el("span", "akd-in-p", nameOf(n.portal)), el("b", "", n.title), n.body ? el("span", "akd-in-b", n.body) : "", el("small", "", ago(n.at)));
-      b.onclick = () => go(n); list.append(b);
+    const list = el("div", "akd-in-list"), unread = inbox.filter(n => !n.read).length;
+    if (!inbox.length) list.append(el("p", "akd-in-empty", "All clear. Nothing new in any of your portals."));
+    // one block per portal, in the order of the person's portals; unread first, then the rest (greyed)
+    const order = (myPortals || []).map(p => p.key); [...new Set(inbox.map(n => n.portal))].forEach(k => { if (!order.includes(k)) order.push(k); });
+    order.forEach(k => {
+      const L = inbox.filter(n => n.portal === k).sort((a, b) => (a.read - b.read) || String(b.at || "").localeCompare(String(a.at || "")));
+      if (!L.length) return;
+      const u = L.filter(n => !n.read).length, g = el("button", "akd-in-g"); g.type = "button";
+      g.append(el("b", "", nameOf(k)), el("span", u ? "akd-in-n" : "akd-in-n0", u ? u + " new" : "seen")); g.title = "Open " + nameOf(k);
+      g.onclick = () => go({ key: "portal|" + k, portal: k, open: "" }); list.append(g);
+      L.slice(0, 15).forEach(n => {
+        const b = el("button", "akd-in-row" + (n.read ? " read" : "")); b.type = "button";
+        b.append(el("b", "", n.title || "Notification"), n.body ? el("span", "akd-in-b", n.body) : "", n.at ? el("small", "", ago(n.at)) : "");
+        b.onclick = () => go(n); list.append(b);
+      });
+      if (L.length > 15) list.append(el("p", "akd-in-more", `+${L.length - 15} more in ${nameOf(k)}`));
     });
-    const head = el("div", "akd-in-h"); head.append(el("b", "", `All notifications (${inbox.length})`));
+    const head = el("div", "akd-in-h"); head.append(el("b", "", unread ? `${unread} new in your portals` : "All notifications"));
     if (!("Notification" in window) || Notification.permission !== "granted") { const t = el("button", "akd-in-on", "🔕 Turn on alerts"); t.type = "button"; t.onclick = () => turnOn(); head.append(t); }
     panel.replaceChildren(head, list);
   }
@@ -257,8 +284,11 @@
 .akd-in-p{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#0B51A7}
 .akd-in-b{color:#4a5568;font-size:13px}.akd-in-row small{color:#5b6475;font-size:11.5px}
 .akd-in-empty{padding:18px;color:#4a5568;text-align:center}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .akd-in{background:#162033;color:#E8EDF5}:root:not([data-theme="light"]) .akd-in-h{border-color:#2A3650}:root:not([data-theme="light"]) .akd-in-row:hover{background:#20304A}:root:not([data-theme="light"]) .akd-in-b,:root:not([data-theme="light"]) .akd-in-row small,:root:not([data-theme="light"]) .akd-in-empty{color:#B7C2D3}:root:not([data-theme="light"]) .akd-in-p{color:#7FB2F0}}
-:root[data-theme="dark"] .akd-in{background:#162033;color:#E8EDF5}:root[data-theme="dark"] .akd-in-h{border-color:#2A3650}:root[data-theme="dark"] .akd-in-row:hover{background:#20304A}:root[data-theme="dark"] .akd-in-b,:root[data-theme="dark"] .akd-in-row small,:root[data-theme="dark"] .akd-in-empty{color:#B7C2D3}:root[data-theme="dark"] .akd-in-p{color:#7FB2F0}
+.akd-in-g{display:flex;align-items:center;gap:8px;width:100%;border:0;background:#F1F5FA;border-radius:8px;padding:8px 10px;margin:8px 0 2px;cursor:pointer;font:inherit;color:#0B3D75;text-align:left}.akd-in-g b{flex:1}
+.akd-in-n{background:#D23B3B;color:#fff;border-radius:99px;padding:1px 8px;font-size:12px;font-weight:700}.akd-in-n0{color:#5b6475;font-size:12px}
+.akd-in-row.read b{font-weight:600;color:#5b6475}.akd-in-more{margin:2px 10px 6px;font-size:12px;color:#5b6475}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .akd-in{background:#162033;color:#E8EDF5}:root:not([data-theme="light"]) .akd-in-h{border-color:#2A3650}:root:not([data-theme="light"]) .akd-in-row:hover{background:#20304A}:root:not([data-theme="light"]) .akd-in-b,:root:not([data-theme="light"]) .akd-in-row small,:root:not([data-theme="light"]) .akd-in-empty{color:#B7C2D3}:root:not([data-theme="light"]) .akd-in-p{color:#7FB2F0}:root:not([data-theme="light"]) .akd-in-g{background:#20304A;color:#CFE0F7}}
+:root[data-theme="dark"] .akd-in{background:#162033;color:#E8EDF5}:root[data-theme="dark"] .akd-in-h{border-color:#2A3650}:root[data-theme="dark"] .akd-in-row:hover{background:#20304A}:root[data-theme="dark"] .akd-in-b,:root[data-theme="dark"] .akd-in-row small,:root[data-theme="dark"] .akd-in-empty{color:#B7C2D3}:root[data-theme="dark"] .akd-in-p{color:#7FB2F0}:root[data-theme="dark"] .akd-in-g{background:#20304A;color:#CFE0F7}
 .akd-help{max-width:min(440px,calc(100vw - 32px));border:0;border-radius:14px;padding:20px 22px;font:14px/1.5 Manrope,"Segoe UI",system-ui,sans-serif;color:#1d2433;background:#fff;box-shadow:0 20px 50px -20px rgba(0,0,0,.5)}
 .akd-help::backdrop{background:rgba(15,23,42,.45)}
 .akd-pops{position:fixed;right:16px;bottom:96px;z-index:2147482000;display:grid;gap:8px;width:min(340px,calc(100vw - 32px))}

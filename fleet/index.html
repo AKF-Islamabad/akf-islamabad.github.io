@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-fleet.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-D9X5aVpdEiuHvK31yqkYgkBviUhMkU+1QK/p9+UtnSE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-jpSRzUEHpfKJvwJBu6gqZ3683gnjSrUl7ZlR/idbhNI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -2436,7 +2436,7 @@ function pageTitle() { if (PQ.view === 'det') return PQ.sel || 'Request'; const 
 function buildChrome() {
   if (!ME) return;
   const nb = todo().length + ckTodo().length;
-  if (window.AKF_NOTIFY) AKF_NOTIFY(todo().map(o => ({ key: 'fr|' + o.no + '|' + o.status, title: 'Vehicle request ' + o.no + ' · ' + o.status, body: [o.name, o.place].filter(Boolean).join(' · ') }))
+  if (window.AKF_NOTIFY) AKF_NOTIFY(todo().map(o => ({ key: 'fr|' + o.no + '|' + o.status, open: '#track', title: 'Vehicle request ' + o.no + ' · ' + o.status, body: [o.name, o.place].filter(Boolean).join(' · ') }))
     .concat(ckTodo().map(k => ({ key: 'fc|' + k.id, title: 'Daily checklist to check · ' + (k.veh || ''), body: k.date || '' }))));   // system notification + bell sound (akf-desk.js)
   let h = '', sec = null;
   for (const n of NAVX) {
