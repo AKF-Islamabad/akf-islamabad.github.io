@@ -187,3 +187,5 @@ html[data-jz-shell="on"] .topbar{top:var(--jz-strip-h,46px)!important}
 
 /* a request opens as a wide side panel: the whole step table (name, designation, date, remarks, status) fits without scrolling */
 html[data-jz-family="app"] .overlay > .modal:has(.track){width:min(1120px,100vw)!important;max-width:none!important}
+
+.jz-ts-bell{position:relative} .jz-ts-badge{position:absolute;top:-5px;right:-6px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:#D23B3B;color:#fff;font:700 11px/18px Manrope,"Segoe UI",system-ui,sans-serif;text-align:center;box-shadow:0 0 0 2px #0B2A4A} .jz-ts-badge[hidden]{display:none}
