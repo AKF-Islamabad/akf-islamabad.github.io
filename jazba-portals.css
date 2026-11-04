@@ -66,7 +66,6 @@ h1,h2,h3,h4,h5,h6,button,input,select,textarea{font-family:inherit}
 .jz-topstrip button,.jz-topstrip a{color:inherit}
 .jz-ts-menu,.jz-ts-search{flex:none;display:grid;place-items:center;width:34px;height:34px;border:0;border-radius:9px;background:rgba(255,255,255,.08);cursor:pointer}
 .jz-ts-menu:hover,.jz-ts-search:hover{background:rgba(255,255,255,.18)} .jz-ts-menu svg,.jz-ts-search svg{width:18px;height:18px}
-.jz-ts-bell{position:relative} .jz-ts-badge{position:absolute;top:-5px;right:-6px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:#D23B3B;color:#fff;font:700 11px/18px Manrope,"Segoe UI",system-ui,sans-serif;text-align:center;box-shadow:0 0 0 2px #0B2A4A} .jz-ts-badge[hidden]{display:none}
 .jz-ts-home{flex:none;display:block;line-height:0} .jz-ts-home img{border-radius:8px;background:#fff}
 /* every portal name in full: the links wrap onto a second row instead of being cut off */
 .jz-ts-portals{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:4px}

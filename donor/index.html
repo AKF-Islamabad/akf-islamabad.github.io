@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Foundation Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-/GsS9n0L3lC7vK3vRnqEjCm4whje8+jDHS2FEy+hs9c='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-LS19QuqVRexzfbRWUU2nZ39e+oCiYwTlma8lkGk0uJU='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -1132,7 +1132,7 @@ html.side-pinned .side-pin{background:#fff;color:#0B3D91}
       <form class="top-search" id="top-search" role="search"><span data-icon="search"></span><input class="input" name="q" type="search" placeholder="Search donors by name, CNIC, phone…" aria-label="Search donors" maxlength="80"><kbd>/</kbd></form>
       <span class="session-chip" id="session-chip" title="Automatic sign-out after inactivity"><span data-icon="clock"></span><span class="lbl">Auto sign-out</span> <b id="session-left" class="num"></b></span>
       <button class="btn btn-secondary btn-sm hidden" data-act="switch-role" id="switch-role" title="Testing mode: sign in as another role"><span data-icon="swap"></span><span class="lbl">Switch role</span></button>
-      <div class="bell-wrap"><button class="btn-icon bell" data-act="bell" id="bell-btn" aria-label="Notifications" aria-haspopup="true" aria-expanded="false"><span data-icon="bell"></span><span class="bell-count hidden" id="bell-count">0</span></button>
+      <div class="bell-wrap" hidden><button class="btn-icon bell" data-act="bell" id="bell-btn" aria-label="Notifications" aria-haspopup="true" aria-expanded="false"><span data-icon="bell"></span><span class="bell-count hidden" id="bell-count">0</span></button>
         <div class="bell-panel hidden" id="bell-panel" role="dialog" aria-label="Notifications"></div></div>
       <button class="btn-icon motion-btn" data-act="motion" id="motion-btn" aria-label="Animations" title="Animations"><span data-icon="zap"></span></button>
       <button class="btn-icon" data-act="theme" aria-label="Toggle dark mode" id="theme-btn"></button>
@@ -2334,7 +2334,7 @@ VIEWS.dashboard = {
         </div></div>
         <div class="hero-acts">${can('donation.create') ? `<button class="btn btn-white btn-lg" data-act="new-again">${ic('plus')}New receipt</button>` : ''}<button class="btn btn-glass" data-act="nav" data-view="donations">${ic('receipt')}Donations</button>${can('reports') ? `<button class="btn btn-glass" data-act="nav" data-view="reports">${ic('chart')}Reports</button>` : ''}</div>
       </div></section>
-    ${notes.length ? `<div class="card attention"><div class="card-h"><h3>${ic('bell')}Needs your attention <span class="count-pill">${notes.length}</span></h3></div><div class="tasks">${notifHTML(notes.slice(0, 5))}</div>${notes.length > 5 ? `<button class="btn btn-ghost btn-sm" data-act="bell" style="margin-top:8px">Show all ${notes.length}</button>` : ''}</div>` : ''}
+    ${notes.length ? `<div class="card attention"><div class="card-h"><h3>${ic('bell')}Needs your attention <span class="count-pill">${notes.length}</span></h3></div><div class="tasks">${notifHTML(notes)}</div></div>` : ''}
     <div class="kpis">
       ${kpi('ytd', 'accent', 'wallet', `Verified collections ${yr}`, esc(compact(ytd)), esc(money(ytd)), 'Show verified donations this year', trendVals)}
       ${kpi('mtd', '', 'calendar', 'This month', esc(compact(mtd)), delta === null ? 'No data for last month' : `${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)}% vs last month`, 'Show this month’s donations', trendVals.slice(-6))}
