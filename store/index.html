@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-t4MW2Vyagn0FTkFUU9oAL7lMXYuRxH4N4l2+XS840uw='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-UKk2iLsACv6qBOAmhKrwDTpGOXL8znH6bK+sLpkUNgE='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -7381,7 +7381,8 @@ function THome({state,user,A,open,vis,openNew,go,openEvent}){
   const t0=tToday(); const h=new Date().getHours(); const greet=h<12?"Good morning":h<17?"Good afternoon":"Good evening";
   const r=tRole(user); const mine=vis.filter(t=>t.assigneeId===user.id); const scope=r==="Staff"?mine:vis;
   const dueToday=scope.filter(tDueToday), overdue=scope.filter(tOverdue), openT=scope.filter(tOpen);
-  const waiting=vis.filter(t=>t.stage==="04"&&TR.canApprove(t,user));
+  const waiting=vis.filter(t=>(t.stage==="04"||(t.stage==="03"&&tIsSelf(t)))&&TR.canApprove(t,user));
+  const sent=mine.filter(t=>t.stage==="03"||t.stage==="04");   // handed in by me, waiting on the reviewer / HOD
   const doneMonth=scope.filter(t=>t.stage==="06"&&tLocalDay(t.completedAt).slice(0,7)===t0.slice(0,7));
   const todayAll=scope.filter(t=>t.plannedDate===t0); const todayDone=todayAll.filter(t=>t.stage==="06").length;
   const pct=todayAll.length?Math.round(todayDone/todayAll.length*100):(openT.length?0:100);
@@ -7412,7 +7413,7 @@ function THome({state,user,A,open,vis,openNew,go,openEvent}){
     <div class="tk-kpis4">
       <${Kpi} label="Due today" value=${dueToday.length} tone="warn" onClick=${()=>go("planner")}/>
       <${Kpi} label="Overdue" value=${overdue.length} tone="bad" onClick=${()=>go("board")}/>
-      <${Kpi} label="Waiting approval" value=${waiting.length} tone="violet" onClick=${()=>go("board")}/>
+      <${Kpi} label="Waiting approval" value=${waiting.length+sent.length} sub=${sent.length?`${waiting.length} for you · ${sent.length} of yours with the reviewer`:waiting.length?"for your approval":""} tone="violet" onClick=${()=>go("board")}/>
       <${Kpi} label="Done this month" value=${doneMonth.length} tone="ok" onClick=${()=>go("performance")}/>
     </div>
     <div class="grid2">
