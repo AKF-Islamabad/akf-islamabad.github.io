@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-aXsjGjHe+5Bb6nb2B5hTzvvj7gSoeyA/6oERpYnOFIU='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-0cKizhpnWSVJm9ffnl7Flh810MPyqH8d0yREpd3996g='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -741,6 +741,15 @@ async function loadToday() {
   const before = JSON.stringify([S.today, S.todayErr]);
   try { S.today = await q(sb.rpc("core_my_today")); S.todayErr = false; }
   catch (e) { S.todayErr = true; }
+  // HR keeps its own list (portals/hr.sql: hr_today); added here so the shared Today function did not change. Without it, Today is as before.
+  if (S.today) try {
+    const h = await q(sb.rpc("hr_today"));
+    if (h && Array.isArray(h.actions)) {
+      const T = S.today, C = T.counts || (T.counts = {}), late = h.actions.filter(a => Date.now() - new Date(a.since).getTime() > 2 * 864e5).length;
+      T.actions = (T.actions || []).concat(h.actions).sort((a, b) => String(a.since || "").localeCompare(String(b.since || "")));
+      C.actions = (C.actions || 0) + h.actions.length; C.late = (C.late || 0) + late; C.my_open_requests = (C.my_open_requests || 0) + (+h.mine_open || 0);
+    }
+  } catch (e) { }
   // the bell (ring + list) for every portal, this page included, is akf-desk.js (core_my_inbox)
   // repaint only when something changed and nobody is working inside the Today screen (keeps keyboard focus and scroll)
   const busy = document.activeElement && document.activeElement.closest && document.activeElement.closest(".jz-today");
@@ -791,7 +800,7 @@ function waitingChart(A) {
 }
 document.addEventListener("akf-inbox", e => { const n = e.detail.count || 0; document.querySelectorAll(".jz-bell").forEach(b => { b.setAttribute("aria-label", n + " notifications from every portal"); const x = b.querySelector(".jz-bell-n"); if (x) { x.hidden = !n; x.textContent = n > 99 ? "99+" : String(n); } }); });
 document.addEventListener("akf-chart-pick", e => { if (e.detail.chart !== "today-portals") return; const p = (S.portals || []).find(x => x.key === e.detail.key); if (p) location.href = safeHref(p.url); });
-const TODAY_ICON = { procurement: "cart", store: "box", assistance: "helping", fleet: "truck", donor: "heart" };
+const TODAY_ICON = { procurement: "cart", store: "box", assistance: "helping", fleet: "truck", donor: "heart", hr: "users" };
 const daysWaiting = s => { const d = Math.floor((Date.now() - new Date(s).getTime()) / 864e5); return isFinite(d) ? d : 0; };
 function actionList(A) {
   const tab = S.todayTab || "all", portalOf = k => S.portals.find(p => p.key === k);
