@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-J0ULEz6KSaaisX3nFfNCBVWoTtvwkrbXZzO4dtgZ4fg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-NrhXvtUXIFY/++StMCLhQU1Qs61b+ZMWPLe+MNdkgbI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1054,6 +1054,8 @@ html.side-pinned .side-pin{background:#fff;color:#0B3D91}
 .hr-filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
 .hr-filters .input,.hr-filters .select{max-width:220px}
 @media (max-width:640px){.hr-kv{grid-template-columns:1fr}}
+/* payslips and tax certificates print on their own */
+@media print { body * { visibility: hidden; } #layer, #layer * { visibility: visible; } #layer { position: absolute; inset: 0; background: #fff; } .no-print, #m-close { display: none !important; } }
 
 </style>
 </head>
@@ -1089,7 +1091,8 @@ html.side-pinned .side-pin{background:#fff;color:#0B3D91}
 <script src="../akf-charts.js"></script>      <!-- Jazba charts: 3D, animated, clickable -->
 <script src="../akf-desk.js" defer></script>  <!-- REQUIRED in every portal: one bell + notifications -->
 <script>
-/* Human Resources (HR360) on Jazba — phase 1: leave, requests, HR letters, approvals, staff records, HR policy.
+/* Human Resources (HR360) on Jazba — leave, requests, HR letters, approvals, staff records, HR policy, attendance (phase 2),
+   claims, loans, payroll and payslips (phase 3; rules in erp/supabase/portals/hr_pay.sql).
    Every rule is checked by the database (erp/supabase/portals/hr.sql); this page only shows the data and calls hr_* functions.
    Safety: all text goes in with textContent (el()), never as HTML; the only HTML strings are fixed icons and AKF_CHARTS. */
 "use strict";
@@ -1113,7 +1116,8 @@ const P = { home: '<path d="M3 11l9-8 9 8M5 10v10h14V10"/>', plus: '<path d="M12
   list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>', menu: '<path d="M4 6h16M4 12h16M4 18h16"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>',
   moon: '<path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/>', sun: '<path d="M12 4V2M12 22v-2M4 12H2M22 12h-2M5 5l-1.4-1.4M20.4 20.4 19 19M5 19l-1.4 1.4M20.4 3.6 19 5M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z"/>',
   check: '<path d="M5 12l5 5L20 7"/>', clock: '<path d="M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z"/>', bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
-  door: '<path d="M14 3H6v18h8M14 3l6 2v16l-6-2zM11 12h.01"/>', org: '<path d="M10 3h4v4h-4zM4 17h4v4H4zM16 17h4v4h-4zM12 7v5M6 17v-3h12v3"/>', folder: '<path d="M3 6h6l2 2h10v11H3z"/>', pin: '<path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11zM12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>', alert: '<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>' };
+  door: '<path d="M14 3H6v18h8M14 3l6 2v16l-6-2zM11 12h.01"/>', org: '<path d="M10 3h4v4h-4zM4 17h4v4H4zM16 17h4v4h-4zM12 7v5M6 17v-3h12v3"/>', folder: '<path d="M3 6h6l2 2h10v11H3z"/>', pin: '<path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11zM12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>', alert: '<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
+  wallet: '<path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H3zM3 7l12-3v3M17 13h.01"/>' };
 const ic = n => { const s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("class", "i"); s.setAttribute("aria-hidden", "true"); s.innerHTML = P[n] || P.list; return s; };
 const ref = () => Math.random().toString(36).slice(2, 8).toUpperCase();
 function toast(msg, bad) {
@@ -1131,14 +1135,23 @@ const can = (tab, a = "view") => !!(ME && (ME.super || (GRID[tab] || []).include
 async function rpc(name, args, what) { const { data, error } = await SB.rpc(name, args || {}); if (error) { const e = new Error(errText(error, what)); e.shown = true; throw e; } return data; }
 const fmtD = s => { if (!s) return ""; const d = new Date(String(s).length <= 10 ? s + "T00:00:00" : s); return isNaN(d) ? String(s) : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
 const fmtDT = s => { const d = new Date(s); return isNaN(d) ? "" : d.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); };
-const KIND = { Leave: "Leave", Attendance: "Attendance correction", Shift: "Shift change", Profile: "Profile correction", Document: "HR letter", Policy: "Policy change", Exit: "Exit" };
+const KIND = { Leave: "Leave", Attendance: "Attendance correction", Shift: "Shift change", Profile: "Profile correction", Document: "HR letter", Policy: "Policy change", Exit: "Exit",
+  Medical: "Medical claim", Expense: "Expense claim", Loan: "Loan", Advance: "Salary advance", Phone: "Phone scheme", Overtime: "Overtime", Outstation: "TA/DA (out-station)", Encashment: "Leave encashment", Payroll: "Payroll" };
+const MONEY = ["Medical", "Expense", "Overtime", "Outstation", "Loan", "Advance", "Phone", "Encashment"];
+const rs = n => "Rs " + Math.round(+n || 0).toLocaleString("en-PK");
+const monthName = m => new Date(m + "-01T00:00:00").toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 let NOTES = [];
 const STATUS = { pending: ["Waiting", "b-warn"], approved: ["Approved", "b-ok"], rejected: ["Rejected", "b-bad"], cancelled: ["Withdrawn", "b-info"] };
 const badge = st => el("span", { class: "badge " + (STATUS[st] || ["", "b-info"])[1], text: (STATUS[st] || [st])[0] });
 const what = r => r.kind === "Leave" ? (r.data.leaveType || "Leave") + " · " + fmtD(r.data.from) + (r.data.to && r.data.to !== r.data.from ? " – " + fmtD(r.data.to) : "") + (r.result && r.result.days ? " · " + r.result.days + " day" + (r.result.days === 1 ? "" : "s") : "")
   : r.kind === "Document" ? (r.data.docName || "HR letter") : r.kind === "Policy" ? (r.data.summary || "Policy change") : r.kind === "Attendance" ? "Attendance · " + fmtD(r.data.date)
   : r.kind === "Shift" ? "Shift · " + (r.data.shift || "") + " from " + fmtD(r.data.from) : r.kind === "Profile" ? "Correct: " + (r.data.item || "")
-  : r.kind === "Exit" ? (r.data.exitKind || "Exit") + " · last day " + fmtD(r.data.lastDay) : KIND[r.kind] || r.kind;
+  : r.kind === "Exit" ? (r.data.exitKind || "Exit") + " · last day " + fmtD(r.data.lastDay)
+  : r.kind === "Payroll" ? "Payroll " + monthName(r.data.month) + " · " + ((r.result.totals || {}).staff || 0) + " staff · net " + rs((r.result.totals || {}).net)
+  : r.kind === "Overtime" ? "Overtime · " + fmtD(r.data.date) + " until " + (r.data.until || "")
+  : r.kind === "Loan" ? "Loan " + rs(r.result.amount) + " over " + (r.result.months || "") + " months"
+  : r.kind === "Encashment" ? "Encash " + (r.result.days || r.data.days) + " days · " + rs(r.result.amount)
+  : MONEY.includes(r.kind) ? KIND[r.kind] + (r.data.category ? " · " + r.data.category : "") + (r.data.place ? " · " + r.data.place : "") + " · " + rs(r.result.amount) : KIND[r.kind] || r.kind;
 const overdue = r => r.status === "pending" && (Date.now() - new Date(r.updated_at).getTime()) / 36e5 > ((ME.policy || {}).slaHours || 48);
 
 const NAVX = [
@@ -1154,6 +1167,8 @@ const NAVX = [
   { v: "org", l: "Org chart", ic: "org", ok: () => can("org") },
   { v: "library", l: "Policies & forms", ic: "folder", ok: () => can("library") },
   { v: "policy", l: "HR policy", ic: "book", ok: () => can("policy") },
+  { v: "pay", l: "My pay", ic: "wallet", ok: () => can("pay") },
+  { v: "payroll", l: "Payroll", ic: "wallet", ok: () => can("payroll") },
   { v: "reports", l: "Reports", ic: "chart", ok: () => can("reports") }
 ];
 function go(view, id) { V.view = view; V.id = id || null; closeMenu(); render(); scrollTo(0, 0); }
@@ -1199,7 +1214,8 @@ const VIEWS = {
   },
   apply(box) {
     const pol = ME.policy || {}, kinds = ["Leave", "Attendance", "Shift", "Profile", "Document", "Exit"];
-    box.append(el("div", { class: "hr-kinds" }, kinds.map(k => el("button", { type: "button", class: "btn btn-outline" + (V.kind === k ? " active" : ""), text: KIND[k], onclick: () => { V.kind = k; render(); } }))));
+    const kbtn = k => el("button", { type: "button", class: "btn btn-outline" + (V.kind === k ? " active" : ""), text: KIND[k], onclick: () => { V.kind = k; render(); } });
+    box.append(el("div", { class: "hr-kinds" }, kinds.map(kbtn)), el("div", { class: "hr-kinds" }, el("span", { class: "small muted", text: "Claims & loans:" }), MONEY.map(kbtn)));
     const f = {}, field = (label, node, full) => el("label", { class: full ? "full" : null }, label, node);
     const input = (k, type, extra) => (f[k] = el("input", Object.assign({ class: "input", type: type || "text" }, extra || {})));
     const area = k => (f[k] = el("textarea", { class: "textarea", rows: 3, maxlength: 1000 }));
@@ -1230,14 +1246,62 @@ const VIEWS = {
     } else if (V.kind === "Exit") {
       form.append(field("Kind", select("exitKind", ["Resignation"])), field("Last working day", input("lastDay", "date")), field("Reason", area("reason"), true),
         el("div", { class: "small muted full", text: "Notice period: " + ((pol.exit || {}).noticeDays || 30) + " days. After approval HR goes through the clearance list with you (equipment, ID card, handover, dues)." }));
+    } else if (MONEY.includes(V.kind)) {
+      const files = () => field("Bills (PDF or photo, under 5 MB each)", (f._files = el("input", { class: "input", type: "file", multiple: true, accept: ".pdf,.png,.jpg,.jpeg" })), true);
+      const pp = pol.payroll || {}, money = (k, l) => field(l || "Amount (Rs)", input(k || "amount", "number", { min: 0, step: 1 }));
+      const say = t => { note.textContent = t; };
+      if (V.kind === "Medical") { const m = pol.medical || {};
+        form.append(field("Treatment for", select("patient", m.patients || ["Self"])), field("Bill date", input("billDate", "date")), money("amount", "Bill amount (Rs)"), field("Treatment / reason", area("reason"), true), files(), note);
+        say(m.pct + "% of the bill is paid with salary, up to " + m.capTimesGross + " × your gross salary a year and " + m.maxClaimsPerYear + " claims a year. Bills under " + rs(m.minBill) + " or older than " + m.maxBillAgeDays + " days are not claimed. Not taxed.");
+      } else if (V.kind === "Expense") { const x = pol.expense || {};
+        form.append(field("Category", (f.category = el("select", { class: "select" }, (x.categories || []).map(c => el("option", { value: c[0], text: c[0] + " (up to " + rs(c[1]) + ")" }))))),
+          field("Date of the expense", input("date", "date")), money(), field("What it was for", area("reason"), true), files(), note);
+        say("At most " + rs(x.monthlyCap) + " a month, within " + x.maxBillAgeDays + " days. Paid with salary, not taxed.");
+      } else if (V.kind === "Loan") { const l = pol.loan || {};
+        form.append(money(), field("Repay in (months)", input("months", "number", { min: 1, max: l.maxMonths, step: 1 })), field("Purpose", area("reason"), true), note);
+        const show = () => say("Up to " + l.maxTimesGross + " × gross salary, repaid in at most " + l.maxMonths + " months; the instalment can be at most " + l.emiCapPct + "% of gross. Needs " + l.minServiceMonths + " months of service; a new loan only after " + l.repaidPctForNew + "% of the last one is repaid." + (+f.amount.value && +f.months.value ? " Your instalment: " + rs(Math.ceil(f.amount.value / f.months.value)) + " a month." : ""));
+        f.amount.addEventListener("input", show); f.months.addEventListener("input", show); show();
+      } else if (V.kind === "Advance") { const a = pol.advance || {};
+        form.append(money(), field("Purpose", area("reason"), true), note);
+        say("Up to " + a.maxTimesGross + " × gross salary, " + a.perYear + " a year, one a month, not while a loan is being repaid. Recovered from the next salary.");
+      } else if (V.kind === "Phone") { const p = pol.phone || {};
+        form.append(money("amount", "Phone price (Rs)"), field("Reason", area("reason"), true), note);
+        const show = () => { const v = +f.amount.value || 0, co = Math.round(Math.min(v, p.cap) * p.sharePct / 100);
+          say("After " + p.minServiceMonths + " months of service. Alkhidmat pays " + p.sharePct + "% of up to " + rs(p.cap) + "; your share is recovered " + rs(p.monthly) + " a month." + (v ? " Alkhidmat pays " + rs(co) + ", you pay " + rs(v - co) + "." : "")); };
+        f.amount.addEventListener("input", show); show();
+      } else if (V.kind === "Overtime") { const o = pp.overtime || {};
+        form.append(field("Date", input("date", "date")), field("Approved to work until", input("until", "time")), field("Work log", area("workLog"), true), field("Why it could not wait", area("reason"), true), note);
+        say("File in advance or by the next day. Paid from " + o.startAfterHours + " h after your shift ends until the earlier of your check-out and this time, at most " + o.maxHoursDay + " h a day and " + rs(o.monthlyCap) + " a month, at " + o.rate + "× basic ÷ (" + o.daysPerMonth + " × " + o.hoursPerDay + "). Taxed with salary.");
+      } else if (V.kind === "Outstation") { const t = pp.outstation || {};
+        form.append(field("Left at", input("from", "datetime-local")), field("Back at", input("to", "datetime-local")), field("Distance (km)", input("km", "number", { min: 0 })), field("Place", input("place", "text", { maxlength: 100 })), field("Purpose", area("reason"), true), note);
+        say("For duty more than " + t.minKm + " km away: the daily allowance of your designation, 100% for over 10 h away, 50% for 6–10 h, 25% under 6 h. Claim after you are back. Not taxed.");
+      } else if (V.kind === "Encashment") { const e = pol.encashment || {}, b = bal.find(x => x.type === e.leaveType) || {};
+        form.append(field("Days to encash", input("days", "number", { min: 1, max: e.maxDays, step: 1 })), field("Reason", area("reason"), true), note);
+        say("Open in " + new Date(2000, (e.month || 6) - 1, 1).toLocaleDateString("en-GB", { month: "long" }) + " only, at most " + e.maxDays + " days a year from " + e.leaveType + " leave (" + (b.left ?? 0) + " left). Paid at basic ÷ 30 a day.");
+      }
     }
     const route = V.kind === "Document" ? null : ((pol.routes || {})[V.kind] || []);
     const btn = el("button", { class: "btn btn-primary btn-lg", type: "button", text: "Submit request" });
     btn.addEventListener("click", async () => {
-      const d = {}; Object.entries(f).forEach(([k, n]) => { if (k !== "_fields") d[k] = n.value; });
+      const d = {}; Object.entries(f).forEach(([k, n]) => { if (!k.startsWith("_")) d[k] = n.value; });
       if (f._fields) { d.fields = {}; Object.entries(f._fields).forEach(([k, n]) => { d.fields[k] = n.value; }); }
+      if (V.kind === "Encashment") { d.leaveType = (pol.encashment || {}).leaveType || "Annual"; d.from = new Date().toLocaleDateString("en-CA"); }
       btn.disabled = true;
-      try { const id = await rpc("hr_submit", { p_kind: V.kind, p_data: d }, "The request was not saved"); toast("Request " + id + " sent for approval"); await reload(); go("mine"); }
+      try {
+        if (f._files) {   // bills go to the private claims bucket, in my own folder; the server checks every path
+          const list = Array.from(f._files.files || []);
+          if (list.length > 5) throw Object.assign(new Error("At most 5 files"), { shown: true });
+          d.files = [];
+          for (const file of list) {
+            const ext = (file.name.split(".").pop() || "").toLowerCase().replace("jpeg", "jpg");
+            if (!/^(pdf|png|jpg)$/.test(ext) || file.size > 5242880) throw Object.assign(new Error("Bills must be PDF, PNG or JPG under 5 MB"), { shown: true });
+            const path = "claims/" + ME.id + "/" + crypto.randomUUID() + "." + ext;
+            const { error: e1 } = await SB.storage.from("hr-claims").upload(path, file, { contentType: file.type || undefined, upsert: false });
+            if (e1) throw Object.assign(new Error(errText(e1, "The bill could not upload")), { shown: true });
+            d.files.push(path);
+          }
+        }
+        const id = await rpc("hr_submit", { p_kind: V.kind, p_data: d }, "The request was not saved"); toast("Request " + id + " sent for approval"); await reload(); go("mine"); }
       catch (e) { toast(e.shown ? e.message : errText(e, "The request was not saved"), true); btn.disabled = false; }
     });
     box.append(card(KIND[V.kind], form, route ? el("p", { class: "small muted", text: "Approved by: " + route.join(" → ") + " (a step is skipped when nobody holds it or it is you; at least 2 different people approve)." }) : null, el("div", { class: "hr-actions" }, btn)));
@@ -1403,6 +1467,70 @@ const VIEWS = {
     });
     box.append(card("Propose a change", el("p", { class: "small muted", text: "Change the days or holidays above, then send. Nothing changes until the Regional Manager approves." }), el("div", { class: "hr-actions" }, sum, send)));
   },
+  async pay(box) {
+    const mp = await rpc("hr_my_pay", {}, "Your pay could not load") || {}, slips = mp.slips || [], loans = mp.loans || [];
+    const owe = loans.filter(l => l.status === "active").reduce((a, l) => a + +l.balance, 0);
+    box.append(el("div", { class: "kpis" }, kpi("Gross salary", mp.gross != null ? rs(mp.gross) : "not set", "a month", "wallet"),
+      kpi("Last net pay", slips[0] ? rs(slips[0].net) : "—", slips[0] ? monthName(slips[0].month) : "no payslip yet", "check", slips[0] ? () => slipModal(slips[0]) : null),
+      kpi("Still to repay", rs(owe), loans.filter(l => l.status === "active").length + " active", "list")));
+    const ch = el("div"); if (window.AKF_CHARTS) ch.innerHTML = AKF_CHARTS.bars({ id: "hr-mynet", items: slips.slice(0, 12).reverse().map(s => ({ key: s.month, label: s.month, value: +s.net })), empty: "No payslips yet" });
+    // tax certificate for the tax year (July to June) of the latest payslip
+    const ty = slips[0] ? (+slips[0].month.slice(5) >= 7 ? +slips[0].month.slice(0, 4) : +slips[0].month.slice(0, 4) - 1) : null;
+    const inTy = slips.filter(s => ty && s.month >= ty + "-07" && s.month <= (ty + 1) + "-06");
+    const sum = k => inTy.reduce((a, s) => a + (+s[k] || 0), 0);
+    const cert = el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Tax certificate", disabled: !inTy.length, onclick: () => modal("Tax deduction certificate · July " + ty + " – June " + (ty + 1),
+      el("dl", { class: "hr-kv" }, [["Name", ME.name], ["Designation", ME.designation || ""], ["Months", inTy.length], ["Taxable salary", rs(sum("taxable"))], ["Income tax deducted", rs(sum("tax"))], ["EOBI (employee)", rs(sum("eobi"))]]
+        .flatMap(([k, v]) => [el("dt", { text: k }), el("dd", { text: String(v) })])),
+      el("p", { class: "small muted", text: "Issued from the HR portal of Alkhidmat Foundation Islamabad from approved payrolls. Tax is deducted under section 149 and paid to FBR by Finance." }),
+      el("div", { class: "hr-actions no-print" }, el("button", { class: "btn btn-primary", type: "button", text: "Print", onclick: () => print() }))) });
+    box.append(el("div", { class: "hr-grid" }, card("Net pay by month", ch), card("Payslips", el("div", { class: "hr-filters" }, cert),
+      ...(slips.length ? slips.map(s => el("button", { class: "hr-row", type: "button", onclick: () => slipModal(s) }, el("span", { class: "grow" }, el("b", { text: monthName(s.month) }), el("small", { text: "Gross " + rs(s.gross) + " · tax " + rs(s.tax) })), el("b", { class: "num", text: rs(s.net) })))
+        : [empty("Payslips appear here after each month's payroll is approved.")]))),
+      card("Loans, advances and phone", loans.length ? el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Type", "Amount", "Monthly", "Left to repay", "Since", "Status"].map(t => el("th", { text: t })))),
+        el("tbody", {}, loans.map(l => el("tr", {}, [l.kind, rs(l.amount), rs(l.monthly), rs(l.balance), fmtD(l.since), l.status === "active" ? "Repaying" : "Repaid"].map(x => el("td", { text: x }))))))) : empty("No loans."),
+        el("p", { class: "small muted", text: "Apply for claims, loans and advances on Apply. Instalments start from the salary after approval." })));
+  },
+  async payroll(box) {
+    const m = V.payM || new Date().toLocaleDateString("en-CA").slice(0, 7); V.payM = m;
+    const [runs, run] = await Promise.all([rpc("hr_payruns_list", {}, "Payroll could not load"), rpc("hr_payrun_get", { p_month: m }, "Payroll could not load")]);
+    const pend = (runs || []).find(x => x.request && x.request.status === "pending");
+    const pick = el("input", { class: "input", type: "month", value: m, onchange: e => { V.payM = e.target.value || m; render(); } });
+    const calc = can("payroll", "edit") && (!run || run.status === "draft") && !pend ? el("button", { class: "btn btn-primary", type: "button", text: run ? "Recalculate" : "Calculate payroll" }) : null;
+    if (calc) calc.addEventListener("click", async () => { calc.disabled = true; try { const t = await rpc("hr_payrun_calc", { p_month: m }, "The payroll was not calculated"); toast(monthName(m) + ": " + t.staff + " payslips, net " + rs(t.net)); render(); } catch (e) { toast(e.message, true); calc.disabled = false; } });
+    const send = can("payroll", "edit") && run && run.status === "draft" && !pend && (run.slips || []).length ? el("button", { class: "btn btn-success", type: "button", text: "Send for approval" }) : null;
+    if (send) send.addEventListener("click", async () => { if (!confirm("Send the " + monthName(m) + " payroll (net " + rs(run.totals.net) + ") for approval? It cannot be recalculated while it waits.")) return; send.disabled = true;
+      try { const id = await rpc("hr_submit", { p_kind: "Payroll", p_data: { month: m } }, "Not sent"); toast("Payroll " + id + " sent for approval"); await reload(); render(); } catch (e) { toast(e.message, true); send.disabled = false; } });
+    const t = (run && run.totals) || {};
+    box.append(card("Monthly payroll", el("div", { class: "hr-filters" }, pick, calc, send,
+        run ? el("span", { class: "badge " + (run.status === "approved" ? "b-ok" : pend && pend.month === m ? "b-warn" : "b-info"), text: run.status === "approved" ? "Approved · payslips published" : pend && pend.month === m ? "Waiting for approval (" + pend.request.id + ")" : "Draft" }) : null),
+      el("p", { class: "small muted", text: "Claims approved by day " + ((ME.policy.payroll || {}).claimCutoffDay || 23) + " of the month are paid with that month's salary. Route: " + ((ME.policy.routes || {}).Payroll || []).join(" → ") + "; the person who prepares it cannot approve it." })));
+    if (run) {
+      box.append(el("div", { class: "kpis" }, kpi("Staff", t.staff || 0, "", "users"), kpi("Gross", rs(t.gross), "", "wallet"), kpi("Net to bank", rs(t.net), "", "check"), kpi("Income tax", rs(t.tax), "EOBI " + rs(t.eobi), "chart")));
+      const ch = el("div"); if (window.AKF_CHARTS) ch.innerHTML = AKF_CHARTS.donut({ id: "hr-payroll", center: "rupees paid out", items: [["Net pay", t.net], ["Income tax", t.tax], ["Recovered loans", t.recovered]].filter(x => +x[1] > 0).map(([k, v]) => ({ key: k, label: k, value: +v })) });
+      const sl = run.slips || [], ex = can("payroll", "export");
+      const dl = (n, h, f) => el("button", { class: "btn btn-outline btn-sm", type: "button", text: n, onclick: () => csv("payroll-" + m + "-" + n.toLowerCase().replace(/\W+/g, "-"), h, sl.map(f)) });
+      box.append(el("div", { class: "hr-grid" }, card("Where the money goes", ch), card("Downloads", ex ? el("div", { class: "hr-actions" },
+          dl("Bank file", ["Account title", "Bank", "Account / IBAN", "Net pay", "Employee no", "Month"], s => [s.accountTitle || s.name, s.bank, s.account, s.net, s.empNo, m]),
+          dl("FBR tax", ["Name", "Employee no", "Taxable salary", "Tax deducted", "Month"], s => [s.name, s.empNo, s.taxable, s.tax, m]),
+          dl("EOBI", ["Name", "Employee no", "Employee share", "Employer share", "Month"], s => [s.name, s.empNo, s.eobi, s.eobiEmployer, m]),
+          dl("Payroll journal", ["Name", "Department", "Gross", "Unpaid days", "Unpaid", "Overtime", "Encashment", "TA/DA", "Medical", "Expense", "Tax", "EOBI", "Recovered", "Net", "Gratuity provision"],
+            s => [s.name, s.dept, s.gross, s.unpaidDays, s.unpaid, s.overtime, s.encashment, s.outstation, s.medical, s.expense, s.tax, s.eobi, s.recovered, s.net, s.gratuity]))
+          : el("p", { class: "small muted", text: "Downloads need HR Payroll → Export." }))),
+        card(sl.length + " payslips", el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Name", "Department", "Gross", "Additions", "Deductions", "Net", ""].map(x => el("th", { text: x })))),
+          el("tbody", {}, sl.map(s => el("tr", {}, el("td", { text: s.name }), el("td", { text: s.dept || "" }), el("td", { text: rs(s.gross) }),
+            el("td", { text: rs(+s.overtime + +s.encashment + +s.outstation + +s.medical + +s.expense) }), el("td", { text: rs(+s.unpaid + +s.tax + +s.eobi + +s.recovered) }), el("td", { text: rs(s.net) }),
+            el("td", {}, el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Payslip", onclick: () => slipModal(Object.assign({ month: m }, s)) })))))))));
+    }
+    if (!can("payroll")) return;
+    let L = []; try { L = await rpc("hr_pay_list", {}, "Salaries could not load") || []; } catch (e) { box.append(empty(e.message)); return; }
+    box.append(card("Salary records · " + L.filter(p => p.gross != null).length + " of " + L.length + " set", el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Name", "Department", "Emp. no", "Gross", "Bank", "Account", "EOBI", ""].map(x => el("th", { text: x })))),
+      el("tbody", {}, L.map(p => el("tr", {}, el("td", { text: p.name }), el("td", { text: p.dept || "" }), el("td", { text: p.empNo || "" }), el("td", { text: p.gross != null ? rs(p.gross) : "not set" }),
+        el("td", { text: p.bank || "" }), el("td", { text: p.account ? "••••" + p.account.slice(-4) : "" }), el("td", { text: p.eobi ? "Yes" : "No" }),
+        el("td", {}, can("payroll", "edit") && p.id !== ME.id ? el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Edit", onclick: () => editPay(p) }) : null)))))),
+      el("p", { class: "small muted", text: "Nobody can change their own salary. Every change is kept in the Super Admin's audit log." })),
+      runs && runs.length ? card("Payroll history", ...runs.map(x => el("button", { class: "hr-row", type: "button", onclick: () => { V.payM = x.month; render(); } }, el("span", { class: "grow" }, el("b", { text: monthName(x.month) }), el("small", { text: (x.totals.staff || 0) + " staff · net " + rs(x.totals.net) })),
+        el("span", { class: "badge " + (x.status === "approved" ? "b-ok" : "b-info"), text: x.status === "approved" ? "Approved" : x.request && x.request.status === "pending" ? "Waiting" : "Draft" })))) : null);
+  },
   reports(box) {
     const f = V.f, kinds = Object.keys(KIND), list = REQ.filter(r => (!f.kind || r.kind === f.kind) && (!f.status || r.status === f.status));
     const by = (key, lab) => Object.entries(REQ.reduce((a, r) => (a[r[key]] = (a[r[key]] || 0) + 1, a), {})).map(([k, v]) => ({ key: k, label: lab(k), value: v }));
@@ -1488,8 +1616,22 @@ async function openReq(id) {
   if (d.reason) add("Reason", d.reason); if (d.in) add("Time in / out", d.in + (d.out ? " – " + d.out : "")); if (d.correct) add("Correct information", d.correct);
   if (d.fields) Object.entries(d.fields).forEach(([k, v]) => add(k, v)); if (r.result && r.result.long) add("Note", "Long medical leave: also needs the Secretary General or President (outside HR360)");
   if (r.result && r.result.overWallet) add("Note", "Beyond this month's allowance: counts as a late");
+  if (MONEY.includes(r.kind)) { const x = r.result || {};
+    add("Bill / price", d.amount && x.amount != d.amount ? rs(d.amount) : null); add("Amount", x.amount != null ? rs(x.amount) : null);
+    if (x.company) add("Alkhidmat pays", rs(x.company)); if (x.monthly) add("Recovered", rs(x.monthly) + " a month"); if (x.rate) add("Daily allowance", rs(x.rate) + " × " + x.days + " days");
+    add("Treatment for", d.patient); add("Bill date", fmtD(d.billDate)); add("Date", d.date ? fmtD(d.date) : null); add("Away", d.from && d.to ? fmtDT(d.from) + " – " + fmtDT(d.to) + " · " + (d.km || "") + " km" : null);
+    add("Work log", d.workLog); add("Paid with salary", x.paidIn ? monthName(x.paidIn) : r.status === "approved" && !["Loan", "Advance", "Phone"].includes(r.kind) ? "next payroll" : null);
+  }
   const tl = el("ol", { class: "hr-tl" }, (r.history || []).map(h => el("li", {}, el("b", { text: h.action + (h.step ? " · " + h.step : "") }), el("span", { text: " — " + (h.name || "") + " · " + fmtDT(h.at) }), h.remarks ? el("div", { class: "small muted", text: h.remarks }) : null)));
   const body = [steps, kv, el("h4", { text: "History" }), tl];
+  if ((d.files || []).length) body.splice(2, 0, el("div", { class: "hr-actions" }, d.files.map((p, i) => el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Bill " + (i + 1),
+    onclick: async () => { const { data: s, error: e } = await SB.storage.from("hr-claims").createSignedUrl(p, 60); if (e || !s) return toast(errText(e, "The bill could not open"), true); el("a", { href: s.signedUrl, target: "_blank", rel: "noopener" }).click(); } }))));
+  if (r.kind === "Payroll") {   // approvers see every payslip of the run they are deciding
+    try { const run = await rpc("hr_payrun_get", { p_month: d.month }, "The payslips could not load");
+      if (run) body.splice(2, 0, el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Name", "Gross", "Tax", "Recovered", "Net"].map(x => el("th", { text: x })))),
+        el("tbody", {}, (run.slips || []).map(s => el("tr", { style: "cursor:pointer", onclick: () => slipModal(Object.assign({ month: d.month }, s)) }, [s.name, rs(s.gross), rs(s.tax), rs(s.recovered), rs(s.net)].map(x => el("td", { text: x }))))))));
+    } catch (e) { body.push(el("p", { class: "small muted", text: e.message })); }
+  }
   if (r.kind === "Policy" && (r.myStep || can("policy"))) {
     try { const full = await rpc("hr_policy_request", { p_id: r.id }, "The change could not load"); const now = ME.policy || {}, nx = (full || {}).policy || {}, diff = [];
       (nx.leaveTypes || []).forEach(t => { const o = (now.leaveTypes || []).find(x => x.name === t.name); if (!o) diff.push("New leave type " + t.name); else if (o.days !== t.days) diff.push(t.name + ": " + o.days + " → " + t.days + " days"); });
@@ -1534,6 +1676,30 @@ function grantLeave(p) {
     catch (er) { toast(er.message, true); save.disabled = false; } });
   modal("Give leave · " + p.name, el("div", { class: "hr-form" }, el("label", {}, "Leave", t), el("label", {}, "Days", n), el("label", { class: "full" }, "Reason", why)), el("div", { class: "hr-actions" }, save));
 }
+function slipModal(s) {
+  const row = (k, v, minus) => +v ? [el("dt", { text: k }), el("dd", { text: (minus ? "− " : "") + rs(v) })] : [];
+  modal("Payslip · " + monthName(s.month),
+    el("dl", { class: "hr-kv" }, [["Name", s.name], ["Designation", s.designation], ["Department", s.dept], ["Employee no", s.empNo], ["Paid to", [s.bank, s.account ? "••••" + String(s.account).slice(-4) : ""].filter(Boolean).join(" · ")]]
+      .filter(x => x[1]).flatMap(([k, v]) => [el("dt", { text: k }), el("dd", { text: String(v) })])),
+    el("h4", { text: "Earnings" }), el("dl", { class: "hr-kv" }, row("Gross salary (basic " + rs(s.basic) + ")", s.gross), row("Overtime (" + (s.overtimeHours || 0) + " h)", s.overtime), row("Leave encashment", s.encashment),
+      row("TA/DA", s.outstation), row("Medical", s.medical), row("Expenses", s.expense)),
+    el("h4", { text: "Deductions" }), el("dl", { class: "hr-kv" }, row("Unpaid days (" + (s.unpaidDays || 0) + ")", s.unpaid, true), row("Income tax", s.tax, true), row("EOBI", s.eobi, true),
+      (s.recoveries || []).flatMap(x => row(x.kind + " instalment (left " + rs(x.left) + ")", x.amount, true))),
+    el("dl", { class: "hr-kv" }, el("dt", {}, el("b", { text: "Net pay" })), el("dd", {}, el("b", { text: rs(s.net) }))),
+    el("p", { class: "small muted", text: "Alkhidmat also pays EOBI " + rs(s.eobiEmployer) + " and sets aside gratuity " + rs(s.gratuity) + " for you this month." }),
+    el("div", { class: "hr-actions no-print" }, el("button", { class: "btn btn-primary", type: "button", text: "Print", onclick: () => print() })));
+}
+function editPay(p) {
+  const g = el("input", { class: "input", type: "number", min: 0, step: 1, value: p.gross ?? "" }), b = el("input", { class: "input", maxlength: 80, value: p.bank || "" });
+  const a = el("input", { class: "input", maxlength: 40, value: p.account || "", placeholder: "IBAN, e.g. PK36SCBL0000001123456702" }), t = el("input", { class: "input", maxlength: 100, value: p.accountTitle || p.name });
+  const e = el("input", { type: "checkbox", checked: p.eobi !== false });
+  const save = el("button", { class: "btn btn-primary", type: "button", text: "Save salary record" });
+  save.addEventListener("click", async () => { save.disabled = true;
+    try { await rpc("hr_pay_save", { p_id: p.id, p_gross: +g.value, p_bank: b.value, p_account: a.value, p_title: t.value, p_eobi: e.checked }, "Not saved"); toast("Salary record of " + p.name + " saved"); closeModal(); render(); }
+    catch (er) { toast(er.message, true); save.disabled = false; } });
+  modal("Salary · " + p.name, el("div", { class: "hr-form" }, el("label", {}, "Gross salary a month (Rs)", g), el("label", {}, "Bank", b), el("label", {}, "Account no / IBAN", a), el("label", {}, "Account title", t),
+    el("label", {}, el("span", {}, e, " EOBI is deducted"))), el("p", { class: "small muted", text: "Basic is " + (((ME.policy || {}).payroll || {}).basicPct || 60) + "% of gross. The change is logged with the old and new amount." }), el("div", { class: "hr-actions" }, save));
+}
 // CSV that Excel opens safely: text starting with = + - @ is written with a leading ' (no formulas)
 function csv(name, head, rows) {
   const cell = v => { let s = v == null ? "" : String(v); s = s.replace(/^[=+\-@\t\r]/, "'$&"); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
@@ -1563,7 +1729,7 @@ async function refresh() { if (busy || document.hidden) return; busy = true; try
 function hashOpen() {
   const m = /^#req=(HR-\d{4}-\d{5,})$/.exec(location.hash || "");
   if (m) { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { } openReq(m[1]); }
-  else if (["#leave", "#notices", "#exits"].includes(location.hash)) { const v = { "#leave": "dashboard", "#notices": "notices", "#exits": "exits" }[location.hash]; try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { } go(v); }
+  else if (["#leave", "#notices", "#exits", "#pay"].includes(location.hash)) { const v = { "#leave": "dashboard", "#notices": "notices", "#exits": "exits", "#pay": "pay" }[location.hash]; try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { } go(v); }
 }
 async function render() {
   if (!ME) return; chrome();
