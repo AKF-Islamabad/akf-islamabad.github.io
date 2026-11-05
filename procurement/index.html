@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-Vtd5KslBJwurLyw4rpqLra0PNPTrFDbAV/+6/xaJNkU='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-FKsdrkiIKBZnpXNgZH1UW26dB2Iy3hqX52B716KlKIM='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -4207,11 +4207,13 @@ const DB = {
   },
   subscribe(onChange){
     /* live updates only while this tab is visible (keeps far below the free plan's 200 open connections) */
-    let ch=null; const on=()=>{ if(!ch) ch=sb.channel("portal-rows-"+PORTAL).on("postgres_changes",{event:"*",schema:"public",table:"portal_rows"},()=>onChange()).subscribe(); };
-    const off=()=>{ if(ch){ sb.removeChannel(ch); ch=null; } };
+    let ch=null, live=false; const on=()=>{ if(!ch) ch=sb.channel("portal-rows-"+PORTAL).on("postgres_changes",{event:"*",schema:"public",table:"portal_rows"},()=>onChange()).subscribe(st=>{ live=st==="SUBSCRIBED"; }); };
+    const off=()=>{ if(ch){ sb.removeChannel(ch); ch=null; live=false; } };
     const vis=()=>{ if(document.hidden) off(); else { on(); onChange(); } };
+    /* safety net: if the live connection is down (network, sleep), look for changes every 30 s instead */
+    const poll=setInterval(()=>{ if(!document.hidden&&!live){ off(); on(); onChange(); } },30000);
     document.addEventListener("visibilitychange",vis); if(!document.hidden) on();
-    return ()=>{ document.removeEventListener("visibilitychange",vis); off(); };
+    return ()=>{ clearInterval(poll); document.removeEventListener("visibilitychange",vis); off(); };
   },
   /* ---- auth ---- */
   async signIn(username,password){
