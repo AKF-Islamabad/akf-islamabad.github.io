@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-fleet.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-jpSRzUEHpfKJvwJBu6gqZ3683gnjSrUl7ZlR/idbhNI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-6MBmixm+FA4GaewMGzd0rnmej7IRO1ZHOPr3Npqs5Ww='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1543,8 +1543,9 @@ function setupView(){if(!erpCan('fleet','add'))return `<div class="card">${empty
 /* ---------- SMART TRACKING (per request, shareable link) ---------- */
 const trackURL=no=>location.origin+location.pathname+'#track='+encodeURIComponent(no);
 PQ.tr=PQ.tr||{};
-async function trackGo(no){no=(no||'').trim().toUpperCase();if(!no)return toast('Enter the request number, e.g. REQ-2026-0001');const o=PQ.reqs.find(x=>String(x.no).toUpperCase()==no);PQ.tr={no,r:o?{ok:true,req:o}:{ok:false,err:'No request found with number '+no+' (or it is not one you may see)'}};render()}
-function trackView(){const h=location.hash.match(/^#track=?(.*)$/),pre=h&&h[1]?decodeURIComponent(h[1]).toUpperCase():'',t=PQ.tr||{};if(pre&&t.no!=pre&&!t.busy)setTimeout(()=>trackGo(pre),0);
+const trackId=s=>String(s||'').toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,30);   // the number comes from the link or a box: letters, digits and dashes only, so it can never become HTML
+async function trackGo(no){no=trackId(no);if(!no)return toast('Enter the request number, e.g. REQ-2026-0001');const o=PQ.reqs.find(x=>String(x.no).toUpperCase()==no);PQ.tr={no,r:o?{ok:true,req:o}:{ok:false,err:'No request found with number '+no+' (or it is not one you may see)'}};render()}
+function trackView(){const h=location.hash.match(/^#track=?(.*)$/),pre=h&&h[1]?trackId((()=>{try{return decodeURIComponent(h[1])}catch(e){return ''}})()):'',t=PQ.tr||{};if(pre&&t.no!=pre&&!t.busy)setTimeout(()=>trackGo(pre),0);
  const box=`<div class="card"><b class="text-lg flex items-center gap-2">${i('list',20)} Track a vehicle request</b><p class="text-sm text-slate-500 mt-1">Type the request number from your confirmation message (e.g. REQ-2026-0001). Search the requests you may see.</p><div class="flex gap-2 mt-3"><input id="tk" class="in" style="text-transform:uppercase" placeholder="REQ-2026-0001" value="${t.no||pre}" data-onkeydown="if(event.key=='Enter')trackGo(this.value)"><button class="btn g" data-onclick="trackGo($('tk').value)">Track</button></div></div>`;
  if(t.busy)return box+`<div class="card text-center text-slate-500"><span class="pulse">●</span> Looking up ${t.no}…</div>`;
  if(!t.r)return box;if(!t.r.ok)return box+`<div class="card" style="border-color:#DC2626"><b class="text-red-700">${t.r.err}</b></div>`;
@@ -1591,8 +1592,8 @@ const RX=()=>[['Req No','Date','Requester','Dept','Program','Visit Date','Pick-u
 function ndays(){const a=$('nq_pd').value,b=$('nq_rd').value;$('nq_days').value=a&&b?Math.max(1,Math.round((new Date(b)-new Date(a))/864e5)+1):1}
 /* the employees to choose from on the vehicle request: the HOD's own department first */
 const visOpts=u=>{const P=PQ.people||[],mine=P.filter(p=>p.dept_name&&p.dept_name===u.d),rest=P.filter(p=>!(p.dept_name&&p.dept_name===u.d));
- const o=p=>`<option value="${String(p.full_name).replace(/"/g,'&quot;')}">${p.full_name}${p.designation?' · '+p.designation:''}${p.dept_name?' · '+p.dept_name:''}</option>`;
- return (mine.length?`<optgroup label="${u.d}">${mine.map(o).join('')}</optgroup>`:'')+(rest.length?`<optgroup label="Other departments">${rest.map(o).join('')}</optgroup>`:'')};
+ const c=x=>cleanStr(String(x||'')),o=p=>`<option value="${c(p.full_name)}">${c(p.full_name)}${p.designation?' · '+c(p.designation):''}${p.dept_name?' · '+c(p.dept_name):''}</option>`;
+ return (mine.length?`<optgroup label="${c(u.d)}">${mine.map(o).join('')}</optgroup>`:'')+(rest.length?`<optgroup label="Other departments">${rest.map(o).join('')}</optgroup>`:'')};
 async function rsubmit(){const g=x=>$(x).value.trim(),pd=g('nq_pd'),rd=g('nq_rd'),vd=g('nq_vd'),pt=tget('nq_pt'),rt=tget('nq_rt'),prog=g('nq_prog')=='Other'?g('nq_prog2'):g('nq_prog'),vis=g('nq_vis')=='__other'?g('nq_vis2'):g('nq_vis'),mn=pd2(NOTICE());
  if(vis.length<3)return toast('Select the employee who is visiting (or Other and type the name)');
  if(!prog||!vd||!pd||!rd||!g('nq_place')||!g('nq_city')||!g('nq_reason'))return toast('Please fill all fields of the form');if(vd<mn||pd<mn)return toast(NDAYS()+' notice is required - earliest date is '+dmy(mn));if(rd+' '+rt<=pd+' '+pt)return toast('Return must be after pick-up');
@@ -2052,6 +2053,7 @@ async function erpRefetch(c, id) {
 function sortArr(a) { a.sort((x, y) => String(x.date || '').localeCompare(String(y.date || '')) || (+x.id || 0) - (+y.id || 0)); }
 /* one row from the server -> the app's memory (data null = deleted) */
 function erpApply(c, id, data) {
+  cleanDeep(data);   // records from the database get the same text safety as what is typed here
   const k = ek(c, id);
   if (COL_ARR[c]) {
     const arr = COL_ARR[c](), i = arr.findIndex(x => String(x.id) === id);

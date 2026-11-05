@@ -153,7 +153,7 @@
     if (ups.length) { const { error } = await sb.from("portal_rows").upsert(ups, { onConflict: "collection,id" }); if (error) throw error; }
     return ups.length;
   }
-  const plain = e => { const m = String((e && e.message) || ""); return m && m.length < 220 ? m : "Not saved on the server. Try again."; };
+  const plain = e => { const m = String((e && e.message) || ""); return m && m.length < 220 && !/relation|column|function|syntax|policy|violates|jsonb|null value|permission denied/i.test(m) ? m : "Not saved on the server. Try again."; };   // no table or rule names on screen
 
   /* ---- sheets ---- */
   const ITEM_COLS = [

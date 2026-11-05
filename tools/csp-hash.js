@@ -10,9 +10,14 @@ const hashes = [];
 for (const m of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {
   hashes.push("'sha256-" + crypto.createHash("sha256").update(m[1], "utf8").digest("base64") + "'");
 }
-const scriptSrc = ["'self'", "https://cdn.jsdelivr.net", ...new Set(hashes)].join(" ");
+// only the exact pinned libraries, not all of jsDelivr (which serves any package anyone publishes)
+const CDN = ["@supabase/supabase-js@2.45.4", "xlsx@0.18.5", "jsqr@1.4.0", "chart.js@4.4.1"].map(p => "https://cdn.jsdelivr.net/npm/" + p + "/");
+const scriptSrc = ["'self'", ...CDN, ...new Set(hashes)].join(" ");
 const re = /(<meta http-equiv="Content-Security-Policy" content="[^"]*?script-src )[^;"]*/;
 if (!re.test(html)) { console.error("Content-Security-Policy meta tag with script-src not found in " + file); process.exit(1); }
 html = html.replace(re, (_, head) => head + scriptSrc);
+// deploy: data may go only to OUR database project, not to any *.supabase.co (set by the workflow from its secret)
+const sb = /^https:\/\/[a-z0-9]+\.supabase\.co$/.test(process.env.SUPABASE_URL || "") ? process.env.SUPABASE_URL : "";
+if (sb) html = html.replace(/(<meta http-equiv="Content-Security-Policy" content="[^"]*)/, m => m.split("https://*.supabase.co").join(sb).split("wss://*.supabase.co").join(sb.replace("https://", "wss://")));
 fs.writeFileSync(file, html);
 console.log(`CSP updated: ${hashes.length} inline script(s) allowed by hash in ${file}`);

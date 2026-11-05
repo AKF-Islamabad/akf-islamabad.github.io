@@ -16,7 +16,7 @@
   const low = s => String(s == null ? "" : s).trim().toLowerCase();
   const domain = () => (window.AKF_SUPABASE && window.AKF_SUPABASE.emailDomain) || "";
   const loginOf = v => { v = low(v); return v && !v.includes("@") && domain() ? v + "@" + domain() : v; };
-  const csvCell = v => /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v);
+  const csvCell = v => { v = String(v).replace(/^[=+\-@\t\r]/, "'$&"); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };   // = + - @ at the start would run as an Excel formula
   const errText = async (error) => { try { const b = await error.context.json(); return b.error || "not saved"; } catch (e) { return (error && error.message) || "not saved"; } };
 
   async function load(sb) {

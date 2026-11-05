@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-dSrvaBSOzvsyGRgl8CbL2C7lU7EaZp6X7JTUIXXxy10='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-YTqSaTuvsUyOmNP+faOKk7Z8c7xFTNkxF5AHid4/KR8='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -5860,7 +5860,7 @@ function Reports({state,user,openReq,openDoc}){
   const table=()=>{ if(sec==="proc") return {name:"procurement",head:["Request","Type","Department","Project","Purpose","Amount","Status","Waiting for","Submitted"],rows:reqs.map(x=>[x.id,x.type,x.dept,x.projectCode,x.purpose,reqTotal(x),statusLabel(x),(nextStage(x)||{}).who||"",fmtDT(x.createdAt)])};
     if(sec==="vend") return {name:"vendors",head:["Vendor","NTN","Filer","GST","RFQs invited","POs won","Win rate %","Spend incl. tax","WHT"],rows:vendorRows.map(x=>[x.v.name,x.v.ntn,x.v.filer?"Filer":"Non-filer",x.v.gstRegistered===false?"No":"Yes",x.inv,x.won,x.rate,x.spend,x.wht])};
     return {name:"store",head:["Item code","Item","Category","Store","Rack","Bin","Qty","Unit","Unit price","Value","Min","Expiry"],rows:stock.map(s=>[s.id,s.name,s.category,s.store,s.rack,s.bin,s.qty,s.uom,s.price,s.qty*s.price,s.min,s.expiry||""])}; };
-  const csv=()=>{ const t=table(); const q=v=>/[",\n]/.test(String(v))?'"'+String(v).replace(/"/g,'""')+'"':v; return [t.head,...t.rows].map(r=>r.map(q).join(",")).join("\n"); };
+  const csv=()=>{ const t=table(); const q=v=>{ if(typeof v==="string") v=v.replace(/^[=+\-@\t\r]/,"'$&"); return /[",\n]/.test(String(v))?'"'+String(v).replace(/"/g,'""')+'"':v; };   /* text starting with = + - @ would run as an Excel formula */ return [t.head,...t.rows].map(r=>r.map(q).join(",")).join("\n"); };
   const dlCSV=()=>{ const t=table(); const ok=downloadText(`AKF-${t.name}-report-${nowISO().slice(0,10)}.csv`,csv(),"text/csv"); window.__toast&&window.__toast(ok?"CSV downloaded":"Download blocked",ok?"ok":"bad"); };
   const dlXLSX=async()=>{ try{ await loadScript(XLSX_URL); const t=table(); const ws=XLSX.utils.aoa_to_sheet([t.head,...t.rows]); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,t.name); XLSX.writeFile(wb,`AKF-${t.name}-report-${nowISO().slice(0,10)}.xlsx`); }catch(e){ window.__toast&&window.__toast(e.message,"bad"); } };
   const active=Object.entries(f).filter(([k,v])=>v&&v!=="all");
@@ -7482,7 +7482,7 @@ function TList({state,user,A,open,filtered}){
   const th=(k,l)=>html`<th class=${sort.k===k?"on":""} onClick=${()=>setSort(s=>({k,d:s.k===k?-s.d:1}))}>${l} ${sort.k===k?(sort.d>0?"↑":"↓"):""}</th>`;
   const exportCsv=()=>{ const head=["ID","Task","Department","Assignee","Stage","Priority","Planned","Start","Estimate","Logged","Rating","Tags"];
     const data=rows.map(t=>[t.id,t.title,tDept(t.dept).name,tName(state,t.assigneeId),tStage(t.stage).name,t.priority,t.plannedDate,t.startDate,tMin(t.estimate),tMin(t.timeLogged),t.rating||"",(t.tags||[]).join(" ")]);
-    const csv=[head,...data].map(r=>r.map(v=>`"${String(v==null?"":v).replace(/"/g,'""')}"`).join(",")).join("\r\n");
+    const csv=[head,...data].map(r=>r.map(v=>`"${String(v==null?"":v).replace(/"/g,'""').replace(/^[=+\-@\t\r]/,"'$&")}"`).join(",")).join("\r\n");
     const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob(["﻿"+csv],{type:"text/csv"})); a.download=`tasks-${tToday()}.csv`; a.click(); };
   return html`<${Card} title=${`${rows.length} task${rows.length===1?"":"s"}`} right=${html`<button class="btn btn-ghost btn-sm" onClick=${exportCsv}><${Icon} name="download"/>Excel (CSV)</button>`}>
     ${keys.length>0&&html`<div class="tk-bulk"><b>${keys.length} selected</b>
@@ -8236,7 +8236,7 @@ function VendorQuote({token}){
 }
 
 /* Any unexpected error is shown as a red message, so a failure is never silent ("button does nothing"). */
-const BUILD="2026-11-04 store";
+const BUILD="2026-11-05 store";
 (()=>{ let last=0; const show=m=>{ const msg=errRef(m,"Unexpected error"); if(Date.now()-last<1500) return; last=Date.now(); if(window.__toast) window.__toast(msg+" (build "+BUILD+")","bad"); };   /* no raw error text on screen: details stay in the console under the reference */
   window.addEventListener("error",e=>show(e.message||e.error)); window.addEventListener("unhandledrejection",e=>show((e.reason&&e.reason.message)||e.reason)); })();
 const vendorToken=(/#rfq=([0-9a-f]{16,})/i.exec(location.hash||"")||[])[1];
