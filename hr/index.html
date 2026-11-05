@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-3ysoENor+bS8Plf5Wl5kebeJ7mSSsfMXIxEo9dWGZxE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-J0ULEz6KSaaisX3nFfNCBVWoTtvwkrbXZzO4dtgZ4fg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1112,7 +1112,8 @@ const P = { home: '<path d="M3 11l9-8 9 8M5 10v10h14V10"/>', plus: '<path d="M12
   book: '<path d="M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4zM20 4h-6M20 4v14h-6"/>', chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>', menu: '<path d="M4 6h16M4 12h16M4 18h16"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>',
   moon: '<path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/>', sun: '<path d="M12 4V2M12 22v-2M4 12H2M22 12h-2M5 5l-1.4-1.4M20.4 20.4 19 19M5 19l-1.4 1.4M20.4 3.6 19 5M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z"/>',
-  check: '<path d="M5 12l5 5L20 7"/>', alert: '<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>' };
+  check: '<path d="M5 12l5 5L20 7"/>', clock: '<path d="M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z"/>', bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+  door: '<path d="M14 3H6v18h8M14 3l6 2v16l-6-2zM11 12h.01"/>', org: '<path d="M10 3h4v4h-4zM4 17h4v4H4zM16 17h4v4h-4zM12 7v5M6 17v-3h12v3"/>', folder: '<path d="M3 6h6l2 2h10v11H3z"/>', pin: '<path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11zM12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>', alert: '<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>' };
 const ic = n => { const s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("class", "i"); s.setAttribute("aria-hidden", "true"); s.innerHTML = P[n] || P.list; return s; };
 const ref = () => Math.random().toString(36).slice(2, 8).toUpperCase();
 function toast(msg, bad) {
@@ -1130,12 +1131,14 @@ const can = (tab, a = "view") => !!(ME && (ME.super || (GRID[tab] || []).include
 async function rpc(name, args, what) { const { data, error } = await SB.rpc(name, args || {}); if (error) { const e = new Error(errText(error, what)); e.shown = true; throw e; } return data; }
 const fmtD = s => { if (!s) return ""; const d = new Date(String(s).length <= 10 ? s + "T00:00:00" : s); return isNaN(d) ? String(s) : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
 const fmtDT = s => { const d = new Date(s); return isNaN(d) ? "" : d.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); };
-const KIND = { Leave: "Leave", Attendance: "Attendance correction", Shift: "Shift change", Profile: "Profile correction", Document: "HR letter", Policy: "Policy change" };
+const KIND = { Leave: "Leave", Attendance: "Attendance correction", Shift: "Shift change", Profile: "Profile correction", Document: "HR letter", Policy: "Policy change", Exit: "Exit" };
+let NOTES = [];
 const STATUS = { pending: ["Waiting", "b-warn"], approved: ["Approved", "b-ok"], rejected: ["Rejected", "b-bad"], cancelled: ["Withdrawn", "b-info"] };
 const badge = st => el("span", { class: "badge " + (STATUS[st] || ["", "b-info"])[1], text: (STATUS[st] || [st])[0] });
 const what = r => r.kind === "Leave" ? (r.data.leaveType || "Leave") + " · " + fmtD(r.data.from) + (r.data.to && r.data.to !== r.data.from ? " – " + fmtD(r.data.to) : "") + (r.result && r.result.days ? " · " + r.result.days + " day" + (r.result.days === 1 ? "" : "s") : "")
   : r.kind === "Document" ? (r.data.docName || "HR letter") : r.kind === "Policy" ? (r.data.summary || "Policy change") : r.kind === "Attendance" ? "Attendance · " + fmtD(r.data.date)
-  : r.kind === "Shift" ? "Shift · " + (r.data.shift || "") + " from " + fmtD(r.data.from) : r.kind === "Profile" ? "Correct: " + (r.data.item || "") : KIND[r.kind] || r.kind;
+  : r.kind === "Shift" ? "Shift · " + (r.data.shift || "") + " from " + fmtD(r.data.from) : r.kind === "Profile" ? "Correct: " + (r.data.item || "")
+  : r.kind === "Exit" ? (r.data.exitKind || "Exit") + " · last day " + fmtD(r.data.lastDay) : KIND[r.kind] || r.kind;
 const overdue = r => r.status === "pending" && (Date.now() - new Date(r.updated_at).getTime()) / 36e5 > ((ME.policy || {}).slaHours || 48);
 
 const NAVX = [
@@ -1143,8 +1146,13 @@ const NAVX = [
   { v: "apply", l: "Apply", ic: "plus", ok: () => can("apply", "add") },
   { v: "mine", l: "My requests", ic: "list", ok: () => can("apply") },
   { v: "approvals", l: "Approvals", ic: "inbox", ok: () => can("approvals"), count: () => REQ.filter(r => r.myStep).length },
+  { v: "attendance", l: "Attendance", ic: "clock", ok: () => can("attendance") },
+  { v: "notices", l: "Announcements", ic: "bell", ok: () => can("notices"), count: () => NOTES.filter(n => n.needs_ack && !n.acked).length },
   { v: "calendar", l: "Leave calendar", ic: "cal", ok: () => can("calendar") },
   { v: "people", l: "People", ic: "users", ok: () => can("people") },
+  { v: "exits", l: "Onboarding & exits", ic: "door", ok: () => can("exits") },
+  { v: "org", l: "Org chart", ic: "org", ok: () => can("org") },
+  { v: "library", l: "Policies & forms", ic: "folder", ok: () => can("library") },
   { v: "policy", l: "HR policy", ic: "book", ok: () => can("policy") },
   { v: "reports", l: "Reports", ic: "chart", ok: () => can("reports") }
 ];
@@ -1190,7 +1198,7 @@ const VIEWS = {
       card("My recent requests", ...(mine.length ? mine.slice(0, 8).map(reqRow) : [empty("No requests yet.")]))));
   },
   apply(box) {
-    const pol = ME.policy || {}, kinds = ["Leave", "Attendance", "Shift", "Profile", "Document"];
+    const pol = ME.policy || {}, kinds = ["Leave", "Attendance", "Shift", "Profile", "Document", "Exit"];
     box.append(el("div", { class: "hr-kinds" }, kinds.map(k => el("button", { type: "button", class: "btn btn-outline" + (V.kind === k ? " active" : ""), text: KIND[k], onclick: () => { V.kind = k; render(); } }))));
     const f = {}, field = (label, node, full) => el("label", { class: full ? "full" : null }, label, node);
     const input = (k, type, extra) => (f[k] = el("input", Object.assign({ class: "input", type: type || "text" }, extra || {})));
@@ -1219,6 +1227,9 @@ const VIEWS = {
           f._fields[x.label] = n; extra.append(el("label", { class: x.type === "textarea" ? "full" : null }, x.label, n)); });
         extra.append(el("div", { class: "small muted full", text: "Approved by: " + (d.steps || []).join(" → ") })); };
       f.docName.addEventListener("change", draw); draw();
+    } else if (V.kind === "Exit") {
+      form.append(field("Kind", select("exitKind", ["Resignation"])), field("Last working day", input("lastDay", "date")), field("Reason", area("reason"), true),
+        el("div", { class: "small muted full", text: "Notice period: " + ((pol.exit || {}).noticeDays || 30) + " days. After approval HR goes through the clearance list with you (equipment, ID card, handover, dues)." }));
     }
     const route = V.kind === "Document" ? null : ((pol.routes || {})[V.kind] || []);
     const btn = el("button", { class: "btn btn-primary btn-lg", type: "button", text: "Submit request" });
@@ -1235,7 +1246,105 @@ const VIEWS = {
   approvals(box) {
     const now = REQ.filter(r => r.myStep), done = REQ.filter(r => !r.mine && !r.myStep && (r.history || []).some(h => h.by === ME.id)).slice(0, 30);
     box.append(card("Waiting for you", ...(now.length ? now.map(reqRow) : [empty("All clear. JazakAllah khair!")])),
-      el("div", { class: "hr-grid" }, card("Signed by you", ...(done.length ? done.map(reqRow) : [empty("Nothing yet.")]))));
+      el("div", { class: "hr-grid" }, card("Signed by you", ...(done.length ? done.map(reqRow) : [empty("Nothing yet.")])), delegationCard()));
+  },
+  async attendance(box) {
+    const m = V.att || new Date().toISOString().slice(0, 7); V.att = m;
+    const who = V.attWho || ME.id, team = can("attendance", "edit") || can("people") || (["hod", "finance_hod"].includes(ME.role) && can("approvals"));
+    if (can("attendance", "add") && who === ME.id) {
+      const b = el("button", { class: "btn btn-primary btn-lg", type: "button" }, ic("pin"), el("span", { text: "Check in / out now" }));
+      b.addEventListener("click", () => checkIn(b));
+      box.append(card("Check in", el("p", { class: "small muted", text: "Your first check-in of the day counts as In and the last as Out. Check in at the office (location is needed), or anywhere if you are Field Staff. Check-in is locked to the first phone you use." }), el("div", { class: "hr-actions" }, b)));
+    }
+    let mo; try { mo = await rpc("hr_month", { p_uid: who, p_month: m }, "Attendance could not load"); } catch (e) { box.append(empty(e.message)); return; }
+    const days = mo.days || [], cnt = s => days.filter(d => d.status === s).length, late = days.filter(d => d.late).length;
+    const pick = el("input", { class: "input", type: "month", value: m, onchange: e => { V.att = e.target.value || m; render(); } });
+    box.append(el("div", { class: "kpis" }, kpi("Present", cnt("Present") + cnt("Checked in"), "", "check"), kpi("Late arrivals", late, "after " + (((ME.policy || {}).attendance || {}).graceMinutes || 15) + " min grace", "clock"),
+      kpi("Absent", cnt("Absent"), cnt("Half Day") ? cnt("Half Day") + " half days" : "", "alert"), kpi("On leave", cnt("Leave") + cnt("Duty"), "", "cal")));
+    const eng = leaveRules(days, ((ME.balance && ME.balance.types) || []).find(b => b.type === "Casual"));
+    box.append(card((who === ME.id ? "My attendance" : mo.name) + " · " + new Date(m + "-01T00:00:00").toLocaleDateString("en-GB", { month: "long", year: "numeric" }) + " · shift " + (mo.shift || []).join("–"),
+      el("div", { class: "hr-filters" }, pick, who !== ME.id ? el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Back to my attendance", onclick: () => { V.attWho = null; render(); } }) : null),
+      el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Date", "Status", "In", "Out", "Hours", "Note"].map(t => el("th", { text: t })))),
+        el("tbody", {}, days.filter(d => d.status !== "Not yet").map(d => el("tr", {}, el("td", { text: fmtD(d.date) }), el("td", {}, el("span", { class: "badge " + ({ Present: "b-ok", "Checked in": "b-info", Late: "b-warn", Absent: "b-bad", "Half Day": "b-warn", Leave: "b-info", Duty: "b-info" }[d.status] || ""), text: d.status })),
+          el("td", { text: d.in || "" }), el("td", { text: d.out || "" }), el("td", { text: d.hours ? String(d.hours) : "" }),
+          el("td", { text: [d.leave, d.note, d.wallet ? (d.wallet === "half" ? "Half day leave" : "Short leave") : "", d.late ? "late " + d.lateMin + " min" : "", d.early ? "left " + d.earlyMin + " min early" : ""].filter(Boolean).join(" · ") })))))),
+      el("div", { class: "hr-grid" }, card("Leave rules this month (preview)", el("ul", {}, (eng.events.length ? eng.events : [{ text: "No lateness deductions this month." }]).map(x => el("li", { text: (x.date ? fmtD(x.date) + ": " : "") + x.text }))),
+        el("p", { class: "small muted", text: "Regularity, Attendance and Leave Policy: every 3rd late under 2 h costs 1 Casual leave; 2–4 h late = half a day; over 4 h = absent; leaving early under 4 h = half a day. This preview is applied for real when payroll is added." })))));
+    if (!team) return;
+    const ds = V.attDay || new Date().toISOString().slice(0, 10); V.attDay = ds;
+    let rows = []; try { rows = await rpc("hr_day_sheet", { p_day: ds }, "The day sheet could not load") || []; } catch (e) { box.append(empty(e.message)); return; }
+    const by = {}; rows.forEach(r => { const k = r.late ? "Late" : r.status; by[k] = (by[k] || 0) + 1; });
+    const ch = el("div"); if (window.AKF_CHARTS) ch.innerHTML = AKF_CHARTS.donut({ id: "hr-day", center: "staff", items: Object.entries(by).map(([k, v]) => ({ key: k, label: k, value: v })) });
+    box.append(card("Everyone you see · " + fmtD(ds), el("div", { class: "hr-filters" }, el("input", { class: "input", type: "date", value: ds, onchange: e => { V.attDay = e.target.value || ds; render(); } })), ch,
+      rows.length ? el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Name", "Department", "Status", "In", "Out", ""].map(t => el("th", { text: t })))),
+        el("tbody", {}, rows.map(r => el("tr", {}, el("td", { text: r.name }), el("td", { text: r.dept || "" }), el("td", { text: r.status + (r.late ? " · late " + r.lateMin + " min" : "") }), el("td", { text: r.in || "" }), el("td", { text: r.out || "" }),
+          el("td", {}, el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Month", onclick: () => { V.attWho = r.id; scrollTo(0, 0); render(); } }),
+            can("attendance", "edit") ? el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Reset phone", onclick: async () => { if (!confirm("Let " + r.name + " register a new check-in phone?")) return; try { await rpc("hr_reset_phone", { p_uid: r.id }, "Not reset"); toast("Check-in phone reset for " + r.name); } catch (e) { toast(e.message, true); } } }) : null)))))) : empty("Nobody to show.")));
+  },
+  async notices(box) {
+    if (can("notices", "edit")) {
+      const t = el("input", { class: "input", maxlength: 150, placeholder: "Title" }), b = el("textarea", { class: "textarea", rows: 4, maxlength: 5000, placeholder: "Message" }), ack = el("input", { type: "checkbox" });
+      const post = el("button", { class: "btn btn-primary", type: "button", text: "Post announcement" });
+      post.addEventListener("click", async () => { if (t.value.trim().length < 3) return toast("Give a title", true); post.disabled = true;
+        try { await rpc("hr_notice_post", { p_title: t.value, p_body: b.value, p_ack: ack.checked }, "Not posted"); toast("Announcement posted"); await reload(); render(); } catch (e) { toast(e.message, true); post.disabled = false; } });
+      box.append(card("New announcement", el("div", { class: "hr-form" }, el("label", { class: "full" }, "Title", t), el("label", { class: "full" }, "Message", b), el("label", {}, el("span", {}, ack, " Everyone must confirm they have read it"))), el("div", { class: "hr-actions" }, post)));
+    }
+    box.append(...(NOTES.length ? NOTES.map(n => card(n.title, el("p", { class: "small muted", text: (n.by || "HR") + " · " + fmtDT(n.at) }), el("p", { text: n.body || "" }),
+      el("div", { class: "hr-actions" }, n.acked ? el("span", { class: "badge b-ok", text: "You confirmed reading" }) : el("button", { class: "btn btn-success", type: "button", text: n.needs_ack ? "I have read it" : "Mark as read", onclick: async () => { try { await rpc("hr_notice_ack", { p_id: n.id }, "Not saved"); await reload(); render(); } catch (e) { toast(e.message, true); } } }),
+        n.read != null ? el("span", { class: "small muted", text: n.read + " confirmed" + (n.missing && n.missing.length ? " · not yet: " + n.missing.slice(0, 30).join(", ") + (n.missing.length > 30 ? " +" + (n.missing.length - 30) + " more" : "") : "") }) : null,
+        can("notices", "edit") ? el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Archive", onclick: async () => { try { await rpc("hr_notice_archive", { p_id: n.id }, "Not archived"); await reload(); render(); } catch (e) { toast(e.message, true); } } }) : null)))
+      : [card("Announcements", empty("No announcements."))]));
+  },
+  async exits(box) {
+    let L = []; try { L = await rpc("hr_checklists", {}, "Checklists could not load") || []; } catch (e) { box.append(empty(e.message)); return; }
+    if (can("exits", "edit") && can("people")) {
+      if (!PEOPLE) { try { PEOPLE = await rpc("hr_people", {}, "Staff could not load") || []; } catch (e) { PEOPLE = []; } }
+      const who = el("select", { class: "select" }, PEOPLE.filter(p => p.id !== ME.id).map(p => el("option", { value: p.id, text: p.name + (p.dept ? " · " + p.dept : "") })));
+      const kind = el("select", { class: "select" }, ["Termination", "Contract end", "Retirement", "Resignation"].map(k => el("option", { value: k, text: k })));
+      const day = el("input", { class: "input", type: "date" }), why = el("textarea", { class: "textarea", rows: 2, maxlength: 1000 });
+      const go_ = el("button", { class: "btn btn-primary", type: "button", text: "Send exit for approval" });
+      go_.addEventListener("click", async () => { go_.disabled = true;
+        try { const id = await rpc("hr_submit", { p_kind: "Exit", p_data: { for: who.value, exitKind: kind.value, lastDay: day.value, reason: why.value } }, "Not saved"); toast("Exit " + id + " sent for approval"); await reload(); render(); }
+        catch (e) { toast(e.message, true); go_.disabled = false; } });
+      box.append(card("File an exit for a staff member", el("div", { class: "hr-form" }, el("label", {}, "Person", who), el("label", {}, "Kind", kind), el("label", {}, "Last working day", day), el("label", { class: "full" }, "Reason", why)), el("div", { class: "hr-actions" }, go_)));
+    }
+    if (!L.length) { box.append(card("Onboarding & exits", empty("No joiners in the last 120 days and nobody leaving."))); return; }
+    box.append(el("div", { class: "hr-grid" }, L.map(p => card((p.list === "onboarding" ? "Joiner · " : "Leaver · ") + p.name,
+      el("p", { class: "small muted", text: [p.designation, p.dept, p.list === "onboarding" ? "joined " + fmtD(p.joining) : "last day " + fmtD(p.lastDay), p.status === "exited" ? "exit complete" + (p.stillActive ? ": switch the login off on People & access" : "") : ""].filter(Boolean).join(" · ") }),
+      (p.assets || []).length ? el("p", { class: "badge b-bad", text: "Still holds: " + p.assets.map(a => a.tag + " " + (a.name || "")).join(", ") }) : null,
+      el("div", {}, (p.items || []).map(i => { const c = el("input", { type: "checkbox", checked: i.done, disabled: !can("exits", "edit") || p.id === ME.id });
+        c.addEventListener("change", async () => { try { const r = await rpc("hr_check_tick", { p_uid: p.id, p_list: p.list, p_item: i.item, p_done: c.checked }, "Not saved"); if (r && r.status === "exited") toast("Exit complete for " + p.name + ". Switch the login off on People & access."); render(); } catch (e) { toast(e.message, true); c.checked = !c.checked; } });
+        return el("label", { style: "display:flex;gap:8px;align-items:center;padding:4px 0" }, c, el("span", { text: i.item }), i.done ? el("small", { class: "muted", text: "· " + (i.by || "") + " " + fmtD(i.at) }) : null); }))))));
+  },
+  async org(box) {
+    let O = []; try { O = await rpc("hr_org", {}, "The org chart could not load") || []; } catch (e) { box.append(empty(e.message)); return; }
+    box.append(el("div", { class: "hr-grid" }, O.filter(d => (d.heads || []).length || (d.staff || []).length).map(d => card(d.dept,
+      (d.heads || []).length ? el("p", {}, el("b", { text: "Head: " }), el("span", { text: d.heads.join(", ") })) : null,
+      el("ul", {}, (d.staff || []).map(s => el("li", { text: s.name + (s.designation ? " · " + s.designation : "") })))))));
+  },
+  async library(box) {
+    const { data, error } = await SB.from("hr_library").select("id,folder,title,path,size,created_at").order("folder").order("title");
+    if (error) { box.append(empty(errText(error, "The library could not load"))); return; }
+    if (can("library", "edit")) {
+      const f = el("input", { class: "input", type: "file", accept: ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg" }), fol = el("input", { class: "input", maxlength: 60, placeholder: "Folder, e.g. HR Manual, SOPs, Forms" }), ti = el("input", { class: "input", maxlength: 150, placeholder: "Title" });
+      const up = el("button", { class: "btn btn-primary", type: "button", text: "Upload" });
+      up.addEventListener("click", async () => {
+        const file = f.files && f.files[0]; if (!file) return toast("Choose a file", true);
+        const ext = (file.name.split(".").pop() || "").toLowerCase(); if (!/^(pdf|docx?|xlsx?|pptx?|png|jpe?g)$/.test(ext)) return toast("PDF, Word, Excel, PowerPoint or picture files only", true);
+        if (file.size > 10485760) return toast("Files must be under 10 MB", true);
+        up.disabled = true; const path = "lib/" + crypto.randomUUID() + "." + ext;
+        try { const { error: e1 } = await SB.storage.from("hr-library").upload(path, file, { contentType: file.type || undefined, upsert: false }); if (e1) throw e1;
+          await rpc("hr_library_add", { p_folder: fol.value || "General", p_title: ti.value || file.name, p_path: path, p_size: file.size }, "Not saved"); toast("Uploaded"); render(); }
+        catch (e) { toast(e.shown ? e.message : errText(e, "Not uploaded"), true); up.disabled = false; }
+      });
+      box.append(card("Add a file", el("div", { class: "hr-form" }, el("label", {}, "Folder", fol), el("label", {}, "Title", ti), el("label", { class: "full" }, "File (under 10 MB)", f)), el("div", { class: "hr-actions" }, up)));
+    }
+    const groups = {}; (data || []).forEach(x => (groups[x.folder] = groups[x.folder] || []).push(x));
+    const open = async x => { const { data: s, error: e } = await SB.storage.from("hr-library").createSignedUrl(x.path, 60); if (e || !s) return toast(errText(e, "The file could not open"), true); const a = el("a", { href: s.signedUrl, target: "_blank", rel: "noopener" }); a.click(); };
+    box.append(...(Object.keys(groups).length ? Object.entries(groups).map(([g, xs]) => card(g, ...xs.map(x => el("div", { class: "hr-row" }, el("span", { class: "grow" }, el("b", { text: x.title }), el("small", { text: Math.round(x.size / 1024) + " KB · " + fmtD(x.created_at) })),
+      el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Open", onclick: () => open(x) }),
+      can("library", "edit") ? el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Remove", onclick: async () => { if (!confirm("Remove " + x.title + "?")) return; try { const p = await rpc("hr_library_remove", { p_id: x.id }, "Not removed"); if (p) await SB.storage.from("hr-library").remove([p]); render(); } catch (e) { toast(e.message, true); } } }) : null))))
+      : [card("Policies & forms", empty("No files yet."))]));
   },
   async calendar(box) {
     const m = V.cal || new Date().toISOString().slice(0, 7); V.cal = m;
@@ -1314,6 +1423,57 @@ document.addEventListener("akf-chart-pick", e => {
   else if (e.detail.chart === "hr-myleave" && can("apply", "add")) { V.kind = "Leave"; go("apply"); }
 });
 
+/* ---------- attendance helpers ---------- */
+// a random id for this phone, kept on the phone (no personal data); the server keeps only a fingerprint of it
+function deviceId() {
+  let d = ""; try { d = localStorage.getItem("hr360-device") || ""; } catch (e) { }
+  if (!/^[A-Za-z0-9_-]{16,64}$/.test(d)) { d = Array.from(crypto.getRandomValues(new Uint8Array(24)), b => (b % 36).toString(36)).join(""); try { localStorage.setItem("hr360-device", d); } catch (e) { } }
+  return d;
+}
+function checkIn(btn) {
+  btn.disabled = true;
+  const send = async (lat, lng) => { try { const r = await rpc("hr_checkin", { p_lat: lat, p_lng: lng, p_device: deviceId() }, "Not checked in"); toast("Checked in at " + r.at + " · " + r.place); render(); } catch (e) { toast(e.message, true); btn.disabled = false; } };
+  if (!navigator.geolocation) return send(null, null);
+  navigator.geolocation.getCurrentPosition(p => send(p.coords.latitude, p.coords.longitude), () => send(null, null), { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
+}
+// Regularity, Attendance and Leave Policy, day by day (HR360 leaveEngine). Preview only: payroll will apply the same rules on the server.
+function leaveRules(days, casual) {
+  const ev = [], perHalf = 2, perShort = 2, w = { half: perHalf, short: perShort }; let minor = 0, cl = Math.max(0, (casual && casual.left) || 0);
+  for (const d of days) {
+    let dayCut = 0; const cut = (n, why) => { const x = Math.min(n, 1 - dayCut); if (x <= 0) return; dayCut += x; ev.push({ date: d.date, text: why + ": " + x + " day's pay" }); };
+    if (!d.wallet && ["Weekend", "Holiday", "Leave", "Duty", "Not yet", "Absent"].includes(d.status)) continue;
+    if (d.wallet) { if (w[d.wallet] > 0) { w[d.wallet]--; ev.push({ date: d.date, text: "Approved " + (d.wallet === "half" ? "half day" : "short leave") + " from the monthly allowance" }); } else cut(d.wallet === "half" ? 0.5 : 0.25, "Beyond the monthly allowance"); }
+    const cover = d.wallet === "half" ? 240 : d.wallet === "short" ? 120 : 0;
+    if (d.late && d.lateMin > cover) {
+      if (d.lateMin > 240) cut(1, "Late " + d.lateMin + " min (over 4 h), counted as absent");
+      else if (d.lateMin >= 120) cut(0.5, "Late " + d.lateMin + " min (2 to 4 h)");
+      else if (++minor % 3) ev.push({ date: d.date, text: "Late " + d.lateMin + " min: " + (minor % 3) + " of 3" });
+      else if (cl >= 1) { cl--; ev.push({ date: d.date, text: "Late " + d.lateMin + " min: 3 lates under 2 h, 1 Casual leave would be deducted" }); }
+      else cut(1, "Late " + d.lateMin + " min: 3 lates and no Casual leave left");
+    }
+    if (d.early && d.earlyMin > cover) cut(d.earlyMin > 240 ? 1 : 0.5, "Left " + d.earlyMin + " min early");
+  }
+  return { events: ev };
+}
+function delegationCard() {
+  const box = card("Stand-in while you are away"); if (!can("approvals", "approve")) return null;
+  rpc("hr_delegation_info", {}, "Could not load").then(info => {
+    if (!info) return;
+    if ((info.forMe || []).length) box.append(el("p", { class: "small", text: "You are standing in for: " + info.forMe.map(x => x.name + " until " + fmtD(x.until)).join(", ") }));
+    if (info.mine) {
+      const stop = el("button", { class: "btn btn-outline btn-sm", type: "button", text: "End hand-over now" });
+      stop.addEventListener("click", async () => { try { await rpc("hr_delegate", { p_to: null, p_until: null }, "Not saved"); toast("Hand-over ended"); render(); } catch (e) { toast(e.message, true); } });
+      box.append(el("p", { text: info.mine.name + " signs your HR approvals until " + fmtD(info.mine.until) + "." }), stop); return;
+    }
+    const who = el("select", { class: "select" }, (info.choices || []).map(c => el("option", { value: c.id, text: c.name + (c.designation ? " · " + c.designation : "") })));
+    const until = el("input", { class: "input", type: "date" }), go_ = el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Hand over" });
+    go_.addEventListener("click", async () => { try { await rpc("hr_delegate", { p_to: who.value, p_until: until.value }, "Not saved"); toast("Approvals handed over"); render(); } catch (e) { toast(e.message, true); } });
+    box.append(el("p", { class: "small muted", text: "Your stand-in signs your steps until the date you choose (at most 60 days). Someone who already signs another step of a request cannot also sign yours." }),
+      el("div", { class: "hr-form" }, el("label", {}, "Stand-in", who), el("label", {}, "Until", until)), el("div", { class: "hr-actions" }, go_));
+  }).catch(e => box.append(el("p", { class: "small muted", text: e.message })));
+  return box;
+}
+
 /* ---------- request detail ---------- */
 function modal(title, ...kids) { $("m-title").textContent = title; $("m-body").replaceChildren(...kids); $("layer").classList.add("open"); $("layer").setAttribute("aria-hidden", "false"); $("m-close").focus(); }
 function closeModal() { $("layer").classList.remove("open"); $("layer").setAttribute("aria-hidden", "true"); $("m-body").replaceChildren(); }
@@ -1386,13 +1546,16 @@ async function reload() {
   const [me, list] = await Promise.all([rpc("hr_me", {}, "Your HR profile could not load"), rpc("hr_requests_list", {}, "Requests could not load")]);
   if (!me) throw new Error("Your account has no access to " + NAME + ".");
   ME = Object.assign(ME || {}, me); REQ = Array.isArray(list) ? list : [];
+  if (can("notices")) { try { NOTES = await rpc("hr_notices", {}, "Announcements could not load") || []; } catch (e) { NOTES = []; } }
   notify();
 }
 function notify() {
   if (!window.AKF_NOTIFY) return;
   const items = REQ.filter(r => r.myStep).map(r => ({ key: "hr|tap|" + r.id + "|" + r.step, title: "Waiting for your approval · " + r.id, body: KIND[r.kind] + " · " + (r.name || ""), at: r.updated_at, open: "#req=" + r.id }))
     .concat(REQ.filter(r => r.mine && (r.status === "approved" || r.status === "rejected") && r.updated_at && Date.now() - new Date(r.updated_at).getTime() < 7 * 864e5)
-      .map(r => ({ key: "hr|done|" + r.id + "|" + r.status, title: "Your " + r.kind + " request was " + r.status + " · " + r.id, body: "", at: r.updated_at, open: "#req=" + r.id })));
+      .map(r => ({ key: "hr|done|" + r.id + "|" + r.status, title: "Your " + r.kind + " request was " + r.status + " · " + r.id, body: "", at: r.updated_at, open: "#req=" + r.id })))
+    .concat(NOTES.filter(n => !n.acked && (n.needs_ack || Date.now() - new Date(n.at).getTime() < 3 * 864e5))
+      .map(n => ({ key: "hr|notice|" + n.id, title: "HR announcement · " + n.title, body: n.needs_ack ? "Please read and confirm" : "", at: n.at, open: "#notices" })));
   AKF_NOTIFY(items);
 }
 let busy = false;
@@ -1400,7 +1563,7 @@ async function refresh() { if (busy || document.hidden) return; busy = true; try
 function hashOpen() {
   const m = /^#req=(HR-\d{4}-\d{5,})$/.exec(location.hash || "");
   if (m) { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { } openReq(m[1]); }
-  else if (location.hash === "#leave") { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { } go("dashboard"); }
+  else if (["#leave", "#notices", "#exits"].includes(location.hash)) { const v = { "#leave": "dashboard", "#notices": "notices", "#exits": "exits" }[location.hash]; try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { } go(v); }
 }
 async function render() {
   if (!ME) return; chrome();
