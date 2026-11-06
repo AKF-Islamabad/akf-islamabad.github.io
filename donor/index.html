@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Foundation Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-LS19QuqVRexzfbRWUU2nZ39e+oCiYwTlma8lkGk0uJU='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-zm+pmTx75A/PN1FMzPwq1nzo+QjqF05yPidPqF57dko='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -2733,7 +2733,7 @@ function signatoryForm(existing) {
         </div>
         <div class="sig-tabs" role="tablist"><button type="button" class="on" data-tab="draw" role="tab">Draw signature</button><button type="button" data-tab="upload" role="tab">${ic('image')}Import image</button></div>
         <div data-pane="draw"><div class="sigbox" id="sg-box"><canvas id="sg-pad" width="900" height="260" aria-label="Signature pad"></canvas><span class="sig-ph" id="sg-ph">Sign here: mouse, pen or finger</span></div><button type="button" class="btn btn-ghost btn-sm" id="sg-clear">Clear</button></div>
-        <div data-pane="upload" class="hidden"><label class="drop" for="sg-file">${ic('upload')}<b>Choose a photo or scan of the signature</b><span>PNG or JPG, on white paper. The background is removed automatically.</span></label><input type="file" id="sg-file" accept="image/png,image/jpeg,image/webp" class="sr-only"><div class="err" id="sg-file-err"></div></div>
+        <div data-pane="upload" class="hidden"><label class="drop" for="sg-cam">${ic('upload')}<b>Take a photo (camera)</b><span>Sign on white paper with a dark pen, then photograph it. The background is removed automatically.</span></label><input type="file" id="sg-cam" accept="image/*" capture="environment" class="sr-only"><label class="drop" for="sg-file" style="margin-top:8px">${ic('upload')}<b>Choose from gallery</b><span>A PNG or JPG picture or scan of your signature.</span></label><input type="file" id="sg-file" accept="image/png,image/jpeg,image/webp" class="sr-only"><div class="err" id="sg-file-err"></div></div>
         <div class="sig-preview ${existing && S.signatures[existing.sigId] ? '' : 'hidden'}" id="sg-prev"><span class="k">Signature that will print on receipts</span><img id="sg-img" alt="Signature preview" src="${existing && S.signatures[existing.sigId] ? esc(S.signatures[existing.sigId]) : ''}"></div>
         <div class="err" data-err="sig"></div>
       </form>`,
@@ -2743,12 +2743,14 @@ function signatoryForm(existing) {
     const pad = sigPad($('#sg-pad'), () => { $('#sg-ph').classList.add('hidden'); imported = null; $('#sg-prev').classList.add('hidden'); });
     $('#sg-clear').addEventListener('click', () => { pad.clear(); $('#sg-ph').classList.remove('hidden'); });
     $$('.sig-tabs button', f).forEach(b => b.addEventListener('click', () => { $$('.sig-tabs button', f).forEach(x => x.classList.toggle('on', x === b)); $$('[data-pane]', f).forEach(p => p.classList.toggle('hidden', p.dataset.pane !== b.dataset.tab)); }));
-    $('#sg-file').addEventListener('change', async e => {
+    const sgPick = async e => {
       const file = e.target.files[0]; e.target.value = ''; $('#sg-file-err').textContent = '';
       if (!file) return;
       try { imported = await processSignatureImage(file); $('#sg-img').src = imported.toDataURL('image/png'); $('#sg-prev').classList.remove('hidden'); f.dataset.dirty = '1'; }
       catch (err) { $('#sg-file-err').textContent = err.message; }
-    });
+    };
+    $('#sg-file').addEventListener('change', sgPick);
+    $('#sg-cam').addEventListener('change', sgPick);   // the same, from the camera
     f.addEventListener('submit', async e => {
       e.preventDefault(); clearErrs(f);
       const name = f.name.value.trim(), des = f.designation.value.trim();
