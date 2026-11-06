@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-QXuMSI1K5AbhBUzIXCGhOvxg2Cq6wlRvpjSWTLzAK+w='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-ODjP/Uxdg1yq6JLIPuf0KqnxTB0dqC9wltLdiAvOQ04='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -3742,7 +3742,7 @@ const UOMS = ["Pcs","Box","Kg","Ltr","Pack","Set","Carton"];
 const DEFAULT_STORES = ["CS1 Central Store 1","CS2 Central Store 2"];
 let STORES = DEFAULT_STORES;   // "CODE Name"; the Super Admin renames or adds stores in Settings (settings.stores)
 const storesOf = st => { const l=st&&Array.isArray(st.stores)?st.stores.filter(x=>/^[A-Z0-9]{1,6} \S/.test(String(x||""))):[]; return l.length?l:DEFAULT_STORES; };
-let SETTINGS = { orgName:"Alkhidmat Foundation Islamabad Region", escalationHours:48, gst:0.18, whtGoodsFiler:0.04, whtGoodsNonFiler:0.08, whtServicesFiler:0.08, whtServicesNonFiler:0.16, storeAutoApprove:0, procurementAutoApprove:0, assetThreshold:50000, actingApprover:"", fiscalYear:"2026-27", directPurchaseLimit:100000, aiProvider:"builtin", aiKey:"", aiModel:"gemini-2.5-flash" };
+let SETTINGS = { orgName:"Alkhidmat Foundation Islamabad Region", escalationHours:48, gst:0.18, whtGoodsFiler:0.04, whtGoodsNonFiler:0.08, whtServicesFiler:0.08, whtServicesNonFiler:0.16, storeAutoApprove:0, procurementAutoApprove:0, assetThreshold:50000, actingApprover:"", fiscalYear:"2026-27", directPurchaseLimit:200000, aiProvider:"builtin", aiKey:"", aiModel:"gemini-2.5-flash" };
 const DEFAULT_SETTINGS={...SETTINGS};
 
 const ROLES = {
@@ -4645,7 +4645,7 @@ function makeActions(commit, user, toast){
         advance(d,r,"rfq",`${rfq.id} closed — ${rfq.quotes.filter(q=>q.status==="Submitted").length} quotations to purchase committee`,""); }); toast("Sent to the purchase committee","ok"); },
     /* Up to the direct-purchase limit: one vendor quotation, no RFQ/committee (policy step is logged). */
     directPurchase(reqId,{vendorId,amount,inclusive,deliveryDays,docs}){
-      let id; commit(d=>{ const r=d.requests.find(r=>r.id===reqId); const v=d.vendors.find(v=>v.id===vendorId); const lim=Number(d.settings.directPurchaseLimit)||100000;
+      let id; commit(d=>{ const r=d.requests.find(r=>r.id===reqId); const v=d.vendors.find(v=>v.id===vendorId); const lim=Number(d.settings.directPurchaseLimit)||200000;
         id=nextNumber(d,`RFQ-${YEAR}-`,3); const t=quoteCalc(amount,inclusive,v); const qid="Q"+uid();
         d.rfqs.unshift({ id, requestId:reqId, at:nowISO(), deadline:nowISO(), status:"Closed", direct:true, quotes:[{id:qid,vendorId,link:"Direct purchase",status:"Submitted",docs:docs||100,deliveryDays:deliveryDays||3,at:nowISO(),...t}], committee:{quoteId:qid,direct:true,at:nowISO(),by:user.name,byId:user.id,reason:`Direct purchase — value ≤ ${pkr(lim)}`,members:[]} });
         r.links.rfq=id; advance(d,r,"rfq",`Direct purchase quotation from ${v.name} (${id})`,`Total incl. tax ${pkr(t.gross)} · ${inclusive?"vendor price included taxes":"GST added from vendor profile"}`);
@@ -4861,6 +4861,9 @@ function makeActions(commit, user, toast){
 /* Permission: can this user act on this request now? */
 /* No bypass: only the owner of the NEXT step can act — not even the Super Admin.
    The requester's own steps (confirm receipt) belong to whoever raised the request. */
+/* the departments a Head of Department or Director looks after: their own, plus the extra ones the Super Admin gave them (044) */
+const myDepts=u=>[u&&u.dept,...((u&&Array.isArray(u.extraDepts))?u.extraDepts:[])].filter(Boolean);
+const isDeptHead=u=>!!u&&(u.role==="hod"||u.role==="director");
 function canAct(user, req){
   if(!req || req.status!=="active" || req.stage==="closed") return false;
   if(req.correction) return false;   // sent back for correction: it waits for the requester (the database refuses too)
@@ -4871,7 +4874,7 @@ function canAct(user, req){
   if(n && n.key==="closed" && req.receiverId) return user.id===req.receiverId;
   /* a view-only role acts only on an approval step the matrix gave it */
   if(READ_ONLY_ROLES.includes(user.role)) return !!n && n.kind==="approval" && owner===user.role;
-  if(owner==="hod") return req.requesterId===user.id || (user.role==="hod" && req.dept===user.dept);
+  if(owner==="hod") return req.requesterId===user.id || (isDeptHead(user) && myDepts(user).includes(req.dept));
   return owner===user.role;
 }
 /* A request becomes visible to an officer only once it has reached that officer's step
@@ -4881,7 +4884,7 @@ function canAct(user, req){
 function inScope(user,r){
   if(user.role==="admin_officer") return r.type==="procurement";
   if(user.role==="store_officer") return r.type==="store"||["po","grn","issued","closed"].includes(r.stage);
-  if(user.role==="hod") return r.dept===user.dept;
+  if(isDeptHead(user)) return myDepts(user).includes(r.dept);
   return true;
 }
 function auditFor(user,state){
@@ -4896,7 +4899,8 @@ function visibleRequestsAll(user, requests){
   if(user.role==="super"||READ_ONLY_ROLES.includes(user.role)) return requests;
   return requests.filter(r=>{
     if(r.requesterId===user.id||r.receiverId===user.id) return true;
-    if(user.role==="hod") return r.dept===user.dept;
+    if(user.role==="hod") return myDepts(user).includes(r.dept);   // HOD: every department they look after, and only those
+    if(user.role==="director"&&myDepts(user).includes(r.dept)) return true;   // Director: their departments, plus any request at their matrix step (below)
     const flow=flowOf(r); const reached=stageIndex(r)+1;
     if(r.timeline.some(t=>t.uid===user.id||(t.role===user.role&&!t.uid))) return true;
     if(SETTINGS.actingApprover===user.role&&flow.some((s,i)=>s.key==="approved"&&i<=reached)) return true;
@@ -5028,10 +5032,10 @@ function RequestModal({req,state,user,A,onClose,openDoc,readOnly}){
     if(/^x_/.test(k)) actionBlock=html`<${Act} ...${actProps}>${req.type==="procurement"&&html`<${FinanceNote} req=${req}/>`}${CommentBox({ph:`${next.label} — remarks…`})}<div class="row wrap"><button class="btn btn-primary" onClick=${()=>{A.forward(req.id,comment);onClose();}}><${Icon} name="check"/>Approve${fwdLabel}</button>${backBtn}${rejectBtn}</div><//>`;
     if(k==="rec_hr"||k==="rec_rm") actionBlock=html`<${Act} ...${actProps}>${req.type==="procurement"&&html`<${FinanceNote} req=${req}/>`}${CommentBox({ph:"Recommendation remarks…"})}<div class="row wrap"><button class="btn btn-primary" onClick=${()=>{A.forward(req.id,comment);onClose();}}><${Icon} name="check"/>Recommend${fwdLabel}</button>${backBtn}${rejectBtn}</div><//>`;
     if(k==="approved") actionBlock=html`<${Act} ...${actProps}>${req.type==="procurement"&&html`<${FinanceNote} req=${req}/>`}${CommentBox({ph:"Approval remarks…"})}<div class="row wrap"><button class="btn btn-ok" onClick=${()=>{A.forward(req.id,comment);onClose();}}><${Icon} name="stamp"/>Approve</button>${backBtn}${rejectBtn}</div><//>`;
-    if(k==="rfq"){ const lim=Number(state.settings.directPurchaseLimit)||100000; const needRfq=total>lim;
+    if(k==="rfq"){ const lim=Number(state.settings.directPurchaseLimit)||200000; const needRfq=total>lim;
       actionBlock=html`<${Act} ...${actProps}>${rfq?html`<${QuotesPanel} rfq=${rfq} state=${state} A=${A} req=${req} collect onIssued=${onClose}/>`:mode==="rfq"?html`<${RfqForm} vendors=${state.vendors} req=${req} onCancel=${()=>setMode(null)} onSend=${(ids,days)=>{A.sendRFQ(req.id,ids,days);onClose();}}/>`
         :mode==="direct"?html`<${DirectForm} vendors=${state.vendors} req=${req} onCancel=${()=>setMode(null)} onSave=${p=>{A.directPurchase(req.id,p);onClose();}}/>`
-        :html`<div class=${"notice "+(needRfq?"notice-warn":"notice-info")}><${Icon} name=${needRfq?"alert":"shield"}/><span>Request value <b>${pkr(total)}</b> ${needRfq?`exceeds ${pkr(lim)} — quotations from vendors and a purchase-committee decision are mandatory.`:`is within the direct-purchase limit of ${pkr(lim)} — you may buy directly from one vendor, or still run an RFQ.`}</span></div><div class="row wrap"><button class="btn btn-primary" onClick=${()=>setMode("rfq")}><${Icon} name="send"/>Send RFQ to vendors</button>${!needRfq&&html`<button class="btn btn-ghost" onClick=${()=>setMode("direct")}><${Icon} name="cart"/>Direct purchase</button>`}${rejectBtn}</div>`}<//>`; }
+        :html`<div class=${"notice "+(needRfq?"notice-warn":"notice-info")}><${Icon} name=${needRfq?"alert":"shield"}/><span>Request value <b>${pkr(total)}</b> ${needRfq?`exceeds ${pkr(lim)} — quotations from vendors and a purchase-committee decision are mandatory.`:`is within the direct-purchase limit of ${pkr(lim)} — the Admin Officer (Procurement) buys directly from one vendor and carries it out, or may still send an RFQ link to vendors to get their rates.`}</span></div><div class="row wrap"><button class="btn btn-primary" onClick=${()=>setMode("rfq")}><${Icon} name="send"/>Send RFQ to vendors</button>${!needRfq&&html`<button class="btn btn-ghost" onClick=${()=>setMode("direct")}><${Icon} name="cart"/>Direct purchase</button>`}${rejectBtn}</div>`}<//>`; }
     if(k==="committee") actionBlock=html`<${Act} ...${actProps}><${CommitteePanel} rfq=${rfq} state=${state} A=${A} req=${req} user=${user} onDone=${onClose}/><//>`;
     if(k==="po") actionBlock=html`<${Act} ...${actProps}><${QuotesPanel} rfq=${rfq} state=${state} A=${A} req=${req} onIssued=${onClose}/><//>`;
     if(k==="grn") actionBlock=html`<${Act} ...${actProps}>${mode==="grn"?html`<${GrnForm} req=${req} po=${po} onCancel=${()=>setMode(null)} onSave=${p=>{A.receiveGRN(req.id,p);onClose();}}/>`:html`<p class="sm muted" style="margin:0">${po?`${po.id} issued to ${vendorName(po.vendorId)} · delivery by ${fmtD(po.deliveryBy)}`:"Awaiting goods from vendor"}.</p><button class="btn btn-primary" onClick=${()=>setMode("grn")}><${Icon} name="box"/>Receive goods (create GRN)</button>`}<//>`;
@@ -5114,7 +5118,7 @@ function QuotesPanel({rfq,state,A,req,onIssued,collect}){
   const submitted=rfq.quotes.filter(q=>q.status==="Submitted");
   const v=id=>state.vendors.find(x=>x.id===id)||{};
   const chosen=rfq.committee&&rfq.quotes.find(q=>q.id===rfq.committee.quoteId);
-  const lim=Number(state.settings.directPurchaseLimit)||100000;
+  const lim=Number(state.settings.directPurchaseLimit)||200000;
   return html`<div class="stack">
     ${collect&&rfq.status==="Open"&&html`<div class="notice notice-info"><${Icon} name="link"/><span>Send each vendor their own secure link. They open it on any phone or computer, enter prices and submit — the quotation appears here automatically. Paper quotations can still be entered with <b>Record manually</b>.</span></div>`}
     <${ComparativeTable} rfq=${rfq} state=${state} selectable=${false} actions=${collect&&rfq.status==="Open"?(q=>q.status==="Submitted"?(q.byVendor?html`<${Tag} tone="ok">Online</${Tag}>`:""):q.status==="Expired"?"":html`<${SendLink} rfq=${rfq} q=${q} state=${state} req=${req} A=${A} onManual=${()=>{A.markOpened(rfq.id,q.id);setEditing(q.id);setAmount("");}}/>`):null}/>
@@ -6889,19 +6893,22 @@ function tProgress(t){ if(t.stage==="06") return 100; if(t.stage==="07") return 
    MA = Manager Admin, HR = HR Manager: they manage their own department like a HOD and handle event tasks across departments. */
 const TASK_ROLES={RM:"Regional Manager",HOD:"Head of Department",MA:"Manager Admin",HR:"HR Manager",Staff:"Staff",President:"President",GS:"General Secretary"};
 const tRole=u=>{ if(!u) return "Staff"; if(TASK_ADMIN.includes(u.role)||u.taskAdmin) return "RM"; if(u.taskRole&&TASK_ROLES[u.taskRole]) return u.taskRole;
-  return u.role==="hod"?"HOD":u.role==="manager_hr"?"MA":u.role==="president"?"President":u.role==="gen_sec"?"GS":"Staff"; };
+  return u.role==="hod"||u.role==="director"?"HOD":u.role==="manager_hr"?"MA":u.role==="president"?"President":u.role==="gen_sec"?"GS":"Staff"; };
 const tUDept=u=>{ if(!u) return "01"; if(u.taskDept) return u.taskDept; if(PORTAL_TO_TASK_DEPT[u.dept]) return PORTAL_TO_TASK_DEPT[u.dept];
   const n=String(u.dept||"").toLowerCase(), d=n&&tDepts().find(x=>String(x.name||"").toLowerCase()===n); return d?d.id:"01"; };   // a person's real department, by name
+/* every department a person looks after: their own, plus the extra ones the Super Admin gave them (044) */
+const tUDepts=u=>{ const s=[tUDept(u)]; ((u&&u.extraDepts)||[]).forEach(n=>{ const id=PORTAL_TO_TASK_DEPT[n]||((tDepts().find(x=>String(x.name||"").toLowerCase()===String(n).toLowerCase())||{}).id); if(id&&!s.includes(id)) s.push(id); }); return s; };
+const tMine=(u,d)=>tUDepts(u).includes(d);
 const T_MGR=["HOD","MA","HR"];
 const T_EVMGR=["RM","MA","HR"];   // see and manage every event and event task
 const TR={
-  canSee(t,u){ const r=tRole(u); if(["RM","President","GS"].includes(r)) return true; if(["MA","HR"].includes(r)&&t.eventId) return true; if(T_MGR.includes(r)) return t.dept===tUDept(u)||t.assigneeId===u.id||t.creatorId===u.id; return t.assigneeId===u.id||t.creatorId===u.id; },
+  canSee(t,u){ const r=tRole(u); if(["RM","President","GS"].includes(r)) return true; if(["MA","HR"].includes(r)&&t.eventId) return true; if(T_MGR.includes(r)) return tMine(u,t.dept)||t.assigneeId===u.id||t.creatorId===u.id; return t.assigneeId===u.id||t.creatorId===u.id; },
   canCreate:u=>!["President","GS"].includes(tRole(u)),
   canComment:u=>tRole(u)!=="President",
-  canEdit(t,u){ const r=tRole(u); if(["President","GS"].includes(r)) return false; if(r==="RM") return true; if(["MA","HR"].includes(r)&&t.eventId) return true; if(T_MGR.includes(r)) return t.dept===tUDept(u)||t.creatorId===u.id||t.assigneeId===u.id; return t.assigneeId===u.id||t.creatorId===u.id; },
+  canEdit(t,u){ const r=tRole(u); if(["President","GS"].includes(r)) return false; if(r==="RM") return true; if(["MA","HR"].includes(r)&&t.eventId) return true; if(T_MGR.includes(r)) return tMine(u,t.dept)||t.creatorId===u.id||t.assigneeId===u.id; return t.assigneeId===u.id||t.creatorId===u.id; },
   /* closers / approvers come from the approval matrix (tasks.closers, tasks.approvers, tasks.selfNeedsApproval);
      scope as before: RM everywhere · HOD within their department · MA/HR their department and event tasks · GS/President everywhere */
-  inScope(t,u,r){ if(["RM","GS","President"].includes(r)) return true; if(["MA","HR"].includes(r)&&t.eventId) return true; return t.dept===tUDept(u); },
+  inScope(t,u,r){ if(["RM","GS","President"].includes(r)) return true; if(["MA","HR"].includes(r)&&t.eventId) return true; return tMine(u,t.dept); },
   canClose(t,u){ const r=tRole(u), m=tMx(), C=m.closers;
     if(r==="RM"&&C.includes("RM")) return true;
     if(t.assigneeId===u.id) return t.creatorId===u.id&&!m.selfNeedsApproval&&C.includes("assigner");   // a self task: closed by an approver unless the matrix says otherwise
@@ -6944,7 +6951,7 @@ function tAssignable(state,deptId,u,eventId){
 const ENG_STATUS={hod:["Waiting for the department HOD","warn"],rm:["Waiting for the Regional Manager","warn"],approved:["Approved · task created","ok"],
   declined:["Not recommended by the HOD","bad"],rejected:["Rejected by the Regional Manager","bad"],cancelled:["Cancelled","neutral"]};
 const tCanEngage=u=>T_MGR.includes(tRole(u));
-const tHodOf=(state,dept)=>(state.users||[]).find(x=>x.active!==false&&tRole(x)==="HOD"&&tUDept(x)===dept);
+const tHodOf=(state,dept)=>{ const L=(state.users||[]).filter(x=>x.active!==false&&tRole(x)==="HOD"); return L.find(x=>tUDept(x)===dept)||L.find(x=>tMine(x,dept)); };   // the department's own head first, then a Director who oversees it
 const tEngMine=(e,u)=>e.status==="hod"?tRole(u)==="HOD"&&tUDept(u)===e.empDept:e.status==="rm"&&tRole(u)==="RM";   // is the next decision mine?
 const tEngSees=(e,u)=>["RM","President","GS"].includes(tRole(u))||e.requesterId===u.id||e.employeeId===u.id||(T_MGR.includes(tRole(u))&&[e.reqDept,e.empDept].includes(tUDept(u)));
 const tEngPeople=(state,u)=>(state.users||[]).filter(x=>x.active!==false&&tPick(x)&&tUDept(x)!==tUDept(u)&&!["President","GS","RM"].includes(tRole(x)));
@@ -7232,7 +7239,7 @@ function taskNotifications(state,user){
     if(r==="HOD"&&t.dept===tUDept(user)&&t.creatorId!==user.id&&t.assigneeId!==user.id&&T_EVMGR.includes(tRole(tUser(state,t.creatorId)))&&tTs(t.createdAt)>weekAgo&&tOpen(t))
       out.push({tone:"info",icon:"users",t:`${tName(state,t.creatorId)} assigned ${tName(state,t.assigneeId)} a task in your department`,d:`${t.title} · ${t.priority}${t.eventId?" · "+((tEventOf(state,t)||{}).title||""):""} · due ${tFmt(t.plannedDate)}`,at:t.createdAt,task:t.key,key:"thd|"+t.key});
     /* self-task governance: the HOD hears about new self tasks in the department and when one is ready for review */
-    if(tIsSelf(t)&&t.assigneeId!==user.id&&T_MGR.includes(r)&&t.dept===tUDept(user)&&tTs(t.createdAt)>weekAgo&&tOpen(t)) out.push({tone:"info",icon:"user",t:`${tName(state,t.assigneeId)} added a self task · ${t.id}`,d:`${t.title} · due ${tFmt(t.plannedDate)}`,at:t.createdAt,task:t.key,key:"tself|"+t.key});
+    if(tIsSelf(t)&&t.assigneeId!==user.id&&T_MGR.includes(r)&&tMine(user,t.dept)&&tTs(t.createdAt)>weekAgo&&tOpen(t)) out.push({tone:"info",icon:"user",t:`${tName(state,t.assigneeId)} added a self task · ${t.id}`,d:`${t.title} · due ${tFmt(t.plannedDate)}`,at:t.createdAt,task:t.key,key:"tself|"+t.key});
     if(tIsSelf(t)&&t.stage==="03"&&TR.canApprove(t,user)) out.push({tone:"info",icon:"approve",t:`Self task ready for your review · ${t.id}`,d:`${t.title} · ${tName(state,t.assigneeId)}`,at:t.updatedAt,task:t.key,key:"tselfrv|"+t.key+"|"+t.updatedAt});
     if(t.creatorId===user.id&&t.assigneeId!==user.id&&t.stage==="06"&&tTs(t.completedAt)>weekAgo) out.push({tone:"info",icon:"check",t:`${tName(state,t.assigneeId)} completed a task you requested · ${t.id}`,d:t.title,at:t.completedAt,task:t.key,key:"trq|"+t.key});
     if(tOverdue(t)&&(t.assigneeId===user.id||deptMine)) out.push({tone:"bad",icon:"alert",t:`Overdue since ${tFmt(t.plannedDate)} · ${t.id}`,d:t.title,at:t.plannedDate+"T23:59:00",task:t.key,key:"tov|"+t.key+"|"+t.plannedDate});
@@ -7592,7 +7599,7 @@ function TPlanner(P){
 /* ---------- Workload ---------- */
 function TWorkload(P){
   const {state,user,filtered,setFilter,go,A}=P; const r=tRole(user); const [jdFor,setJdFor]=useState(null);
-  const people=(state.users||[]).filter(p=>p.active!==false&&tPick(p)&&!["President","GS"].includes(tRole(p))&&(!T_MGR.includes(r)||tUDept(p)===tUDept(user)||filtered.some(t=>t.assigneeId===p.id))&&(r!=="Staff"||p.id===user.id));
+  const people=(state.users||[]).filter(p=>p.active!==false&&tPick(p)&&!["President","GS"].includes(tRole(p))&&(!T_MGR.includes(r)||tMine(user,tUDept(p))||filtered.some(t=>t.assigneeId===p.id))&&(r!=="Staff"||p.id===user.id));
   const stats=l=>({total:l.length,prog:l.filter(t=>t.stage==="02").length,review:l.filter(t=>["03","04","05"].includes(t.stage)).length,newc:l.filter(t=>t.stage==="01").length,done:l.filter(t=>t.stage==="06").length,over:l.filter(tOverdue).length,hours:l.filter(tOpen).reduce((a,t)=>a+(t.estimate||0),0)});
   const rows=people.map(p=>({p,s:stats(filtered.filter(t=>t.assigneeId===p.id))})).sort((a,b)=>b.s.total-a.s.total);
   const groups=[["RM","Regional Manager"],["MA","Manager Admin"],["HR","HR"],["HOD","Heads of Department"],["Staff","Staff"]].map(([k,l])=>({l,rows:rows.filter(x=>tRole(x.p)===k)})).filter(g=>g.rows.length);
@@ -7779,7 +7786,7 @@ function TAssistant({state,user,A,open,vis,openEvent}){
   sc.filter(t=>t.priority==="Urgent"&&t.stage==="01").forEach(t=>risks.push({t,why:"urgent but not started",fix:TR.canEdit(t,user)?{label:"Start",fn:()=>A.tMove(t.key,"02")}:null}));
   sc.filter(t=>tOpen(t)&&t.estimate&&(t.timeLogged||0)>t.estimate*1.3).forEach(t=>risks.push({t,why:`already ${Math.round(t.timeLogged/t.estimate*100)}% of its estimate`}));
   const wait=vis.filter(t=>t.stage==="04"&&TR.canApprove(t,user));
-  const people=(state.users||[]).filter(p=>p.active!==false&&tPick(p)&&!["President","GS"].includes(tRole(p))&&(r!=="HOD"||tUDept(p)===tUDept(user))).map(p=>{ const l=sc.filter(t=>t.assigneeId===p.id&&tOpen(t)); return {p,n:l.length,h:l.reduce((a,t)=>a+rem(t),0),over:l.filter(tOverdue).length}; }).filter(x=>x.n||r==="HOD");
+  const people=(state.users||[]).filter(p=>p.active!==false&&tPick(p)&&!["President","GS"].includes(tRole(p))&&(r!=="HOD"||tMine(user,tUDept(p)))).map(p=>{ const l=sc.filter(t=>t.assigneeId===p.id&&tOpen(t)); return {p,n:l.length,h:l.reduce((a,t)=>a+rem(t),0),over:l.filter(tOverdue).length}; }).filter(x=>x.n||r==="HOD");
   const avg=people.length?people.reduce((a,x)=>a+x.h,0)/people.length:0;
   const heavy=people.filter(x=>x.h>avg*1.5&&x.h>240).sort((a,b)=>b.h-a.h), light=people.filter(x=>x.h<avg*.5).sort((a,b)=>a.h-b.h);
   const wk=tAddDays(t0,-7); const doneWk=sc.filter(t=>tLocalDay(t.completedAt)>=wk), newWk=sc.filter(t=>tLocalDay(t.createdAt)>=wk);

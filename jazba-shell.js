@@ -43,7 +43,8 @@
     const home = el("a", "jz-ts-home"); home.href = BASE; home.title = "Today (main page)"; const hi = el("img"); hi.src = BASE + "icon.jpg"; hi.alt = "Alkhidmat · Today"; hi.width = 30; hi.height = 30; home.append(hi);
     stripLinks = el("div", "jz-ts-portals");
     const find = el("button", "jz-ts-search"); find.type = "button"; find.title = "Search (Ctrl K)"; find.setAttribute("aria-label", "Search and ask Alkhidmat AI"); find.append(SVG(ICON.search)); find.addEventListener("click", openPalette);
-    meBox = el("div", "jz-ts-me"); meBox.setAttribute("aria-label", "Signed in as");
+    meBox = el("div", "jz-ts-me"); meBox.setAttribute("aria-label", "Signed in as · click for my signature");
+    meBox.style.cursor = "pointer"; meBox.addEventListener("click", () => { if (window.AKF_SIGN) AKF_SIGN.open(); });   // add or change my signature
     // the same all-portal bell as the Today page, so it is there in every portal; a click opens that portal and record (akf-desk.js)
     const bell = el("button", "jz-ts-search jz-ts-bell"); bell.type = "button"; bell.title = "All notifications"; bell.setAttribute("aria-label", "All notifications from every portal");
     const badge = el("span", "jz-ts-badge"); badge.hidden = true; bell.append(SVG(ICON.bell), badge);

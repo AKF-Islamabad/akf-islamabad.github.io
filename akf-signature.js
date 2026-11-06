@@ -99,7 +99,7 @@
       save.disabled = true; save.textContent = "Saving…";
       const { error } = await sb.rpc("core_signature_save", { p_image: img });
       if (error) { toast(String(error.message || "Not saved").slice(0, 200), true); save.disabled = false; save.textContent = "Save my signature"; return; }
-      have = true; paint(); close(); toast("Signature saved. It is used on every request and approval in every portal.");
+      have = true; if (chip) { chip.remove(); chip = null; } close(); toast("Signature saved. It is used on every request and approval in every portal.");
       try { document.dispatchEvent(new CustomEvent("akf-signature-saved")); } catch (e) { }
     });
     box.append(
@@ -127,6 +127,7 @@
   async function start() {
     const { data: s } = await sb.auth.getSession(); if (!s || !s.session) return;   // signed-in pages only
     try { const { data, error } = await sb.rpc("core_has_signature"); if (error) return; have = data === true; } catch (e) { return; }
+    if (have) return;   // already added: the button stays hidden; change it with ✍ on the main page or in a portal's own signature screen
     chip = el("button", { type: "button", style: Object.assign({}, BTN, { position: "fixed", left: "16px", bottom: "84px", zIndex: 99989, padding: "7px 12px", fontSize: "13px", boxShadow: "0 6px 18px rgba(0,0,0,.15)" }), onclick: open });
     document.body.append(chip); paint();
   }

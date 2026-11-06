@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src https://*.supabase.co; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Track my donation · Alkhidmat Foundation Islamabad</title>
+<link rel="icon" href="../icon.jpg">
+<style>
+:root { --bg:#F4F7FB; --card:#fff; --ink:#0F172A; --muted:#64748B; --line:#E2E8F0; --brand:#0E9384; --brand2:#0B4EA8; --ok:#15803D; --warn:#B45309; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0B1220; --card:#111A2E; --ink:#E5E7EB; --muted:#94A3B8; --line:#24324D; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg:#0B1220; --card:#111A2E; --ink:#E5E7EB; --muted:#94A3B8; --line:#24324D; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { background: linear-gradient(135deg, #062A4F, #0B4EA8 60%, #0E9384); color: #fff; padding: 22px 16px 26px; }
+header .w, main { max-width: 860px; margin: 0 auto; }
+header h1 { margin: 6px 0 2px; font-size: 24px; }
+header p { margin: 0; opacity: .85; }
+main { padding: 16px; display: grid; gap: 14px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+label { display: grid; gap: 4px; font-weight: 600; font-size: 14px; }
+input { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; font: inherit; background: var(--card); color: var(--ink); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
+button { padding: 11px 16px; border-radius: 10px; border: 1px solid var(--brand2); background: var(--brand2); color: #fff; font: 600 15px system-ui, sans-serif; cursor: pointer; }
+button.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.muted { color: var(--muted); } .small { font-size: 13px; }
+.kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 560px) { .kpis { grid-template-columns: 1fr; } }
+.kpi { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.kpi b { display: block; font-size: 22px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 8px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-size: 12px; text-transform: uppercase; border-top: 0; }
+.tbl { overflow-x: auto; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.ok { background: #DCFCE7; color: var(--ok); } .wait { background: #FEF3C7; color: var(--warn); }
+.err { color: #B91C1C; font-weight: 600; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+@media print { header, #form, .noprint { display: none !important; } body { background: #fff; } .card { border: 0; padding: 0; } }
+</style>
+</head>
+<body>
+<header><div class="w"><div class="small" style="opacity:.8">Alkhidmat Foundation Islamabad</div><h1>Track my donation</h1>
+  <p>See every donation you made, whether Finance has verified it, and your totals. No sign-in needed.</p></div></header>
+<main>
+  <section class="card" id="form">
+    <div class="grid2">
+      <label>Receipt number <input id="rc" placeholder="RCT-2026-000123" autocomplete="off" inputmode="text" maxlength="24"></label>
+      <label>Mobile number you gave us <input id="ph" placeholder="03XX XXXXXXX" autocomplete="tel" inputmode="tel" maxlength="16"></label>
+    </div>
+    <div class="row" style="margin-top:12px"><button id="go" type="button">Show my donations</button><span id="msg" class="small"></span></div>
+    <p class="small muted" style="margin:10px 0 0">The receipt number is printed on your receipt. For your safety the number must match the mobile number in our records. Your CNIC and address are never shown here.</p>
+  </section>
+  <section id="out" hidden></section>
+</main>
+<script src="config.js"></script>
+<script src="../akf-charts.js"></script>
+<script src="track.js"></script>
+</body>
+</html>

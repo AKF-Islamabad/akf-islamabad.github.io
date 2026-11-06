@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-0cKizhpnWSVJm9ffnl7Flh810MPyqH8d0yREpd3996g='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-AIY5ESGp/zTPFKEbXgv01ggGcj2HVKdtGm/1NtXhlwI='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -477,7 +477,7 @@ async function loadAdmin() {
   S.adminLoading = true; showLoader("Loading people and access…");
   try {
     const [people, modules, tabs, access, tabAccess, depts, audit, usage] = await Promise.all([
-      q(sb.from("core_profiles").select("id,email,full_name,designation,dept,is_super,active,must_change_password,org_role").order("full_name")),
+      q(sb.from("core_profiles").select("id,email,full_name,designation,dept,is_super,active,must_change_password,org_role,extra_depts").order("full_name")),
       q(sb.from("core_modules").select("*").order("sort")),
       q(sb.from("core_module_tabs").select("*").order("sort")),
       q(sb.from("core_module_access").select("user_id,module_key,preset")),
@@ -719,6 +719,9 @@ function topBar() {
         onclick: () => { if (!window.AKF_DESK || !AKF_DESK.openInbox) return toast("Notifications are still loading. Try again in a moment."); AKF_DESK.openInbox(b); } },
         icon("bell", 18), el("span", { class: "jz-bell-n", text: n > 99 ? "99+" : String(n), hidden: !n }));
       return b; })(),
+    // my signature: add or change it (draw, camera or gallery; akf-signature.js)
+    el("button", { class: "jz-iconbtn", title: "My signature: add or change it", "aria-label": "My signature", style: "font-size:18px",
+      onclick: () => { if (window.AKF_SIGN) AKF_SIGN.open(); else toast("Still loading. Try again in a moment."); } }, "✍"),
     theme,
     el("button", { class: "jz-iconbtn", title: "Sign out of every portal", "aria-label": "Sign out", onclick: async () => { await sb.auth.signOut({ scope: "global" }); } }, icon("logout", 18)));
 }
@@ -1046,6 +1049,11 @@ function managePerson(p) {
   const self = p.id === S.me.id;
   const name = el("input", { class: "input", value: p.full_name, maxlength: 120 }), desig = el("input", { class: "input", value: p.designation || "", maxlength: 120 }), dept = deptSelect(p.dept), orgRole = roleSelect(p.org_role);
   const sup = el("input", { type: "checkbox", disabled: self }); sup.checked = p.is_super;
+  // a Director or HOD who looks after more than one department (Tasks and Purchase / Store treat every one as theirs; 044)
+  const extra = new Set(p.extra_depts || []);
+  const extraBox = el("div", { class: "row", style: "flex-wrap:wrap;gap:6px 14px" }, (S.admin.depts || []).filter(d => d.active !== false && d.code !== p.dept).map(d => {
+    const c = el("input", { type: "checkbox" }); c.checked = extra.has(d.code); c.addEventListener("change", () => { c.checked ? extra.add(d.code) : extra.delete(d.code); });
+    return el("label", { class: "row", style: "gap:6px;font-weight:500" }, c, d.name); }));
   const from = el("select", { class: "input", "aria-label": "Copy access from" }, el("option", { value: "", text: "Copy all portal access from…" }),
     S.admin.people.filter(x => x.id !== p.id && !x.is_super && x.active).map(x => el("option", { value: x.id, text: `${x.full_name} (${x.designation || x.email})` })));
   const copyBtn = el("button", { class: "btn ghost sm", text: "Copy", onclick: async () => {
@@ -1058,6 +1066,8 @@ function managePerson(p) {
   dialog(p.full_name, [el("div", { class: "small muted", text: p.email }),
     el("div", { class: "grid2" }, el("label", { class: "f" }, "Full name", name), el("label", { class: "f" }, "Designation", desig), el("label", { class: "f" }, "Department", dept), p.is_super ? null : el("label", { class: "f" }, "Role in approvals", orgRole),
       el("label", { class: "f" }, "Super Admin", el("span", { class: "row", style: "font-weight:600;color:var(--ink)" }, sup, self ? "You (cannot remove your own)" : "Full control of everything"))),
+    p.is_super ? null : el("div", {}, el("b", { class: "small", text: "Also oversees departments (a Director or HOD over more than one department)" }), extraBox,
+      el("div", { class: "small muted", text: "They see, assign and approve for each ticked department as for their own (Tasks, Purchase & Store). Give their portal access as usual below." })),
     p.is_super ? null : el("div", { class: "row" }, el("div", { style: "flex:1;min-width:200px" }, from), copyBtn),
     el("div", { class: "row" },
       el("button", { class: "btn ghost sm", text: "Temporary password", onclick: () => run({ action: "reset", mode: "temp" }, "Temporary password set", "The password was not reset") }),
@@ -1065,6 +1075,8 @@ function managePerson(p) {
       self ? null : el("button", { class: "btn danger sm", text: "Delete", onclick: async () => { if (confirm(`Delete ${p.full_name}'s login and all portal access? This cannot be undone. Records they created stay.`)) { if (await run({ action: "delete" }, "Deleted", "The person was not deleted")) document.querySelector("dialog")?.close(); } } }))],
     close => [el("button", { class: "btn ghost", text: "Close", onclick: close }), el("button", { class: "btn", text: "Save", onclick: async () => {
       const body = { action: "update", full_name: name.value, designation: desig.value, dept: await dept.getCode() }; if (!p.is_super) body.org_role = orgRole.value; if (!self && sup.checked !== p.is_super) body.is_super = sup.checked;
+      const was = JSON.stringify([...(p.extra_depts || [])].sort()), now = JSON.stringify([...extra].sort());
+      if (!p.is_super && was !== now) { try { await q(sb.rpc("core_set_extra_depts", { p_id: p.id, p_codes: [...extra] })); } catch (e) { return fail(e, "The extra departments were not saved"); } }
       if (await run(body, "Saved", "Changes were not saved")) close(); } })]);
 }
 
@@ -1102,7 +1114,7 @@ function setup() {
 }
 
 /* ---------- Super Admin: the ONE Settings place for every portal (stored where the portals read it) ---------- */
-const SETTING_DEFAULTS = { orgName: "Alkhidmat Foundation Islamabad Region", fiscalYear: "2026-27", escalationHours: 48, directPurchaseLimit: 100000, assetThreshold: 50000, actingApprover: "",
+const SETTING_DEFAULTS = { orgName: "Alkhidmat Foundation Islamabad Region", fiscalYear: "2026-27", escalationHours: 48, directPurchaseLimit: 200000, assetThreshold: 50000, actingApprover: "",
   gst: 0.18, whtGoodsFiler: 0.04, whtGoodsNonFiler: 0.08, whtServicesFiler: 0.08, whtServicesNonFiler: 0.16, aiProvider: "gemini", aiModel: "gemini-flash-latest", aiKey: "", aiClaudeModel: "claude-haiku-5-5", aiClaudeKey: "",
   emailFrom: "", emailBrevoLogin: "", emailResendDay: 100, emailResendMonth: 3000, emailBrevoDay: 300, emailBrevoMonth: 0, resendKey: "", brevoKey: "", emailGmail: "careers.akfi@gmail.com", gmailKey: "", emailGmailDay: 500, emailGmailMonth: 0 };
 const SETTING_FIELDS = [
@@ -1155,7 +1167,7 @@ const SETTING_AREAS = [["general", "All portals", "settings", "Organisation, app
 const settingsApi = () => ({ sb, el, icon, toast, fail, q, showLoader, hideLoader, saveGlobal });
 /* Settings-only files (portal settings panels, Excel formats) load when Settings is first opened:
    as plain <script> tags they were fetched one after another on every page load, for everyone */
-const SETTINGS_JS = ["settings-fleet.js", "settings-assistance.js", "akf-excel.js", "excel-procurement.js", "excel-store.js", "excel-tasks.js", "excel-donor.js", "excel-fleet.js", "excel-assistance.js", "excel-people.js"];
+const SETTINGS_JS = ["settings-fleet.js", "settings-assistance.js", "settings-stores.js", "akf-excel.js", "excel-procurement.js", "excel-store.js", "excel-tasks.js", "excel-donor.js", "excel-fleet.js", "excel-assistance.js", "excel-people.js"];
 let settingsJs = null, settingsJsReady = false;
 const loadSettingsJs = () => settingsJs || (settingsJs = Promise.all(SETTINGS_JS.map(src => new Promise((ok, no) => {
   const s = document.createElement("script"); s.src = src; s.async = false; s.onload = ok; s.onerror = () => no(new Error(src + " did not load")); document.head.append(s); })))
