@@ -29,6 +29,10 @@
   }
   const cfg = window.AKF_SUPABASE;
   if (!cfg || !window.supabase || !cfg.url) { window.AKF_NOTIFY = function () {}; return; }
+  // Super Admin: correct any entry (it shows nothing for anyone else; the database checks again)
+  if (document.documentElement.dataset.jzPage !== "hub" && !window.AKF_SUPEREDIT) {
+    const se = document.createElement("script"); se.src = BASE + "akf-superedit.js"; se.defer = true; document.head.append(se);
+  }
   // the page's own client refreshes the sign-in; this one only reads it (same storage key as akf-gate.js)
   const sb = window.supabase.createClient(cfg.url, cfg.anonKey, { auth: { storageKey: "akf-portals-auth", autoRefreshToken: false, detectSessionInUrl: false } });
   const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (_) { return d; } },
