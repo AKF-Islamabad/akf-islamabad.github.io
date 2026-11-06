@@ -46,7 +46,8 @@
 
   /* ---------- the switch ---------- */
   function setOn(v) {
-    on = v; fab.setAttribute("aria-pressed", String(v)); fab.textContent = v ? "✎ Editing: click a row (Esc to stop)" : "✎ Edit entries";
+    on = v; fab.setAttribute("aria-pressed", String(v)); try { localStorage.setItem("akf-se-on", v ? "1" : "0"); } catch (e) { }   // stays on from page to page
+    fab.textContent = v ? "✎ Edit / delete is ON: click an entry (Esc = off)" : "✎ Edit entries";
     css(fab, v ? { background: "#B45309", borderColor: "#B45309", color: "#fff" } : { background: "#fff", borderColor: "#B45309", color: "#B45309" });
     if (!v) mark(null);
   }
@@ -113,7 +114,7 @@
   }
 
   function edit(r) {
-    const body = shell("Correct · " + r.collection + " · " + r.id), d = r.data || {}, get = {};
+    const body = shell("Entry · " + r.collection + " · " + r.id), d = r.data || {}, get = {};
     const field = (k, v) => {
       if (typeof v === "boolean") { const c = el("input", { type: "checkbox" }); c.checked = v; get[k] = () => c.checked; return c; }
       if (typeof v === "number") { const n = el("input", { type: "number", step: "any", value: String(v), style: INP }); get[k] = () => (n.value === "" ? v : Number(n.value)); return n; }
@@ -151,7 +152,31 @@
       toast(n + " field" + (n === 1 ? "" : "s") + " corrected and written to the audit log. Reloading…");
       close(); setTimeout(() => location.reload(), 900);
     });
-    body.append(form.childNodes.length ? form : el("p", { text: "This entry has no values that can be corrected here.", style: { color: "#64748B" } }),
+    // Edit (the form below) or Delete (asks for a reason; the whole entry is kept in the audit log)
+    const editBox = el("div"), delBox = el("div", { style: { display: "none" } });
+    const tabBtn = (t, act) => el("button", { type: "button", text: t, "aria-pressed": String(act), style: Object.assign({}, BTN, act ? { background: "#0F172A", color: "#fff", borderColor: "#0F172A" } : {}) });
+    const tE = tabBtn("✎ Edit", true), tD = tabBtn("🗑 Delete", false);
+    const show = del => { editBox.style.display = del ? "none" : ""; delBox.style.display = del ? "" : "none";
+      css(tE, del ? BTN : Object.assign({}, BTN, { background: "#0F172A", color: "#fff", borderColor: "#0F172A" })); css(tD, del ? Object.assign({}, BTN, { background: "#B91C1C", color: "#fff", borderColor: "#B91C1C" }) : BTN);
+      tE.setAttribute("aria-pressed", String(!del)); tD.setAttribute("aria-pressed", String(del)); };
+    tE.addEventListener("click", () => show(false)); tD.addEventListener("click", () => show(true));
+    body.append(el("div", { style: { display: "flex", gap: "8px", marginBottom: "12px" } }, tE, tD), editBox, delBox);
+    const dWhy = el("input", { type: "text", maxlength: 300, placeholder: "Reason for deleting (required), e.g. entered twice", style: INP });
+    const dGo = el("button", { type: "button", text: "Delete this entry", style: Object.assign({}, PRI, { background: "#B91C1C", borderColor: "#B91C1C" }) });
+    dGo.addEventListener("click", async () => {
+      if (dWhy.value.trim().length < 5) { dWhy.focus(); return toast("Give the reason for deleting", true); }
+      if (!confirm("Delete " + r.collection + " " + r.id + "? It disappears from the portal. A full copy stays in the audit log.")) return;
+      dGo.disabled = true; dGo.textContent = "Deleting…";
+      const { error } = await sb.rpc("core_super_delete", { p_portal: PORTAL, p_collection: r.collection, p_id: r.id, p_reason: dWhy.value.trim() });
+      if (error) { toast(plain(error), true); dGo.disabled = false; dGo.textContent = "Delete this entry"; return; }
+      toast("Entry deleted. A full copy is kept in the audit log. Reloading…"); close(); setTimeout(() => location.reload(), 900);
+    });
+    delBox.append(el("div", { style: { padding: "12px", border: "1px solid #FCA5A5", background: "#FEF2F2", borderRadius: "10px", display: "grid", gap: "8px" } },
+      el("b", { text: "Delete " + r.collection + " · " + r.id }), el("div", { text: summary(d) || "(no details)", style: { color: "#475569", fontSize: "13px" } }),
+      el("p", { text: "Use this for an entry made by mistake or entered twice. If other records point to it (a request with a purchase order, a trip in a report), check those too.", style: { margin: "0", fontSize: "12px", color: "#7F1D1D" } }),
+      dWhy, el("div", {}, dGo)));
+    const put = (...x) => editBox.append(...x.filter(Boolean));
+    put(form.childNodes.length ? form : el("p", { text: "This entry has no values that can be corrected here.", style: { color: "#64748B" } }),
       fixed.length ? el("details", { style: { marginTop: "12px", color: "#475569", fontSize: "12px" } }, el("summary", { text: "Approval record (cannot be changed here)" }), el("ul", {}, fixed.map(t => el("li", { text: t })))) : null,
       el("div", { style: { display: "grid", gap: "8px", marginTop: "14px", paddingTop: "12px", borderTop: "1px solid #E2E8F0" } }, why,
         el("div", { style: { display: "flex", gap: "8px" } }, save, el("button", { type: "button", text: "Cancel", style: BTN, onclick: close })),
@@ -166,7 +191,8 @@
       zIndex: 99990, borderColor: "#B45309", color: "#B45309", boxShadow: "0 6px 18px rgba(0,0,0,.18)" }) });
     fab.addEventListener("click", () => setOn(!on));
     const findBtn = el("button", { type: "button", text: "Find entry", title: "Super Admin: search any entry to correct", style: Object.assign({}, BTN, { position: "fixed", left: "16px", bottom: "136px", zIndex: 99990, display: "none" }), onclick: () => find([], "search") });
-    document.body.append(fab, findBtn); setOn(false);
+    let was = false; try { was = localStorage.getItem("akf-se-on") === "1"; } catch (e) { }
+    document.body.append(fab, findBtn); setOn(was);
     new MutationObserver(() => { findBtn.style.display = on ? "block" : "none"; }).observe(fab, { attributes: true, attributeFilter: ["aria-pressed"] });
     document.addEventListener("mouseover", e => { if (on && !panel) mark(rowOf(e.target)); }, true);
     document.addEventListener("click", e => {
