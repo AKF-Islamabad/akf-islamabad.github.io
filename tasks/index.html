@@ -1330,8 +1330,14 @@ button.item:hover{transform:translateX(3px);border-color:var(--brand-300);border
 .toast.ok::after{background:#18B784}.toast.bad::after{background:#E5484D}
 @media (max-width:980px){.toasts{top:calc(10px + env(safe-area-inset-top,0px));right:12px;left:12px;bottom:auto;width:auto}}
 .ai-panel{border-radius:20px;animation:pop .35s var(--spring)}
-/* Alkhidmat AI looks the same in every portal (see erp/site/akf-assistant.js) */
-.ai-fab{position:relative}
+/* Alkhidmat AI looks the same in every portal and on the Today page: the round button of erp/site/akf-assistant.js (.kai-fab) */
+.ai{right:20px;bottom:20px}
+.ai-fab{position:relative;display:flex;align-items:center;gap:0;height:52px;padding:0 16px;border:0;border-radius:99px;cursor:pointer;color:#fff;font:700 14.5px/1 "Segoe UI Variable Text","Segoe UI",Inter,system-ui,sans-serif;
+  background:linear-gradient(135deg,#1A66CC 0%,#0B51A7 45%,#06368A 100%);box-shadow:0 14px 30px -10px rgba(11,81,167,.7);transition:transform .3s cubic-bezier(.34,1.56,.64,1),box-shadow .3s}
+.ai-fab:hover{transform:translateY(-2px) scale(1.03)} .ai-fab svg,.ai-fab .icon{width:20px;height:20px;flex:none}
+.ai-fab span{max-width:0;overflow:hidden;white-space:nowrap;transition:max-width .3s,margin .3s}
+.ai-fab:hover span,.ai-fab:focus-visible span{max-width:170px;margin:0 4px 0 9px}
+@media (max-width:640px){ .ai{right:14px;bottom:76px} .ai-fab{width:54px;padding:0;justify-content:center} .ai-fab span{display:none} }
 .ai-fab::after{content:"";position:absolute;inset:-4px;border-radius:inherit;border:2px solid rgba(25,194,174,.55);animation:kaiPulse 2.6s ease-out infinite;pointer-events:none}
 @keyframes kaiPulse{0%{transform:scale(.92);opacity:1}100%{transform:scale(1.25);opacity:0}}
 .ai-panel .card-h{background:linear-gradient(120deg,#0B51A7 0%,#0A3F95 45%,#062E73 100%);color:#fff;border-bottom:0}
