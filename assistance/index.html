@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-assistance.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-TyomHMxysb1KNWP1E8hOPIWrrNIIluyK+07ZnpSSaEI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-F6PUQXN8Gpmx74/i2Y2l9hSOkNlMU/mZZ4OjWpb4jAw='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1885,7 +1885,7 @@ function actionPanel(a) {
   const mc = mcBlock(a); if (mc) return `<div class="as-note n-warn">${ic("shield")}<span>${esc(mc)}</span></div>`;
   const st = stepOf(a), i = flowIdx(a, a.status), nx = (a.flow || [])[i + 1];
   const remarks = (req, ph) => `<div class="as-f"><label for="remarks"><span>Remarks${req ? '<span class="req">*</span>' : ""}</span></label><textarea class="textarea" id="remarks" maxlength="1000" placeholder="${esc(ph || "Add your remarks")}" style="min-height:84px"></textarea><span class="msg">Remarks are required for this action</span></div>`;
-  const retRej = (rej = true) => `<div class="${rej ? "as-row2" : ""}"><button class="btn btn-outline" type="button" data-act="do" data-do="return">${ic("undo", "i-sm")}Return${rej ? "" : " to Front Desk"}</button>${rej ? `<button class="btn btn-danger-o" type="button" data-act="do" data-do="reject">${ic("x", "i-sm")}Reject</button>` : ""}</div>`;
+  const retRej = (rej = true) => `<div class="${rej ? "as-row2" : ""}"><button class="btn btn-outline" type="button" data-act="do" data-do="return">${ic("undo", "i-sm")}Return${rej ? "" : " to Front Desk"}</button>${ME.isSuper ? `<label class="as-chk" style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="resumeAt"> After correction, continue at this step (Super Admin)</label>` : ""}${rej ? `<button class="btn btn-danger-o" type="button" data-act="do" data-do="reject">${ic("x", "i-sm")}Reject</button>` : ""}</div>`;
   const amountBox = (label, v) => `<div class="as-f"><label for="amt">${label}<span class="req">*</span></label><div class="as-prefix"><span>Rs</span><input class="input" id="amt" type="number" min="1" max="${esc(a.request.amount)}" step="1" value="${esc(v)}"></div><span class="help">At most the ${esc(rs(a.request.amount))} requested.</span><span class="msg">Enter an amount from 1 to ${esc(rs(a.request.amount))}</span></div>`;
   if (a.status === "dept" && nx && nx.key === "director") {
     const dir = directorOn(a.department);
@@ -1959,6 +1959,7 @@ async function doAction(kind) {
   let action = kind; const data = { note };
   if ((kind === "return" || kind === "reject") && need(remarksEl, !note)) { remarksEl.focus(); return; }
   if (kind === "return" && !confirm("Return this application to the Front Desk for correction?")) return;
+  if (kind === "return" && ME.isSuper && $("resumeAt") && $("resumeAt").checked) data.resume = true;   // continue where it was after the correction (assistance.sql)
   if (kind === "reject" && !confirm("Reject this application? This closes the case.")) return;
   if (kind === "forward" && document.querySelector("input[name=nextStep]:checked") && document.querySelector("input[name=nextStep]:checked").value === "skip") {
     const sel = $("skipReason"); if (need(sel, !sel.value || (sel.value === SKIP_REASONS[3] && !note))) { sel.focus(); return; }

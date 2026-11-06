@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-4KoOaR7uQ7udvIZ0zDosspBodOa+4zQlumK5NFweO3s='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-Rnia839tqEMJY5m5t2cPeaW+YonXwtgnjC8qxQ0uIok='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -4863,6 +4863,7 @@ function makeActions(commit, user, toast){
    The requester's own steps (confirm receipt) belong to whoever raised the request. */
 function canAct(user, req){
   if(!req || req.status!=="active" || req.stage==="closed") return false;
+  if(req.correction) return false;   // sent back for correction: it waits for the requester (the database refuses too)
   const n=nextStage(req); const owner=n?n.owner:null;
   /* acting approver (Settings) may sign the final approval in place of its owner */
   if(n && n.key==="approved" && SETTINGS.actingApprover && SETTINGS.actingApprover===user.role) return true;
@@ -4959,6 +4960,33 @@ function BudgetCard({req,state,user,A}){
     <div class="row" style="margin-top:10px"><button class="btn btn-ghost btn-sm" onClick=${()=>setOpen(o=>!o)}><${Icon} name="log"/>${open?"Hide":"Show"} usage log (${deptLog(state,dept).length})</button></div>
     ${open&&html`<div style="margin-top:8px"><${BudgetLog} state=${state} log=${deptLog(state,dept)} current=${req.id}/></div>`}<//>`;
 }
+/* Send back for correction (042_send_back.sql): the Super Admin returns a request to the person who raised it;
+   they correct items and purpose and resubmit. The database checks who may do each step and signs the history. */
+function CorrectionBox({req,user,readOnly}){
+  const [why,setWhy]=useState(""); const [restart,setRestart]=useState(false); const [busy,setBusy]=useState(false);
+  const [items,setItems]=useState(()=>(req.items||[]).map(i=>({...i}))); const [purpose,setPurpose]=useState(req.purpose||""); const [note,setNote]=useState("");
+  const c=req.correction, mine=req.requesterId===user.id, isSuper=user.role==="super";
+  const run=async(fn,args,ok)=>{
+    if(!sb){ window.__toast&&window.__toast("This needs the live database.","bad"); return; }
+    setBusy(true); const { data, error } = await sb.rpc(fn,args); setBusy(false);
+    if(error){ const m=String(error.message||""); window.__toast&&window.__toast(m.length<300&&!/relation|column|syntax|function /i.test(m)?m:"Not saved. Please try again.","bad"); return; }
+    window.__toast&&window.__toast(ok(data)); setTimeout(()=>location.reload(),900); };
+  const KEEP=["name","category","uom","qty","price","itemId","photo","doc"];
+  const clean=()=>items.map(i=>Object.fromEntries(Object.entries(i).filter(([k,v])=>KEEP.includes(k)&&v!==undefined&&v!==null&&v!=="").map(([k,v])=>[k,k==="qty"||k==="price"?Number(v)||0:v])));
+  if(c) return html`<div class="notice notice-warn"><${Icon} name="alert"/><span><b>Sent back for correction</b> by ${c.by} · ${fmtDT(c.at)}: ${c.reason}. ${c.restart?"After the correction the approvals start again from the first step.":"After the correction it continues at the step it was waiting at (or starts again if the amount goes up)."}</span></div>
+    ${mine&&!readOnly&&html`<div class="actions no-print"><h4>Correct and resubmit</h4>
+      <label class="field"><span>Purpose</span><textarea class="textarea" value=${purpose} onInput=${e=>setPurpose(e.target.value)}/></label>
+      <${ItemsEditor} items=${items} onChange=${setItems} stock=${[]}/>
+      <input class="input" placeholder="What you corrected (optional)" value=${note} onInput=${e=>setNote(e.target.value)}/>
+      <div class="row wrap"><button class="btn btn-primary" disabled=${busy||!purpose.trim()} onClick=${()=>run("portal_resubmit",{p_id:req.id,p_patch:{items:clean(),purpose:purpose.trim()},p_note:note.trim()},
+        d=>d==="restart"?"Resubmitted: the approvals start again from the first step":"Resubmitted: it continues at the step it was waiting at")}><${Icon} name="check"/>${busy?"Sending…":"Resubmit"}</button></div></div>`}`;
+  if(isSuper&&!readOnly&&req.status==="active"&&req.stage!=="closed") return html`<details class="card no-print" style="box-shadow:none;margin-bottom:10px"><summary style="cursor:pointer;padding:10px 14px;font-weight:700">↩ Send back for correction (Super Admin)</summary>
+    <div class="card-b stack" style="gap:8px"><textarea class="textarea" placeholder="What must be corrected (required), e.g. quantity of rice is wrong" value=${why} onInput=${e=>setWhy(e.target.value)}/>
+      <label class="row" style="gap:8px"><input type="checkbox" checked=${restart} onChange=${e=>setRestart(e.target.checked)}/><span>Restart approvals from the first step after the correction (otherwise it continues at the step it is waiting at now)</span></label>
+      <div class="row"><button class="btn btn-bad" disabled=${busy||why.trim().length<5} onClick=${()=>run("portal_sendback",{p_id:req.id,p_reason:why.trim(),p_restart:restart},()=>"Sent back to "+req.requester+" for correction")}>${busy?"Sending…":"Send back to "+req.requester}</button></div>
+      <div class="xs faint">${req.requester} is notified, nobody can approve it until it is resubmitted, and this is signed in the approval log.</div></div></details>`;
+  return null;
+}
 function RequestModal({req,state,user,A,onClose,openDoc,readOnly}){
   const [comment,setComment]=useState("");
   const [bud,setBud]=useState({used:"",avail:""}); // what Finance writes at the budget step
@@ -5020,6 +5048,7 @@ function RequestModal({req,state,user,A,onClose,openDoc,readOnly}){
     <div class="print-only"><${DocHeader} title=${req.type==="procurement"?"Purchase requisition":"Store requisition"} sub=${`${req.dept} · ${req.requester} · ${fmtDT(req.createdAt)}`} id=${req.id}/></div>
     ${can&&!sigOf(state.users.find(u=>u.id===user.id))&&html`<div class="notice notice-warn no-print"><${Icon} name="pen"/><span>You have no signature on file. Use <b>Add signature</b> (sidebar or your name at the top) to draw it or upload a photo of your paper signature — it prints on every document you approve.</span></div>`}
     ${req.status==="rejected"&&html`<div class="notice notice-bad"><${Icon} name="x"/><span><b>Rejected.</b> ${(req.timeline[req.timeline.length-1]||{}).comment||""}</span></div>`}
+    <${CorrectionBox} req=${req} user=${user} readOnly=${readOnly}/>
     ${actionBlock}
     <${TrackTable} req=${req} state=${state}/>
     ${req.type==="procurement"&&user.role!=="staff"&&html`<${BudgetCard} req=${req} state=${state} user=${user} A=${A}/>`}

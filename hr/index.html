@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-NrhXvtUXIFY/++StMCLhQU1Qs61b+ZMWPLe+MNdkgbI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-/6LqEWsHOxtAgPPUcAJ7WOY7Q0s9nBHu/fDyicelVIY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1141,7 +1141,7 @@ const MONEY = ["Medical", "Expense", "Overtime", "Outstation", "Loan", "Advance"
 const rs = n => "Rs " + Math.round(+n || 0).toLocaleString("en-PK");
 const monthName = m => new Date(m + "-01T00:00:00").toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 let NOTES = [];
-const STATUS = { pending: ["Waiting", "b-warn"], approved: ["Approved", "b-ok"], rejected: ["Rejected", "b-bad"], cancelled: ["Withdrawn", "b-info"] };
+const STATUS = { pending: ["Waiting", "b-warn"], approved: ["Approved", "b-ok"], rejected: ["Rejected", "b-bad"], cancelled: ["Withdrawn", "b-info"], returned: ["Sent back for correction", "b-warn"] };
 const badge = st => el("span", { class: "badge " + (STATUS[st] || ["", "b-info"])[1], text: (STATUS[st] || [st])[0] });
 const what = r => r.kind === "Leave" ? (r.data.leaveType || "Leave") + " · " + fmtD(r.data.from) + (r.data.to && r.data.to !== r.data.from ? " – " + fmtD(r.data.to) : "") + (r.result && r.result.days ? " · " + r.result.days + " day" + (r.result.days === 1 ? "" : "s") : "")
   : r.kind === "Document" ? (r.data.docName || "HR letter") : r.kind === "Policy" ? (r.data.summary || "Policy change") : r.kind === "Attendance" ? "Attendance · " + fmtD(r.data.date)
@@ -1639,6 +1639,37 @@ async function openReq(id) {
       if (JSON.stringify(nx.leaveYear) !== JSON.stringify(now.leaveYear)) diff.push("Leave year: " + (nx.leaveYear || {}).from + " to " + (nx.leaveYear || {}).to);
       body.push(el("h4", { text: "What changes" }), el("ul", {}, (diff.length ? diff : ["(other settings)"]).map(t => el("li", { text: t }))));
     } catch (e) { body.push(el("p", { class: "small muted", text: e.message })); }
+  }
+  // send back for correction (042): the Super Admin returns a waiting request; the person who filed it corrects and resubmits
+  const corr = (r.result || {}).correction, filer = r.mine || (r.data || {}).filedBy === ME.id;
+  if (r.status === "returned" && corr) {
+    body.unshift(el("div", { class: "hr-empty", style: "border-color:#B45309;background:#FFFBEB;text-align:left" }, el("b", { text: "Sent back for correction" }),
+      el("div", { text: "By " + (corr.by || "the Super Admin") + " · " + fmtDT(corr.at) + ": " + (corr.reason || "") }),
+      el("div", { class: "small muted", text: corr.restart ? "After the correction the approvals start again from the first step." : "After the correction it continues at the step it was waiting at (or starts again if the days or amount go up)." })));
+    if (filer && r.kind !== "Policy" && r.kind !== "Payroll") {
+      const d0 = r.data || {}, inp = {};
+      const SKIP = ["files", "filedBy", "filedByName", "fields"];
+      const form = el("div", { class: "hr-form" }, Object.entries(d0).filter(([k, x]) => !SKIP.includes(k) && (typeof x === "string" || typeof x === "number")).map(([k, x]) => {
+        const long = String(x).length > 60 || k === "reason" || k === "workLog";
+        inp[k] = el(long ? "textarea" : "input", { class: long ? "textarea" : "input", rows: long ? 3 : null, value: String(x), maxlength: 1000 });
+        if (!long && /^\d{4}-\d\d-\d\d$/.test(String(x))) inp[k].type = "date";
+        return el("label", { class: long ? "full" : null }, k.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase()), inp[k]); }));
+      const fixed = Object.assign({}, d0);
+      const send = el("button", { class: "btn btn-primary", type: "button", text: "Resubmit" });
+      send.addEventListener("click", async () => { send.disabled = true;
+        Object.entries(inp).forEach(([k, n]) => { fixed[k] = typeof d0[k] === "number" ? Number(n.value) : n.value; });
+        try { const res = await rpc("hr_resubmit", { p_id: r.id, p_data: fixed }, "Not resubmitted"); toast(res === "restart" ? r.id + " resubmitted: approvals start again" : r.id + " resubmitted: it continues where it was"); closeModal(); await reload(); render(); }
+        catch (e) { toast(e.message, true); send.disabled = false; } });
+      body.push(el("h4", { text: "Correct and resubmit" }), form, el("div", { class: "hr-actions" }, send));
+    }
+  } else if (ME.super && r.status === "pending") {
+    const why = el("textarea", { class: "textarea", rows: 2, maxlength: 500, placeholder: "What must be corrected (required)" }), restart = el("input", { type: "checkbox" });
+    const go_ = el("button", { class: "btn btn-outline", type: "button", text: "Send back to " + (r.name || "the requester") });
+    go_.addEventListener("click", async () => { if (why.value.trim().length < 5) return toast("Write what must be corrected", true); go_.disabled = true;
+      try { await rpc("hr_sendback", { p_id: r.id, p_reason: why.value.trim(), p_restart: restart.checked }, "Not sent back"); toast(r.id + " sent back for correction"); closeModal(); await reload(); render(); }
+      catch (e) { toast(e.message, true); go_.disabled = false; } });
+    body.push(el("details", {}, el("summary", { text: "↩ Send back for correction (Super Admin)", style: "cursor:pointer;font-weight:700;margin:10px 0" }), why,
+      el("label", { style: "display:flex;gap:8px;align-items:center;margin:6px 0" }, restart, el("span", { text: "Restart approvals from the first step after the correction" })), el("div", { class: "hr-actions" }, go_)));
   }
   if (r.myStep) {
     const rem = el("textarea", { class: "textarea", rows: 2, maxlength: 500, placeholder: "Remarks (required to reject)" });
