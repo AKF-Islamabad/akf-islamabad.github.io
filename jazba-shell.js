@@ -76,7 +76,9 @@
     // Donor/Fleet/Assistance share one design kit (#sidebar + .main)
     else if (!document.documentElement.dataset.jzFamily && document.getElementById("sidebar")) document.documentElement.dataset.jzFamily = "kit";
     // the sign-out clock changes the page every second: rebuild only when the menu itself changed (no flicker, focus stays)
-    const who = meOf();
+    // a portal empties its own name box for a moment while it redraws (every second with the sign-out clock): keep the last
+    // known name, so the top bar does not blink (seen on phones, 7-Nov)
+    let who = meOf(); if (who[0]) paintMine.who = who; else if (paintMine.who) who = paintMine.who;
     const sig = navItems().map(b => labelOf(b) + "|" + b.classList.contains("active") + "|" + countOf(b)).concat(accountItems().map(labelOf), who).join("\n");
     if (sig === paintMine.sig) return; paintMine.sig = sig;
     meBox.replaceChildren(...(who[0] ? [el("b", "", who[0]), el("small", "", who[1])] : [])); meBox.title = who.filter(Boolean).join(" · ");
@@ -100,6 +102,7 @@
       if (here) document.documentElement.style.setProperty("--jz-pc", dot.style.background);
       const s = el("a", "jz-ts-link" + (here ? " on" : "")); s.href = href; s.title = p.name; if (here) s.setAttribute("aria-current", "page");
       s.append(dot, el("span", "", p.name)); stripLinks.append(s);
+      if (here) requestAnimationFrame(() => { stripLinks.scrollLeft = Math.max(0, s.offsetLeft - 40); });   // phones: this portal visible in the one-row list
     });
     sh();   // the names may need a second row: move the page down to match
   }

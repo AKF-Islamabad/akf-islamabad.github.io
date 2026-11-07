@@ -128,7 +128,7 @@
     const { data: s } = await sb.auth.getSession(); if (!s || !s.session) return;   // signed-in pages only
     try { const { data, error } = await sb.rpc("core_has_signature"); if (error) return; have = data === true; } catch (e) { return; }
     if (have) return;   // already added: the button stays hidden; change it with ✍ on the main page or in a portal's own signature screen
-    chip = el("button", { type: "button", style: Object.assign({}, BTN, { position: "fixed", left: "16px", bottom: "84px", zIndex: 99989, padding: "7px 12px", fontSize: "13px", boxShadow: "0 6px 18px rgba(0,0,0,.15)" }), onclick: open });
+    chip = el("button", { type: "button", style: Object.assign({}, BTN, { position: "fixed", left: "16px", bottom: "136px", zIndex: 7000, padding: "7px 12px", fontSize: "13px", boxShadow: "0 6px 18px rgba(0,0,0,.15)" }), onclick: open });
     document.body.append(chip); paint();
   }
   window.AKF_SIGN = { open, fromFile };

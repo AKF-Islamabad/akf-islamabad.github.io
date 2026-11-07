@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-FG0ou0bpmfSPDAdL3U02X1MzeXeZYTBlEy/yyUA0ujE='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-KaW1m+9MWrkgDAg7ZTLpaG7nrG/aicPG9l8Xb37NSa8='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -1338,6 +1338,9 @@ button.item:hover{transform:translateX(3px);border-color:var(--brand-300);border
 .ai-fab span{max-width:0;overflow:hidden;white-space:nowrap;transition:max-width .3s,margin .3s}
 .ai-fab:hover span,.ai-fab:focus-visible span{max-width:170px;margin:0 4px 0 9px}
 @media (max-width:640px){ .ai{right:14px;bottom:76px} .ai-fab{width:54px;padding:0;justify-content:center} .ai-fab span{display:none} }
+.ai-fab.busy::after{border-color:rgba(255,178,91,.95);border-style:dashed;animation:aiSpin 1s linear infinite}
+@keyframes aiSpin{to{transform:rotate(360deg)}}
+.ai-fab .ai-ready{position:absolute;top:-2px;right:-2px;width:14px;height:14px;border-radius:50%;background:#16A34A;border:2px solid #fff}
 .ai-fab::after{content:"";position:absolute;inset:-4px;border-radius:inherit;border:2px solid rgba(25,194,174,.55);animation:kaiPulse 2.6s ease-out infinite;pointer-events:none}
 @keyframes kaiPulse{0%{transform:scale(.92);opacity:1}100%{transform:scale(1.25);opacity:0}}
 .ai-panel .card-h{background:linear-gradient(120deg,#0B51A7 0%,#0A3F95 45%,#062E73 100%);color:#fff;border-bottom:0}
@@ -4673,6 +4676,9 @@ function makeActions(commit, user, toast){
         log(d,rfq.id,`Quotation received from ${v.name}`,`Total incl. tax ${pkr(t.gross)} (${inclusive?"taxes included by vendor":"GST added automatically"}) · docs ${docs}% · ${deliveryDays} days`); });
       toast("Quotation recorded — link expired","ok");
     },
+    /* a quotation from a vendor who was not invited when the RFQ went out (rate by phone, paper, walk-in): the Admin Officer adds the vendor, then records it */
+    addRfqVendor(rfqId,vendorId){ let qid=null; commit(d=>{ const rfq=d.rfqs.find(r=>r.id===rfqId); const v=d.vendors.find(x=>x.id===vendorId); if(!rfq||!v||rfq.status!=="Open"||rfq.quotes.some(q=>q.vendorId===vendorId)) return;
+      qid="Q"+uid(); rfq.quotes.push({id:qid,vendorId,status:"Opened",addedBy:user.name,addedAt:nowISO()}); log(d,rfq.id,`Vendor added to ${rfq.id}: ${v.name}`,`by ${user.name} — quotation to be recorded`); }); return qid; },
     makeLink(rfqId,qId){ commit(d=>{ const q=d.rfqs.find(r=>r.id===rfqId).quotes.find(x=>x.id===qId); q.token=secureToken(); q.link=vendorLink(q.token); }); },
     logSend(rfqId,qId,via){ commit(d=>{ const rfq=d.rfqs.find(r=>r.id===rfqId); const q=rfq&&rfq.quotes.find(x=>x.id===qId); if(!q) return; q.sentVia=via; q.sentAt=nowISO(); const v=d.vendors.find(x=>x.id===q.vendorId)||{}; log(d,rfq.id,`Quotation link ${via==="copied"?"copied":"sent by "+via} · ${v.name}`,""); }); },
     expireLink(rfqId,qId){ commit(d=>{ const q=d.rfqs.find(r=>r.id===rfqId).quotes.find(q=>q.id===qId); q.status="Expired"; }); },
@@ -5119,7 +5125,7 @@ function RfqForm({vendors,req,onCancel,onSend}){
    At PO stage only the committee-selected vendor can receive the PO. */
 function QuotesPanel({rfq,state,A,req,onIssued,collect}){
   const [editing,setEditing]=useState(null); const [amount,setAmount]=useState(""); const [inclusive,setInclusive]=useState(false); const [docs,setDocs]=useState(100); const [dd,setDd]=useState(3);
-  const [deliveryBy,setDeliveryBy]=useState(new Date(Date.now()+7*864e5).toISOString().slice(0,10));
+  const [deliveryBy,setDeliveryBy]=useState(new Date(Date.now()+7*864e5).toISOString().slice(0,10)); const [addV,setAddV]=useState("");
   if(!rfq) return html`<div class="notice notice-warn"><${Icon} name="alert"/>No RFQ linked.</div>`;
   const submitted=rfq.quotes.filter(q=>q.status==="Submitted");
   const v=id=>state.vendors.find(x=>x.id===id)||{};
@@ -5133,6 +5139,7 @@ function QuotesPanel({rfq,state,A,req,onIssued,collect}){
       <label class="check"><input type="checkbox" checked=${inclusive} onChange=${e=>setInclusive(e.target.checked)}/>Quoted amount already includes all applicable taxes</label>
       ${t&&html`<div class="notice notice-info"><${Icon} name="shield"/><span class="num">Subtotal ${fmt(t.sub)} + GST ${fmt(t.gst)} = <b>Total incl. tax ${pkr(t.gross)}</b> · WHT ${fmt(t.wht)} deducted at payment → net payable ${pkr(t.net)}</span></div>`}
       <div class="row"><button class="btn btn-ghost" onClick=${()=>setEditing(null)}>Cancel</button><button class="btn btn-primary" disabled=${!(amount>0)} onClick=${()=>{A.recordQuote(rfq.id,editing,{amount:Number(amount),inclusive,docs,deliveryDays:dd});setEditing(null);setAmount("");setInclusive(false);}}>Save quotation</button></div></div></div>`; })()}
+    ${collect&&rfq.status==="Open"&&!editing&&html`<div class="row wrap" style="gap:8px;align-items:flex-end"><${Field} label="Add a quotation from another vendor (rate by phone, paper or walk-in)"><select class="select" value=${addV} onChange=${e=>setAddV(e.target.value)}><option value="">Choose a vendor…</option>${state.vendors.filter(x=>x.status!=="Blacklisted"&&!rfq.quotes.some(q=>q.vendorId===x.id)).map(x=>html`<option value=${x.id}>${x.name}</option>`)}</select><//><button class="btn btn-soft" disabled=${!addV} onClick=${()=>{ const qid=A.addRfqVendor(rfq.id,addV); setAddV(""); if(qid) setEditing(qid); }}><${Icon} name="plus"/>Add & record quotation</button></div>`}
     ${collect&&rfq.status==="Open"&&html`<div class="row wrap"><span class="sm muted grow">${submitted.length} of ${rfq.quotes.length} quotations recorded. ${reqTotal(req)>lim?"Above the direct-purchase limit: at least 2 quotations are needed for the committee.":""}</span><button class="btn btn-primary" disabled=${!submitted.length||(reqTotal(req)>lim&&submitted.length<2)} onClick=${()=>{ if(submitted.length<rfq.quotes.length&&!confirm("Some vendors have not quoted. Their links will expire. Send to committee now?")) return; A.closeRFQ(req.id); onIssued(); }}><${Icon} name="send"/>Send comparative statement to committee</button></div>`}
     ${!collect&&chosen&&html`<div class="notice notice-ok"><${Icon} name="check"/><span><b>${rfq.committee.direct?"Direct purchase":"Committee decision"}:</b> ${v(chosen.vendorId).name} · total incl. tax ${pkr(grossOf(chosen))}${rfq.csId?` · ${rfq.csId}`:""}. ${submitted.length>1?`Regret letters will be generated for the other ${submitted.length-1} vendor${submitted.length>2?"s":""}.`:""}</span></div>
       <div class="row wrap" style="align-items:flex-end"><${Field} label="Expected delivery by"><input class="input" type="date" value=${deliveryBy} onInput=${e=>setDeliveryBy(e.target.value)}/><//><span class="grow"/>
@@ -6477,22 +6484,23 @@ async function runAiAction(a){
 }
 const mdLite=t=>String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\n/g,"<br>");
 function Assistant({state,user,openReq}){
-  const [open,setOpen]=useState(false); const [q,setQ]=useState(""); const [busy,setBusy]=useState(false);
+  const [open,setOpen]=useState(false); const [q,setQ]=useState(""); const [busy,setBusy]=useState(false); const [ready,setReady]=useState(false);
+  const openRef=useRef(open); openRef.current=open; useEffect(()=>{ if(open) setReady(false); },[open]);   // minimized: a dot when the answer is ready
   const [msgs,setMsgs]=useState(()=>[{me:false,text:user.role==="staff"?`Assalam o Alaikum ${user.name}! I'm your portal assistant. Ask me to plan your day, show overdue tasks, upcoming events or any task number like AK-101.`:`Assalam o Alaikum ${user.name}! I'm your portal assistant. I read live portal data to tell you what's pending, your tasks and events, where delays are, stock and budget risks, and how to improve the process.`}]);
   const box=useRef(); useEffect(()=>{ if(box.current) box.current.scrollTop=box.current.scrollHeight; },[msgs,open]);
   const ask=async text=>{ const t=(text||q).trim(); if(!t||busy) return; setQ(""); const hist=msgs; setMsgs(m=>[...m,{me:true,text:t}]); setBusy(true);
     let a, act=null; if(SB_MODE&&sb){ try{ ({text:a,action:act}=await askServer(t,hist,state,user)); }catch(e){ a=builtinAnswer(t,state,user)+`\n\n_(${e.code==="not_configured"?"Alkhidmat AI is not switched on yet: the Super Admin adds the Gemini key on the main page → Settings → All portals. This answer comes from the portal's own data.":"The AI service did not answer"+(e.ref?" (ref "+e.ref+")":"")+", so this answer comes from the portal's own data."})_`; } } else a=builtinAnswer(t,state,user);
-    setMsgs(m=>[...m,{me:false,text:a,action:act}]); setBusy(false); };
+    setMsgs(m=>[...m,{me:false,text:a,action:act}]); setBusy(false); if(!openRef.current) setReady(true); };
   const decide=async(i,ok)=>{ const m=msgs[i]; const set=p=>setMsgs(l=>l.map((x,k)=>k===i?{...x,...p}:x));
     if(!ok){ set({action:null,text:m.text+"\n\n_Cancelled. Nothing was changed._"}); return; }
     set({saving:true}); try{ const id=await runAiAction(m.action); set({action:null,saving:false,text:m.text+"\n\n**Done"+(id?": "+id:".")+"**"}); }
     catch(e){ set({saving:false,err:String(e.message||e)}); } };
   const chips=user.role==="staff"?["Plan my day","My overdue tasks","Upcoming events","Tasks at risk"]:["What is pending for me?","Plan my day","Upcoming events","Tasks waiting for my approval","Any delays?","Stock alerts","Budget status","How does approval work?"];
-  return html`<div class="ai no-print">${open&&html`<div class="ai-panel card"><div class="card-h"><${Icon} name="spark"/><div class="grow"><h3>Alkhidmat AI</h3><div class="desc">${SB_MODE?"Help with the ERP portals · live portal data":"Built-in · offline demo · live portal data"}</div></div><button class="iconbtn" style="width:30px;height:30px" aria-label="Close assistant" onClick=${()=>setOpen(false)}><${Icon} name="x"/></button></div>
+  return html`<div class="ai no-print">${open&&html`<div class="ai-panel card"><div class="card-h"><${Icon} name="spark"/><div class="grow"><h3>Alkhidmat AI</h3><div class="desc">${SB_MODE?"Help with the ERP portals · live portal data":"Built-in · offline demo · live portal data"}</div></div><button class="iconbtn" style="width:30px;height:30px;font-weight:800" title="Minimize (keeps working)" aria-label="Minimize the assistant; it keeps working" onClick=${()=>setOpen(false)}>—</button><button class="iconbtn" style="width:30px;height:30px" aria-label="Close assistant" onClick=${()=>setOpen(false)}><${Icon} name="x"/></button></div>
       <div class="ai-msgs" ref=${box}>${msgs.map(m=>html`<div class=${"ai-msg "+(m.me?"me":"")} dangerouslySetInnerHTML=${{__html:mdLite(m.text).replace(/(AKF-(?:MR|SR)-\d{4}-\d{4})/g,'<a href="#" data-req="$1">$1</a>')}} onClick=${e=>{ const id=e.target.getAttribute&&e.target.getAttribute("data-req"); if(id){ e.preventDefault(); openReq(id); } }}/>`)}${msgs.map((m,i)=>m.action&&html`<div class="ai-msg"><b>${m.action.summary||"Make this change?"}</b>${m.err&&html`<div>${m.err}</div>`}<div class="row" style="margin-top:8px;gap:8px"><button class="btn btn-primary" disabled=${m.saving} onClick=${()=>decide(i,true)}>${m.saving?"Saving…":"Confirm"}</button><button class="btn btn-ghost" disabled=${m.saving} onClick=${()=>decide(i,false)}>Cancel</button></div></div>`)}${busy&&html`<div class="ai-msg"><span class="dots"><i/><i/><i/></span></div>`}</div>
       ${!msgs.some(m=>m.me)&&html`<div class="ai-chips">${chips.map(c=>html`<button class="chip" onClick=${()=>ask(c)}>${c}</button>`)}</div>`}
       <form class="ai-in" onSubmit=${e=>{ e.preventDefault(); ask(); }}><input class="input" placeholder="Ask about requests, stock, budgets…" value=${q} onInput=${e=>setQ(e.target.value)}/><button class="btn btn-primary" disabled=${busy||!q.trim()}><${Icon} name="send"/></button></form></div>`}
-    <button class="ai-fab" aria-label="Open Alkhidmat AI assistant" onClick=${()=>setOpen(o=>!o)}><${Icon} name=${open?"x":"spark"}/>${!open&&html`<span>Ask Alkhidmat AI</span>`}</button></div>`;
+    <button class=${"ai-fab"+(busy&&!open?" busy":"")} aria-label=${busy&&!open?"Alkhidmat AI is working on your question (open)":"Open Alkhidmat AI assistant"} onClick=${()=>setOpen(o=>!o)}><${Icon} name=${open?"x":"spark"}/>${!open&&html`<span>Ask Alkhidmat AI</span>`}${ready&&!open&&html`<i class="ai-ready" aria-hidden="true"/>`}</button></div>`;
 }
 
 function loadState(){ try{ const raw=localStorage.getItem(STORE_KEY); if(raw){ const s=JSON.parse(raw); if(s&&s.version>=2){ const seed=seedState(); s.budgets=s.budgets||seed.budgets; s.invoices=s.invoices||seed.invoices; s.settings={...DEFAULT_SETTINGS,...(s.settings||{})}; s.assets=s.assets||seed.assets; s.requests.forEach(migrateRequest); normalizeVendorQuotes(s); seed.users.forEach(u=>{ if(!s.users.some(x=>x.username===u.username)&&APPROVER_ROLES.includes(u.role)) s.users.push(u); }); s.version=3; return s; } } }catch(e){} return seedState(); }
@@ -8307,7 +8315,7 @@ function VendorQuote({token}){
 }
 
 /* Any unexpected error is shown as a red message, so a failure is never silent ("button does nothing"). */
-const BUILD="2026-11-06 store";
+const BUILD="2026-11-07 store";
 (()=>{ let last=0; const show=m=>{ const msg=errRef(m,"Unexpected error"); if(Date.now()-last<1500) return; last=Date.now(); if(window.__toast) window.__toast(msg+" (build "+BUILD+")","bad"); };   /* no raw error text on screen: details stay in the console under the reference */
   window.addEventListener("error",e=>show(e.message||e.error)); window.addEventListener("unhandledrejection",e=>show((e.reason&&e.reason.message)||e.reason)); })();
 const vendorToken=(/#rfq=([0-9a-f]{16,})/i.exec(location.hash||"")||[])[1];

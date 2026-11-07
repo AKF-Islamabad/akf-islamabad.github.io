@@ -55,9 +55,12 @@
 .kai-act b{display:block;margin-bottom:6px} .kai-act .row{display:flex;gap:8px;margin-top:8px}
 .kai-act button{border:1px solid var(--line,var(--border,#E3E9F2));border-radius:10px;padding:7px 12px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;background:var(--card,var(--surface,#fff));color:inherit}
 .kai-act button.ok{border:0;color:#fff;background:linear-gradient(135deg,#1A66CC,#0B51A7)} .kai-act button:disabled{opacity:.55;cursor:default}
+.kai-fab.busy::after{border-color:rgba(255,178,91,.95);animation:kaiSpin 1s linear infinite;border-style:dashed}
+@keyframes kaiSpin{to{transform:rotate(360deg)}}
+.kai-fab .kai-ready{position:absolute;top:-2px;right:-2px;width:14px;height:14px;border-radius:50%;background:#16A34A;border:2px solid #fff;max-width:none!important;margin:0!important}
 @media (prefers-reduced-motion: reduce){ .kai-fab::after,.kai-panel,.kai-msg{animation:none!important} }`;
   const NS = "http://www.w3.org/2000/svg";
-  const ICON = { spark: "M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z", x: "M18 6L6 18M6 6l12 12", send: "M22 2L11 13M22 2l-7 20-4-9-9-4z", undo: "M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3" };
+  const ICON = { spark: "M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z", x: "M18 6L6 18M6 6l12 12", min: "M5 12h14", send: "M22 2L11 13M22 2l-7 20-4-9-9-4z", undo: "M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3" };
   const svg = n => { const s = document.createElementNS(NS, "svg"); s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("fill", "none"); s.setAttribute("stroke", "currentColor"); s.setAttribute("stroke-width", "2"); s.setAttribute("stroke-linecap", "round"); s.setAttribute("stroke-linejoin", "round"); s.setAttribute("width", "18"); s.setAttribute("height", "18"); s.setAttribute("aria-hidden", "true"); const p = document.createElementNS(NS, "path"); p.setAttribute("d", ICON[n]); s.append(p); return s; };
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   /* safe formatting: the answer is shown as text; only **bold**, `code` and "- " lists are turned into elements */
@@ -95,6 +98,8 @@
     const history = [];   // this tab only, never saved
     const fab = el("button", "kai-fab"); fab.type = "button"; fab.setAttribute("aria-label", "Open Alkhidmat AI assistant"); fab.append(svg("spark"), el("span", "", "Ask Alkhidmat AI"));
     let panel = null, log, input, sendBtn, chips, busy = false;
+    const fabState = () => { fab.classList.toggle("busy", busy); fab.setAttribute("aria-label", busy ? "Alkhidmat AI is working on your question (open)" : "Open Alkhidmat AI assistant"); };
+    const readyDot = on => { let d = fab.querySelector(".kai-ready"); if (on && !d) { d = el("span", "kai-ready"); d.setAttribute("aria-hidden", "true"); fab.append(d); } else if (!on && d) d.remove(); };
     const add = (who, text, cls) => { const m = el("div", "kai-msg " + (cls || (who === "me" ? "me" : "bot"))); if (who === "me") m.textContent = text; else m.append(format(text)); log.append(m); log.scrollTop = log.scrollHeight; return m; };
     /* the portal guide: the person's portals and tabs, straight from the database (instant, no AI and no key needed) */
     let guideP = null;
@@ -142,7 +147,7 @@
     }
     async function ask(text) {
       const q = String(text || input.value).trim(); if (!q || busy) return;
-      input.value = ""; input.style.height = "46px"; if (chips) chips.hidden = true; add("me", q); busy = true; sendBtn.disabled = true;
+      input.value = ""; input.style.height = "46px"; if (chips) chips.hidden = true; add("me", q); busy = true; sendBtn.disabled = true; fabState();
       const wait = el("div", "kai-msg bot"); const d = el("span", "kai-dots"); d.append(el("i"), el("i"), el("i")); wait.append(d); log.append(wait); log.scrollTop = log.scrollHeight;
       let answer = null, note = null, off = false, action = null;
       try {
@@ -166,16 +171,20 @@
       /* the Super Admin can switch it on straight away (the page passes onSetup only for the Super Admin) */
       if (off && typeof o.onSetup === "function") { const b = el("button", "kai-setup", "Open AI settings"); b.type = "button"; b.addEventListener("click", () => { panel.hidden = true; fab.hidden = false; o.onSetup(); }); m.append(b); }
       history.push({ role: "user", text: q }, { role: "assistant", text: answer });
-      busy = false; sendBtn.disabled = false; input.focus();
+      busy = false; sendBtn.disabled = false; fabState();
+      if (panel.hidden) readyDot(true); else input.focus();   // minimized: a green dot says the answer is ready
     }
     function open() {
-      if (panel) { panel.hidden = false; fab.hidden = true; input.focus(); return; }
+      readyDot(false);
+      if (panel) { panel.hidden = false; fab.hidden = true; log.scrollTop = log.scrollHeight; input.focus(); return; }
       panel = el("section", "kai-panel"); panel.setAttribute("role", "dialog"); panel.setAttribute("aria-label", "Alkhidmat AI assistant");
       const head = el("div", "kai-head"), ic = el("span", "ic"); ic.append(svg("spark"));
       const t = el("div", "t"); t.append(el("b", "", "Alkhidmat AI"), el("small", "", `${portal} · help with the ERP portals`));
       const clear = el("button"); clear.type = "button"; clear.title = "New chat"; clear.setAttribute("aria-label", "Start a new chat"); clear.append(svg("undo"));
       const close = el("button"); close.type = "button"; close.title = "Close"; close.setAttribute("aria-label", "Close the assistant"); close.append(svg("x"));
-      head.append(ic, t, clear, close);
+      const mini = el("button"); mini.type = "button"; mini.title = "Minimize (keeps working)"; mini.setAttribute("aria-label", "Minimize the assistant; it keeps working"); mini.append(svg("min"));
+      mini.addEventListener("click", () => { panel.hidden = true; fab.hidden = false; fabState(); fab.focus(); });
+      head.append(ic, t, clear, mini, close);
       log = el("div", "kai-log"); log.setAttribute("role", "log"); log.setAttribute("aria-live", "polite");
       chips = el("div", "kai-chips"); hints.slice(0, 6).forEach(h => { const b = el("button", "", h); b.type = "button"; b.addEventListener("click", () => ask(h)); chips.append(b); });
       const form = el("form", "kai-in"); input = el("textarea"); input.rows = 1; input.maxLength = 6000; input.placeholder = "Ask about any portal…"; input.setAttribute("aria-label", "Your question");

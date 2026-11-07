@@ -187,10 +187,10 @@
   async function start() {
     let ok = false; try { const { data } = await sb.rpc("core_super_edit_ok"); ok = data === true; } catch (e) { ok = false; }
     if (!ok) return;
-    fab = el("button", { type: "button", "aria-pressed": "false", title: "Super Admin: correct any entry on this page", style: Object.assign({}, BTN, { position: "fixed", left: "16px", bottom: "132px",
+    fab = el("button", { type: "button", "aria-pressed": "false", title: "Super Admin: correct any entry on this page", style: Object.assign({}, BTN, { position: "fixed", left: "16px", bottom: "180px",
       zIndex: 99990, borderColor: "#B45309", color: "#B45309", boxShadow: "0 6px 18px rgba(0,0,0,.18)" }) });
     fab.addEventListener("click", () => setOn(!on));
-    const findBtn = el("button", { type: "button", text: "Find entry", title: "Super Admin: search any entry to correct", style: Object.assign({}, BTN, { position: "fixed", left: "16px", bottom: "176px", zIndex: 99990, display: "none" }), onclick: () => find([], "search") });
+    const findBtn = el("button", { type: "button", text: "Find entry", title: "Super Admin: search any entry to correct", style: Object.assign({}, BTN, { position: "fixed", left: "16px", bottom: "224px", zIndex: 99990, display: "none" }), onclick: () => find([], "search") });
     let was = false; try { was = localStorage.getItem("akf-se-on") === "1"; } catch (e) { }
     document.body.append(fab, findBtn); setOn(was);
     new MutationObserver(() => { findBtn.style.display = on ? "block" : "none"; }).observe(fab, { attributes: true, attributeFilter: ["aria-pressed"] });
