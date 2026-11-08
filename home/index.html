@@ -1911,6 +1911,7 @@ const Live = {
     const [p, i] = await Promise.all([this.sb.rpc('core_my_portals'), this.sb.rpc('core_my_inbox')]);
     if (p.error) throw p.error;
     this.me = me;
+    try { sessionStorage.removeItem('akf-hops'); } catch (e) {}   // arrived safely: reset the main page's loop counter
     this.portals = p.data || [];
     this.inbox = i.error ? [] : (i.data || []);   // empty if this database has not got the all-portals inbox yet
     this.paintUser();

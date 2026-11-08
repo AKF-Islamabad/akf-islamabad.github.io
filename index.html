@@ -428,8 +428,17 @@ async function adminCall(body) {
    This page still handles new passwords, the Super Admin's authenticator set-up and "no access", and the Super Admin
    tools (People & access, Portals, Settings, Activity) when opened as ./#admin.
    To go back to this page (own sign-in and Today) for everyone: set SIGN_IN_PAGE = "" and publish. ---------- */
-const SIGN_IN_PAGE = "home/";
+const SIGN_IN_PAGE = "home/?v=2026-11-08c";   // ?v= : change it whenever home/ changes, so no browser opens an old saved copy
 const ADMIN_VIEW = () => /^#admin/.test(location.hash);
+// safety stop: if this page and home/ keep sending a person to each other (an old saved copy, a bad setting), stop after
+// two bounces in 20 seconds and simply open this page, so nobody is ever stuck in a loop.
+function goSignInPage() {
+  let hops = [];
+  try { hops = JSON.parse(sessionStorage.getItem("akf-hops") || "[]").filter(t => Date.now() - t < 20000); } catch (e) {}
+  if (hops.length >= 2) { try { sessionStorage.removeItem("akf-hops"); } catch (e) {} return false; }
+  try { sessionStorage.setItem("akf-hops", JSON.stringify(hops.concat(Date.now()))); } catch (e) {}
+  location.replace(SIGN_IN_PAGE); return true;
+}
 
 /* ---------- start-up: refuse to run without a safe configuration ---------- */
 function configError() {
@@ -467,7 +476,7 @@ async function loadMe() {
       const { data: aal, error } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
       if (error || !aal || aal.currentLevel !== "aal2") { S.view = "mfa"; S.mfaNew = !aal || aal.nextLevel !== "aal2"; return render(); }
     }
-    if (SIGN_IN_PAGE && !ADMIN_VIEW()) { location.replace(SIGN_IN_PAGE); return; }   // everyone's home is the new page; Super Admin tools open with #admin
+    if (SIGN_IN_PAGE && !ADMIN_VIEW() && goSignInPage()) return;   // everyone's home is the new page; Super Admin tools open with #admin
     S.portals = await q(sb.rpc("core_my_portals"));
     S.view = "home"; render(); loadToday();
     /* Alkhidmat AI on the main page too (every page has it); it knows which portals this person has, nothing personal */
@@ -509,7 +518,7 @@ function render() {
   if (v === "boot") { showLoader("Opening " + HUB + "…", true); return; }
   if (document.getElementById("ak-loader") && !S.adminLoading) { loaderN = 0; hideLoader(); }
   if (v === "config") return app.append(authCard("Setup needed", [el("div", { class: "notice bad", text: S.configErr }), el("p", { class: "small", text: "The page will not start until config.js is correct. See ERP-SETUP-GUIDE.md." })]));
-  if (v === "signin" && SIGN_IN_PAGE) { location.replace(SIGN_IN_PAGE); return; }   // the new sign-in page
+  if (v === "signin" && SIGN_IN_PAGE && goSignInPage()) return;   // the new sign-in page
   if (v === "signin") return app.append(signIn());
   if (v === "setpw") return app.append(setPassword());
   if (v === "mfa") return app.append(twoStep());
