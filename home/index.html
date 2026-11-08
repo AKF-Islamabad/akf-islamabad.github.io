@@ -1397,6 +1397,11 @@ body.nav-collapsed #sidebar-toggle .i { transform: scaleX(-1); }
 .live-tabs button[aria-selected="true"] { background: var(--color-surface); color: var(--color-text); box-shadow: var(--premium-glow); }
 .live-chart { max-width: 560px; }
 .sign-btn { font-size: 17px; }
+/* the whole portal card opens the portal (not only the Open button) */
+a.portal-link { color: inherit; text-decoration: none; cursor: pointer; }
+a.portal-link:hover { transform: translateY(-2px); box-shadow: var(--shadow-xl); }
+a.portal-link:focus-visible { outline: 2px solid var(--mc); outline-offset: 3px; }
+a.portal-link:active { transform: translateY(0); }
 /* the sign-in rows use display:flex, which would override the hidden attribute: the authenticator box must stay hidden until a Super Admin needs it */
 .lf[hidden], .lc-row[hidden], .sign-btn[hidden] { display: none !important; }
 .brief-head { flex-wrap: wrap; }
@@ -2933,16 +2938,16 @@ class HomeView {
       <div class="section-head"><h2>Your portals</h2><span>${plural(nav.length, 'portal', 'portals')} you can open</span></div>
       ${nav.length ? `<section class="portal-grid">
         ${nav.map(p => { const n = byPortal[p.id] || 0; return `
-          <article class="portal-card spot tilt" style="--mc:${p.color}">
+          <a class="portal-card portal-link spot tilt" style="--mc:${p.color}" href="${esc(p.href)}" aria-label="Open ${esc(p.name)}">
             <span class="pc-watermark" aria-hidden="true">${icon(p.icon)}</span>
             <div class="pc-top"><span class="pc-icon">${icon(p.icon)}</span>${p.role ? `<span class="role">${icon('shield')}Your access: ${esc(p.role)}</span>` : ''}</div>
             <h3>${esc(p.name)}</h3>
             <p>${esc(p.desc)}</p>
             <div class="pc-foot">
               <span class="pc-stat"><i></i>${n ? `${plural(n, 'item', 'items')} waiting on you` : 'Nothing waiting'}</span>
-              <a class="btn btn-xs pc-open" href="${esc(p.href)}" aria-label="Open ${esc(p.name)}">Open ${icon('arrowUpRight')}</a>
+              <span class="btn btn-xs pc-open" aria-hidden="true">Open ${icon('arrowUpRight')}</span>
             </div>
-          </article>`; }).join('')}
+          </a>`; }).join('')}
       </section>` : `<div class="brief-empty">${icon('shield')}You have no portals yet. Ask the Super Admin to give you access.</div>`}`;
   }
   html() {

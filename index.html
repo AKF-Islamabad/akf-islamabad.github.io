@@ -428,7 +428,7 @@ async function adminCall(body) {
    This page still handles new passwords, the Super Admin's authenticator set-up and "no access", and the Super Admin
    tools (People & access, Portals, Settings, Activity) when opened as ./#admin.
    To go back to this page (own sign-in and Today) for everyone: set SIGN_IN_PAGE = "" and publish. ---------- */
-const SIGN_IN_PAGE = "home/?v=2026-11-08c";   // ?v= : change it whenever home/ changes, so no browser opens an old saved copy
+const SIGN_IN_PAGE = "home/?v=2026-11-08d";   // ?v= : change it whenever home/ changes, so no browser opens an old saved copy
 const ADMIN_VIEW = () => /^#admin/.test(location.hash);
 // safety stop: if this page and home/ keep sending a person to each other (an old saved copy, a bad setting), stop after
 // two bounces in 20 seconds and simply open this page, so nobody is ever stuck in a loop.
