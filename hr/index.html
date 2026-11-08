@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-miNrhOp93NyBZTrrnjq10UThFa3ZvMItZ0Z1pq47A2U='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-FSneiBgDyEnVPZUYec7SI7cjWjPQy4J60eaeCKHqP4g='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1056,6 +1056,14 @@ html.side-pinned .side-pin{background:#fff;color:#0B3D91}
 @media (max-width:640px){.hr-kv{grid-template-columns:1fr}}
 /* payslips and tax certificates print on their own */
 @media print { body * { visibility: hidden; } #layer, #layer * { visibility: visible; } #layer { position: absolute; inset: 0; background: #fff; } .no-print, #m-close { display: none !important; } }
+/* Recruitment: interview and summary sheets print on their own */
+#rc-print { display: none; }
+@media print {
+  body.rc-printing > *:not(#rc-print) { display: none !important; }
+  body.rc-printing #rc-print { display: block; color: #000; background: #fff; }
+  #rc-print .rc-page { page-break-after: always; }
+  @page { size: A4 landscape; margin: 10mm; }
+}
 
 </style>
 </head>
@@ -1373,24 +1381,16 @@ const VIEWS = {
         can("notices", "edit") ? el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Archive", onclick: async () => { try { await rpc("hr_notice_archive", { p_id: n.id }, "Not archived"); await reload(); render(); } catch (e) { toast(e.message, true); } } }) : null)))
       : [card("Announcements", empty("No announcements."))]));
   },
-  async recruit(box) {
+  async recruit(box) {   // the old Career page's HR tools, now inside HR360 (asked 2026-11-08)
     const b = (await rpc("hr_recruit_board", {}, "Recruitment could not load")) || { jobs: [], waiting: [] };
-    if (V.id) return recruitJob(box, b.jobs.find(j => j.id === V.id), b.editor);
-    const all = {}; b.jobs.forEach(j => Object.entries(j.stages || {}).forEach(([k, n]) => { all[k] = (all[k] || 0) + n; }));
-    box.append(el("div", { class: "hr-actions" }, mayRecruit() ? el("button", { class: "btn btn-primary", type: "button", text: "Request new staff", onclick: () => { V.kind = "Recruitment"; go("apply"); } }) : null,
-      b.depts ? el("button", { class: "btn btn-outline", type: "button", text: "Post a job directly", onclick: () => jobForm(null, null, b.depts) }) : null,
-      el("a", { class: "btn btn-outline", href: CAREERS, target: "_blank", rel: "noopener", text: "Open the Career page" })));
-    box.append(el("div", { class: "kpis" }, kpi("Jobs on the Career page", b.jobs.filter(j => j.live).length, "open now", "brief"),
-      kpi("Applicants", b.jobs.reduce((t, j) => t + (+j.total || 0), 0), "all jobs", "users"), kpi("New", all.Received || 0, "not reviewed yet", "inbox"), kpi("Selected", all.Selected || 0, "", "check")));
-    if (b.editor) box.append(card("Approved staff requests · publish on the Career page", ...(b.waiting.length ? b.waiting.map(w => el("div", { class: "hr-row" },
-      el("span", { class: "grow" }, el("b", { text: w.data.vacancies + " × " + w.data.post + " · " + (w.deptName || w.dept || "") }), el("small", { text: w.id + " · asked by " + (w.by || "") + " · approved " + fmtD(w.decided_at) })),
-      el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Publish", onclick: () => jobForm(w, null) }))) : [empty("Nothing waiting. Staff requests appear here once the President approves them.")])));
-    const ch = el("div"); if (window.AKF_CHARTS) ch.innerHTML = AKF_CHARTS.donut({ id: "hr-recruit", center: "applicants", items: STAGES.filter(x => all[x]).map(x => ({ key: x, label: x, value: all[x] })), empty: "No applicants yet" });
-    box.append(el("div", { class: "hr-grid" }, card("Applicants by stage", ch),
-      card("Jobs", ...(b.jobs.length ? b.jobs.map(j => el("button", { class: "hr-row", type: "button", onclick: () => go("recruit", j.id) },
-        el("span", { class: "grow" }, el("b", { text: j.job.t + " · " + (j.deptName || j.job.dp || "") }),
-          el("small", { text: j.id + " · " + j.job.vac + (j.job.vac == 1 ? " vacancy" : " vacancies") + " · deadline " + fmtDT(j.job.dl) + " · " + j.total + (j.total == 1 ? " applicant" : " applicants") + ((j.stages || {}).Received ? " · " + j.stages.Received + " new" : "") })),
-        el("span", { class: "badge " + (j.live ? "b-ok" : "b-info"), text: j.live ? "On the Career page" : j.open ? "Deadline passed" : "Closed" }))) : [empty("No jobs yet.")]))));
+    const st = (await rpc("hr_rc_settings_get", {}, "Recruitment settings could not load")) || { w: { q: 40, x: 40, k: 20 }, iv: {}, msgs: [] };
+    RCJOBS = b.jobs;
+    if (V.id) { V.rj = V.id; V.rt = "Applicants"; V.id = null; }   // a job opened from the dashboard or a link
+    const tabs = ["Dashboard", "Applicants", "Positions", "Ranking", "Scoring", "Sheets", "CVs"].concat(b.editor ? ["Messages", "Import", "Settings"] : [], can("recruit") || ME.super ? ["Activity"] : []);
+    if (!tabs.includes(V.rt)) V.rt = "Dashboard";
+    if (V.rj !== "" && !b.jobs.some(j => j.id === V.rj)) V.rj = (b.jobs[0] || {}).id || "";
+    box.append(el("div", { class: "hr-kinds" }, tabs.map(t => el("button", { type: "button", class: "btn btn-outline" + (V.rt === t ? " active" : ""), text: t, onclick: () => { V.rt = t; render(); } }))));
+    await RCV[V.rt](box, b, st);
   },
   async exits(box) {
     let L = []; try { L = await rpc("hr_checklists", {}, "Checklists could not load") || []; } catch (e) { box.append(empty(e.message)); return; }
@@ -1781,56 +1781,368 @@ function jobForm(w, j, depts) {   // w: an approved staff request to publish; j:
     L("Job specification (one point per line)", f.js, true), L("Key responsibilities (one point per line)", f.jd, true)),
     el("p", { class: "small muted", text: "Candidates see exactly this on the Career page and can apply until the deadline. Their applications and CVs come into this tab." }), el("div", { class: "hr-actions" }, save));
 }
-async function recruitJob(box, j, editor) {
-  const back = el("button", { class: "btn btn-outline btn-sm", type: "button", text: "← All jobs", onclick: () => go("recruit") });
-  if (!j) return box.append(back, empty("This job is not one you can see."));
-  const list = (await rpc("hr_applicants", { p_job: j.id }, "The applicants could not load")) || [];
-  const by = {}; list.forEach(a => { by[a.stage] = (by[a.stage] || 0) + 1; });
-  const link = CAREERS + "#" + j.id;
-  box.append(el("div", { class: "hr-actions" }, back,
-    el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Copy job link", onclick: async () => { try { await navigator.clipboard.writeText(link); toast("Link copied: share it on WhatsApp, Facebook or by e-mail"); } catch (e) { prompt("Copy this link", link); } } }),
-    el("a", { class: "btn btn-outline btn-sm", href: link, target: "_blank", rel: "noopener", text: "Open on the Career page" }),
-    editor && list.length ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Download list (Excel)", onclick: () => csv("applicants-" + j.id, ["Application ID", "Name", "Father", "CNIC", "E-mail", "Phone", "City", "Experience (years)", "Expected salary", "Earliest joining", "Applied", "Stage", "Marks", "Note"],
-      list.map(a => [a.id, a.name, a.app.father, a.cnic.replace(/^(\d{5})(\d{7})(\d)$/, "$1-$2-$3"), a.email, a.app.ph, a.app.city, a.app.xy, a.app.es, a.app.avail, String(a.created_at).slice(0, 10), a.stage, a.marks ?? "", a.note])) }) : null, editor ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Edit job", onclick: () => jobForm(null, j) }) : null,
-    editor ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: j.open ? "Close job" : "Reopen job", onclick: async () => {
-      try { await rpc("hr_job_open", { p_id: j.id, p_open: !j.open }, "Not saved"); toast(j.open ? "Closed: it left the Career page" : "Reopened"); render(); } catch (e) { toast(e.message, true); } } }) : null));
-  const ch = el("div"); if (window.AKF_CHARTS) ch.innerHTML = AKF_CHARTS.donut({ id: "hr-job", center: "applicants", items: STAGES.filter(x => by[x]).map(x => ({ key: x, label: x, value: by[x] })), empty: "No applicants yet" });
-  const sel = el("select", { class: "select", "aria-label": "Stage" }, el("option", { value: "", text: "All stages" }), STAGES.map(x => el("option", { value: x, text: x + (by[x] ? " (" + by[x] + ")" : "") })));
-  const rows = el("tbody");
-  const draw = () => rows.replaceChildren(...list.filter(a => !sel.value || a.stage === sel.value).map(a => el("tr", { style: "cursor:pointer", onclick: () => applicantModal(a, editor) },
-    [a.name, a.app.city || "", (a.app.xy || 0) + " y", a.app.es || "", fmtD(a.created_at), a.stage, a.marks ?? ""].map(t => el("td", { text: String(t) })))));
-  sel.addEventListener("change", draw); draw();
-  box.append(el("div", { class: "hr-grid" }, card(j.job.t + " · " + j.id, el("dl", { class: "hr-kv" }, ...[["Department", j.deptName || j.job.dp], ["Vacancies", j.job.vac], ["Deadline", fmtDT(j.job.dl)],
-      ["Status", j.live ? "On the Career page" : j.open ? "Deadline passed" : "Closed"], ["Staff request", j.request_id || ""]].flatMap(([k, v]) => [el("dt", { text: k }), el("dd", { text: String(v) })])), ch),
-    card("Applicants (" + list.length + ")", sel, list.length ? el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" },
-      el("thead", {}, el("tr", {}, ["Name", "City", "Experience", "Expected salary", "Applied", "Stage", "Marks"].map(t => el("th", { text: t })))), rows)) : empty("No applications yet."))));
+/* ---------- Recruitment tools (the old Career page's HR screens, now in HR360) ---------- */
+const TRD = [["Educational Background", "Does the candidate have the appropriate & relevant educational qualifications or training for this position?"],
+  ["Prior Work Experience", "Has the candidate acquired necessary skills or qualifications through past work experiences?"],
+  ["Communication / Other Requisite Skills", "How were the candidate's communication skills during the interview?"],
+  ["Motivation / Retention", "How much interest did the candidate show in the position?"],
+  ["Understanding of the Position", "Assess the candidate's knowledge of the position and its requirements."],
+  ["Competency & Potential", "Technical knowledge, intellect, ability to learn on the job, ambition and desire to go ahead in life and career."],
+  ["Personality", "The impression the candidate created: appearance, attitude towards work, confidence."]];
+const QS = [["phd", 100], ["mphil", 100], ["ms", 90], ["m.sc", 90], ["msc", 90], ["master", 90], ["bs", 75], ["b.sc", 75], ["bachelor", 75], ["inter", 55]];
+const qlv = t => { t = String(t || "").toLowerCase(); for (const [k, v] of QS) if (t.includes(k)) return v; return 40; };
+const ageOf = d => d ? Math.floor((Date.now() - new Date(d + "T00:00:00")) / 315576e5) : null;
+const eduTxt = a => ((a.app || {}).edu || []).map(e => e.d).filter(Boolean).join(", ");
+function sklv(a, job) {   // skills match: the job's skills found in the candidate's education and experience
+  const k = String(job.sk || "").toLowerCase().split(/[,;/|]+|\band\b/).map(x => x.trim()).filter(x => x.length > 1);
+  if (!k.length) return 50;
+  const t = (((a.app || {}).edu || []).map(e => e.d + " " + e.u).join(" ") + " " + ((a.app || {}).et || "")).toLowerCase();
+  return 100 * k.filter(x => t.includes(x)).length / k.length;
 }
-function applicantModal(a, editor) {
+function scv(a, job, w) {   // ranking score: qualification, experience and skills, weighted
+  const q = qlv(eduTxt(a)), x0 = (job.x || [0, 99])[0], xs = 100 * Math.min((+(a.app || {}).xy || 0) / Math.max(x0, 1), 1), k = sklv(a, job), W = (+w.q || 0) + (+w.x || 0) + (+w.k || 0) || 1;
+  return { q, x: xs, k, tot: (q * (+w.q || 0) + xs * (+w.x || 0) + k * (+w.k || 0)) / W };
+}
+function eligv(a, job) {   // within the post's gender, age, experience and qualification rule (unknown details are not held against them)
+  const p = a.app || {}, ag = ageOf(p.dob), x = job.x || [0, 99], xy = +p.xy || 0;
+  return (job.g === "B" || !p.g || job.g === p.g) && (ag == null || (ag >= job.a[0] && ag <= job.a[1])) && xy >= x[0] && xy <= x[1] && qlv(eduTxt(a)) >= qlv(job.q);
+}
+const panelAvg = a => { const p = (a.panel || []).map(x => +x.total); return p.length ? p.reduce((s, v) => s + v, 0) / p.length : null; };
+const LATE = ["Shortlisted", "Interview Done", "Selected"];
+const escH = s => String(s ?? "").replace(/[&<>"']/g, c => "&#" + c.charCodeAt(0) + ";");
+const shown = m => Object.assign(new Error(m), { shown: true });
+const normPh = p => { let t = String(p || "").replace(/\D/g, ""); if (!t) return ""; if (t.startsWith("0")) t = t.slice(1); if (!t.startsWith("92")) t = "92" + t; return t; };
+function b64u8(b) { const s = atob(b), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
+const fileSafe = s => String(s).replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+let RCJOBS = [];   // the jobs of the last board, for the pickers
+
+function jobPick(b, all) {   // the job chooser shared by the tools; "" = all jobs
+  RCJOBS = b.jobs;
+  const s = el("select", { class: "select", "aria-label": "Job" }, all ? el("option", { value: "", text: "All jobs" }) : null,
+    b.jobs.map(j => el("option", { value: j.id, text: j.job.t + " · " + (j.deptName || j.job.dp || "") + " · " + j.id })));
+  if (!all && V.rj === "" && b.jobs[0]) V.rj = b.jobs[0].id;
+  s.value = V.rj || ""; s.addEventListener("change", () => { V.rj = s.value; render(); });
+  return s;
+}
+const jobOf = id => (RCJOBS.find(j => j.id === id) || {}).job || { x: [0, 99], a: [16, 70], g: "B" };
+
+// send one of the 6 messages: e-mail through the ERP's e-mail service, or WhatsApp with the text filled in
+async function rcSend(a, n, how) {
+  if (how === "wa") {
+    const m = await rpc("hr_rc_message", { p_id: a.id, p_msg: n, p_mark: true }, "The message could not be prepared");
+    const ph = normPh(m.phone); if (!ph) throw shown("This candidate has no phone number");
+    el("a", { href: "https://wa.me/" + ph + "?text=" + encodeURIComponent(m.subject + "\n\n" + m.text), target: "_blank", rel: "noopener" }).click();
+    return "opened in WhatsApp";
+  }
+  if (!a.email) throw shown("This candidate has no e-mail address");
+  const { data, error } = await SB.functions.invoke("send-email", { body: { kind: "candidate", id: a.id, msg: n } });
+  if (error) { let x = {}; try { x = await error.context.json(); } catch (e) { } throw shown(x.error || "The e-mail service did not answer"); }
+  if (!data || !data.success) throw shown((data && data.error) || "Not sent");
+  return "e-mailed";
+}
+
+function zipBlob(files) {   // a plain (stored) ZIP of the CVs; names in UTF-8
+  const T = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; T[n] = c >>> 0; }
+  const crc = d => { let c = 0xFFFFFFFF; for (let i = 0; i < d.length; i++) c = T[(c ^ d[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  const enc = new TextEncoder(), parts = [], cen = []; let off = 0;
+  for (const f of files) {
+    const nm = enc.encode(f.name), c = crc(f.data), n = f.data.length, h = new DataView(new ArrayBuffer(30)), z = new DataView(new ArrayBuffer(46));
+    [[0, 0x04034b50, 4], [4, 20, 2], [6, 0x0800, 2], [12, 0x21, 2], [14, c, 4], [18, n, 4], [22, n, 4], [26, nm.length, 2]].forEach(([o, v, s]) => s === 4 ? h.setUint32(o, v, true) : h.setUint16(o, v, true));
+    [[0, 0x02014b50, 4], [4, 20, 2], [6, 20, 2], [8, 0x0800, 2], [14, 0x21, 2], [16, c, 4], [20, n, 4], [24, n, 4], [28, nm.length, 2], [42, off, 4]].forEach(([o, v, s]) => s === 4 ? z.setUint32(o, v, true) : z.setUint16(o, v, true));
+    parts.push(new Uint8Array(h.buffer), nm, f.data); cen.push(new Uint8Array(z.buffer), nm); off += 30 + nm.length + n;
+  }
+  const cs = cen.reduce((s, p) => s + p.length, 0), e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cs, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...cen, new Uint8Array(e.buffer)], { type: "application/zip" });
+}
+
+function printHtml(html) {   // the sheets print on their own (everything else on the page is hidden while printing)
+  let p = document.getElementById("rc-print"); if (!p) { p = el("div", { id: "rc-print" }); document.body.append(p); }
+  p.innerHTML = html; document.body.classList.add("rc-printing");
+  const done = () => { document.body.classList.remove("rc-printing"); p.innerHTML = ""; removeEventListener("afterprint", done); };
+  addEventListener("afterprint", done); setTimeout(() => window.print(), 50);
+}
+const LOGO_IMG = () => { const i = document.querySelector(".side-logo img"); return i ? '<img src="' + escH(i.src) + '" style="width:58px;height:58px;float:left" alt="">' : ""; };
+function interviewSheets(job, list, iv) {
+  if (!list.length) return "<p>No shortlisted candidates yet.</p>";
+  const c = "border:1px solid #000;padding:4px;font-size:12px", h = c + ";background:#dbe9f7;font-weight:700", x = job.x || [0, 99];
+  const exp = x[1] < 99 ? x[0] + " - " + x[1] + " years" : x[0] + "+ years", day = iv.d ? fmtD(iv.d) : "";
+  let out = "";
+  for (let i = 0; i < list.length; i += 4) {
+    const r = list.slice(i, i + 4); while (r.length < 4) r.push(null);
+    const row = (l, f) => `<tr><td colspan="2" style="${c}">${l}</td>${r.map(a => `<td style="${c}">${a ? f(a) : "&nbsp;"}</td>`).join("")}</tr>`;
+    out += `<div class="rc-page">${LOGO_IMG()}<h3 style="text-align:center;margin:0">Alkhidmat Foundation Islamabad<br>Interview Assessment Sheet</h3><div style="clear:both"></div>
+<table style="border-collapse:collapse;width:100%"><tr><td style="${h}">Position &amp; Salary Range</td><td style="${c}">${escH(job.t)}<br>${escH(job.sal)}</td><td style="${h}">Required Qualification</td><td style="${c}">${escH(job.q)}</td><td style="${h}">Required Age</td><td style="${c}">${job.a[0]} - ${job.a[1]} years</td></tr>
+<tr><td style="${h}">Required Experience</td><td style="${c}">${exp}</td><td style="${h}">Other Requirements / Skills</td><td style="${c}">${escH(job.sk || "")}</td><td style="${h}">Date of Interview</td><td style="${c}">${escH(day)}${iv.t ? " · " + escH(iv.t) : ""}</td></tr></table>
+<table style="border-collapse:collapse;width:100%;margin-top:6px"><tr><td colspan="2" style="${h}">Taken Perceptions (By Interviewer):</td>${r.map((a, k) => `<td style="${h}">Candidate ${i + k + 1}:</td>`).join("")}</tr>
+${row("☐ Technical ☐ Job Fit ☐ Organizational Fit ☐ Others<br><b>Name:</b>", a => escH(a.name))}${row("<b>Qualification:</b>", a => escH(eduTxt(a)))}${row("<b>Age (years):</b>", a => ageOf(a.app.dob) ?? "")}${row("<b>Experience:</b>", a => (+a.app.xy || 0) + " years")}${row("<b>Available from:</b>", a => a.app.avail ? escH(fmtD(a.app.avail)) : "—")}
+<tr><td style="${h}">Sr.#</td><td style="${h}">Traits (0 - 5 each)</td>${r.map(() => `<td style="${h}">Score</td>`).join("")}</tr>
+${TRD.map((t, k) => `<tr><td style="${c}">${k + 1}</td><td style="${c};width:42%"><b>${escH(t[0])}</b><br>${escH(t[1])}</td>${r.map(() => `<td style="${c}">&nbsp;</td>`).join("")}</tr>`).join("")}
+<tr><td style="${c}"></td><td style="${h}">TOTAL (35)</td>${r.map(() => `<td style="${c}">&nbsp;</td>`).join("")}</tr></table>
+<p style="font-size:12px;margin:8px 0">Comments: ____________________________________________________________________<br><br>Recommendation: ☐ Select ☐ Waitlist ☐ Reject &nbsp; Salary for suitable candidate: ______________<br><br>Interviewer Name: ____________ Designation: ____________ Signature: ____________ Date: ________</p></div>`;
+  }
+  return out;
+}
+function summarySheet(job, list, w) {
+  const c = "border:1px solid #000;padding:4px;font-size:12px", h = c + ";background:#dbe9f7;font-weight:700";
+  return `<div class="rc-page">${LOGO_IMG()}<h3 style="text-align:center;margin:0">Alkhidmat Foundation Islamabad<br>Summary of Shortlisted Candidates Against The Post of ${escH(job.t)}</h3><div style="clear:both"></div>
+<table style="border-collapse:collapse;width:100%;margin-top:8px"><tr>${["Sr. #", "Name", "Qualification", "Age", "Experience (Years)", "Experience Type", "Marital Status", "Available From", "Skills Match (%)", "Interview (35)", "Ranking Score (%)", "Remarks"].map(t => `<td style="${h}">${t}</td>`).join("")}</tr>
+${list.map((a, i) => { const p = panelAvg(a); return `<tr><td style="${c}">${i + 1}</td><td style="${c}">${escH(a.name)}</td><td style="${c}">${escH(eduTxt(a))}</td><td style="${c}">${ageOf(a.app.dob) ?? ""}</td><td style="${c}">${+a.app.xy || 0}</td><td style="${c}">${escH(a.app.et || "").replace(/\n/g, "<br>")}</td><td style="${c}">${escH(a.app.ms || "")}</td><td style="${c}">${a.app.avail ? escH(fmtD(a.app.avail)) : ""}</td><td style="${c}">${sklv(a, job).toFixed(0)}</td><td style="${c}">${p == null ? "" : p.toFixed(1)}</td><td style="${c}"><b>${scv(a, job, w).tot.toFixed(0)}</b></td><td style="${c}">${escH(a.note || "")}</td></tr>`; }).join("")}</table></div>`;
+}
+
+// Excel / CSV import: headers are matched by name, so the old Google Sheet's export works as it is
+const IMPCOL = { name: ["name", "full name", "candidate", "candidate name"], father: ["father", "father name", "father's name", "fathers name"], cnic: ["cnic", "cnic no", "cnic number"],
+  email: ["email", "e-mail", "email address"], ph: ["phone", "mobile", "whatsapp", "phone / whatsapp", "contact", "phone number"], dob: ["date of birth", "dob", "birth date"],
+  g: ["gender", "sex"], city: ["city", "current city"], qual: ["qualification", "degree", "education", "degree / certificate title"], inst: ["institution", "university", "institute", "college"],
+  year: ["passing year", "year"], xy: ["experience", "experience (years)", "total experience", "years of experience", "experience years"], et: ["experience details", "work experience", "experience type"],
+  ms: ["marital status"], cs: ["current salary"], es: ["expected salary"], avail: ["earliest joining", "available from", "date of joining", "earliest date of joining", "joining date"], stage: ["stage", "status"] };
+function csvRows(t) {
+  const rows = [], row = [""]; let q = false;
+  for (let i = 0; i < t.length; i++) { const ch = t[i];
+    if (q) { if (ch === '"') { if (t[i + 1] === '"') { row[row.length - 1] += '"'; i++; } else q = false; } else row[row.length - 1] += ch; }
+    else if (ch === '"') q = true; else if (ch === ",") row.push(""); else if (ch === "\n" || ch === "\r") { if (ch === "\r" && t[i + 1] === "\n") i++; rows.push(row.splice(0)); row.push(""); } else row[row.length - 1] += ch; }
+  if (row.length > 1 || row[0]) rows.push(row);
+  return rows.filter(r => r.some(c => String(c).trim()));
+}
+const isoDay = v => { if (v instanceof Date && !isNaN(v)) return v.toLocaleDateString("en-CA"); const s = String(v || "").trim(); let m;
+  if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return m[1] + "-" + m[2].padStart(2, "0") + "-" + m[3].padStart(2, "0");
+  if ((m = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/))) return m[3] + "-" + m[2].padStart(2, "0") + "-" + m[1].padStart(2, "0");
+  return ""; };
+function mapRows(grid) {
+  const head = (grid[0] || []).map(h => String(h).toLowerCase().replace(/\*/g, "").trim()), idx = {};
+  Object.entries(IMPCOL).forEach(([k, al]) => { const i = head.findIndex(h => al.includes(h)); if (i >= 0) idx[k] = i; });
+  return { found: Object.keys(idx), rows: grid.slice(1).map(r => { const o = {}; Object.entries(idx).forEach(([k, i]) => { o[k] = r[i] instanceof Date ? r[i] : String(r[i] ?? "").trim(); });
+    o.dob = isoDay(o.dob); o.avail = isoDay(o.avail); return o; }).filter(o => o.name || o.cnic) };
+}
+async function loadXlsx() {
+  if (window.XLSX) return window.XLSX;
+  await new Promise((ok, no) => { const s = el("script", { src: "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" }); s.onload = ok; s.onerror = () => no(shown("The Excel reader could not load. Save the file as CSV and try again.")); document.head.append(s); });
+  return window.XLSX;
+}
+
+const RCV = {
+  async Dashboard(box, b) {
+    const all = {}; b.jobs.forEach(j => Object.entries(j.stages || {}).forEach(([k, n]) => { all[k] = (all[k] || 0) + n; }));
+    box.append(el("div", { class: "kpis" }, kpi("Jobs on the Career page", b.jobs.filter(j => j.live).length, "open now", "brief", () => { V.rt = "Positions"; render(); }),
+      kpi("Applicants", b.jobs.reduce((t, j) => t + (+j.total || 0), 0), "all jobs", "users", () => { V.rj = ""; V.rt = "Applicants"; render(); }),
+      kpi("To review", all.Received || 0, "new applications", "inbox"), kpi("Shortlisted", all.Shortlisted || 0, "", "list"), kpi("Selected", all.Selected || 0, "", "check")));
+    const ch = el("div"); if (window.AKF_CHARTS) ch.innerHTML = AKF_CHARTS.donut({ id: "hr-recruit", center: "applicants", items: STAGES.filter(x => all[x]).map(x => ({ key: x, label: x, value: all[x] })), empty: "No applicants yet" });
+    box.append(el("div", { class: "hr-grid" }, card("Applicants by stage", ch),
+      card("Jobs", ...(b.jobs.length ? b.jobs.map(j => el("button", { class: "hr-row", type: "button", onclick: () => { V.rj = j.id; V.rt = "Applicants"; render(); } },
+        el("span", { class: "grow" }, el("b", { text: j.job.t + " · " + (j.deptName || j.job.dp || "") }),
+          el("small", { text: j.id + " · deadline " + fmtDT(j.job.dl) + " · " + j.total + (j.total == 1 ? " applicant" : " applicants") + ((j.stages || {}).Received ? " · " + j.stages.Received + " new" : "") })),
+        el("span", { class: "badge " + (j.live ? "b-ok" : "b-info"), text: j.live ? "On the Career page" : j.open ? "Deadline passed" : "Closed" }))) : [empty("No jobs yet.")]))));
+  },
+  async Positions(box, b) {
+    box.append(el("div", { class: "hr-actions" }, mayRecruit() ? el("button", { class: "btn btn-primary", type: "button", text: "Request new staff", onclick: () => { V.kind = "Recruitment"; go("apply"); } }) : null,
+      b.depts ? el("button", { class: "btn btn-outline", type: "button", text: "Post a job directly", onclick: () => jobForm(null, null, b.depts) }) : null,
+      el("a", { class: "btn btn-outline", href: CAREERS, target: "_blank", rel: "noopener", text: "Open the Career page" })));
+    if (b.editor) box.append(card("Approved staff requests · publish on the Career page", ...(b.waiting.length ? b.waiting.map(w => el("div", { class: "hr-row" },
+      el("span", { class: "grow" }, el("b", { text: w.data.vacancies + " × " + w.data.post + " · " + (w.deptName || w.dept || "") }), el("small", { text: w.id + " · asked by " + (w.by || "") + " · approved " + fmtD(w.decided_at) })),
+      el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Publish", onclick: () => jobForm(w, null) }))) : [empty("Nothing waiting. Staff requests appear here once the President approves them.")])));
+    box.append(card("Positions", ...(b.jobs.length ? b.jobs.map(j => { const link = CAREERS + "#" + j.id;
+      return el("div", { class: "hr-row" }, el("span", { class: "grow" }, el("b", { text: j.job.t + " · " + (j.deptName || j.job.dp || "") }),
+          el("small", { text: j.id + " · " + j.job.vac + (j.job.vac == 1 ? " vacancy" : " vacancies") + " · deadline " + fmtDT(j.job.dl) + " · " + j.total + " applicants" + (j.request_id ? " · request " + j.request_id : "") })),
+        el("span", { class: "badge " + (j.live ? "b-ok" : "b-info"), text: j.live ? "Live" : j.open ? "Deadline passed" : "Closed" }),
+        el("div", { class: "hr-actions" },
+          el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Copy link", onclick: async () => { try { await navigator.clipboard.writeText(link); toast("Link copied: share it on WhatsApp, Facebook or by e-mail"); } catch (e) { prompt("Copy this link", link); } } }),
+          el("a", { class: "btn btn-outline btn-sm", href: link, target: "_blank", rel: "noopener", text: "Open" }),
+          b.editor ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Edit", onclick: () => jobForm(null, j) }) : null,
+          b.editor ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: j.open ? "Close" : "Reopen", onclick: async () => {
+            try { await rpc("hr_job_open", { p_id: j.id, p_open: !j.open }, "Not saved"); toast(j.open ? "Closed: it left the Career page" : "Reopened ✓"); render(); } catch (e) { toast(e.message, true); } } }) : null)); }) : [empty("No positions yet.")])));
+  },
+  async Applicants(box, b, st) {
+    const list = (await rpc("hr_applicants", { p_job: V.rj || null }, "The applicants could not load")) || [];
+    const q = el("input", { class: "input", placeholder: "Search name, CNIC or phone", value: V.rq || "" }), sel = el("select", { class: "select", "aria-label": "Stage" }, el("option", { value: "", text: "All stages" }), STAGES.map(x => el("option", { value: x, text: x })));
+    sel.value = V.rs || "";
+    const rows = el("tbody"), count = el("span", { class: "small muted" });
+    const draw = () => { V.rq = q.value; V.rs = sel.value; const t = q.value.toLowerCase().replace(/-/g, "");
+      const f = list.filter(a => (!sel.value || a.stage === sel.value) && (!t || (a.name + " " + a.cnic + " " + ((a.app || {}).ph || "")).toLowerCase().replace(/-/g, "").includes(t)));
+      count.textContent = f.length + " of " + list.length;
+      rows.replaceChildren(...f.map(a => { const p = panelAvg(a); return el("tr", { style: "cursor:pointer", onclick: () => applicantModal(a, b.editor, st) },
+        [a.name, V.rj ? null : a.title, a.app.city || "", (+a.app.xy || 0) + " y", a.app.es || "", fmtD(a.created_at), a.stage, p == null ? "" : p.toFixed(1) + "/35", Object.keys(a.sent || {}).length || ""].filter(x => x !== null).map(x => el("td", { text: String(x) }))); })); };
+    q.addEventListener("input", draw); sel.addEventListener("change", draw); draw();
+    const fresh = list.filter(a => a.email && !(a.sent || {})["0"]);
+    box.append(card("Applicants", el("div", { class: "hr-actions" }, jobPick(b, true), q, sel, count),
+      b.editor ? el("div", { class: "hr-actions" },
+        list.length ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Download list (Excel)", onclick: () => csv("applicants" + (V.rj ? "-" + V.rj : ""), ["Application ID", "Job", "Name", "Father", "CNIC", "E-mail", "Phone", "City", "Gender", "Date of birth", "Qualification", "Experience (years)", "Expected salary", "Earliest joining", "Applied", "Stage", "Interview (35)", "Note"],
+          list.map(a => [a.id, a.title, a.name, a.app.father, a.cnic.replace(/^(\d{5})(\d{7})(\d)$/, "$1-$2-$3"), a.email, a.app.ph, a.app.city, a.app.g, a.app.dob, eduTxt(a), a.app.xy, a.app.es, a.app.avail, String(a.created_at).slice(0, 10), a.stage, panelAvg(a) ?? "", a.note])) }) : null,
+        fresh.length ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "E-mail \"Application received\" to " + fresh.length + " new", onclick: async e => { const btn = e.currentTarget; btn.disabled = true; let n = 0;
+          for (const a of fresh) { try { await rcSend(a, 0, "email"); n++; btn.textContent = "Sent " + n + " of " + fresh.length + "…"; } catch (x) { toast("Stopped after " + n + ": " + x.message, true); break; } }
+          if (n) toast(n + " e-mailed ✓"); render(); } }) : null) : null,
+      list.length ? el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Name", V.rj ? null : "Job", "City", "Experience", "Expected salary", "Applied", "Stage", "Interview", "Messages"].filter(Boolean).map(t => el("th", { text: t })))), rows)) : empty("No applications yet.")));
+  },
+  async Ranking(box, b, st) {
+    if (!b.jobs.length) return box.append(empty("No positions yet."));
+    const job = jobOf(V.rj || b.jobs[0].id), list = (await rpc("hr_applicants", { p_job: V.rj || b.jobs[0].id }, "The applicants could not load")) || [];
+    const w = Object.assign({ q: 40, x: 40, k: 20 }, V.rw || st.w || {});
+    const r = list.map(a => ({ a, s: scv(a, job, w), ok: eligv(a, job) })).sort((x, y) => (y.ok - x.ok) || (Math.abs(y.s.tot - x.s.tot) > 5 ? y.s.tot - x.s.tot :
+      ((x.a.app.avail ? Date.parse(x.a.app.avail) : Infinity) - (y.a.app.avail ? Date.parse(y.a.app.avail) : Infinity)) || y.s.tot - x.s.tot));
+    const slider = (k, l) => { const i = el("input", { type: "range", min: 0, max: 100, value: String(w[k]), disabled: !b.editor }); i.addEventListener("change", () => { V.rw = Object.assign({}, w, { [k]: +i.value }); render(); }); return el("label", {}, l + ": " + w[k] + "%", i); };
+    const blind = el("input", { type: "checkbox", checked: !!V.blind }); blind.addEventListener("change", () => { V.blind = blind.checked; render(); });
+    const fair = (g, f) => list.filter(a => a.app.g === g && f(a)).length;
+    box.append(card("Suggested ranking", el("div", { class: "hr-actions" }, jobPick(b), el("label", {}, blind, " Blind review (hide names)")),
+      el("div", { class: "hr-form" }, slider("q", "Qualification"), slider("x", "Experience"), slider("k", "Skills match"),
+        b.editor && V.rw ? el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Save weights", onclick: async () => { try { await rpc("hr_rc_settings_save", { p: { w } }, "Not saved"); V.rw = null; toast("Saved ✓"); render(); } catch (e) { toast(e.message, true); } } }) : null),
+      r.length ? el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Rank", "Candidate", "Score", "Verdict", "Reasoning"].map(t => el("th", { text: t })))),
+        el("tbody", {}, r.map((x, i) => { const v = x.ok ? x.s.tot >= 80 ? ["HIGHLY RECOMMENDED: SELECT", "b-ok"] : x.s.tot >= 65 ? ["RECOMMENDED: WAITLIST", "b-info"] : ["AVERAGE", "b-warn"] : ["NOT ELIGIBLE", "b-bad"];
+          return el("tr", { style: "cursor:pointer", onclick: () => applicantModal(x.a, b.editor, st) }, el("td", { text: String(i + 1) }), el("td", { text: V.blind ? "Candidate " + (i + 1) : x.a.name }), el("td", {}, el("b", { text: x.s.tot.toFixed(0) + "%" })),
+            el("td", {}, el("span", { class: "badge " + v[1], text: v[0] })),
+            el("td", { text: "Qualification " + x.s.q.toFixed(0) + ", experience " + x.s.x.toFixed(0) + " (" + (+x.a.app.xy || 0) + " yrs), skills match " + x.s.k.toFixed(0) + "%." + (x.a.app.avail ? " Available " + fmtD(x.a.app.avail) + "." : "") + (x.ok ? "" : " Outside the age, gender, qualification or experience rule for this post.") })); })))) : empty("No applicants yet."),
+      el("h4", { text: "Fairness check" }), el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["", "Applicants", "Eligible", "Shortlisted or later"].map(t => el("th", { text: t })))),
+        el("tbody", {}, [["M", "Male"], ["F", "Female"]].map(([g, l]) => el("tr", {}, [l, fair(g, () => 1), fair(g, a => eligv(a, job)), fair(g, a => LATE.includes(a.stage))].map(t => el("td", { text: String(t) })))))))));
+  },
+  async Scoring(box, b) {
+    if (!b.jobs.length) return box.append(empty("No positions yet."));
+    const list = ((await rpc("hr_applicants", { p_job: V.rj || b.jobs[0].id }, "The applicants could not load")) || []).filter(a => LATE.includes(a.stage));
+    if (!list.some(a => a.id === V.rsel)) V.rsel = list[0] && list[0].id;
+    const a = list.find(x => x.id === V.rsel), csel = el("select", { class: "select", "aria-label": "Candidate" }, list.map(x => el("option", { value: x.id, text: x.name })));
+    csel.value = V.rsel || ""; csel.addEventListener("change", () => { V.rsel = csel.value; render(); });
+    if (!a) return box.append(card("Interview scorecard", el("div", { class: "hr-actions" }, jobPick(b)), empty("No shortlisted candidates for this position yet.")));
+    const mine = ((a.panel || []).find(p => p.me) || {}).scores || [], inputs = TRD.map((t, i) => el("input", { class: "input", type: "number", min: 0, max: 5, step: 0.5, value: mine[i] ?? "" }));
+    const save = el("button", { class: "btn btn-primary", type: "button", text: "Save my scores" });
+    save.addEventListener("click", async () => { save.disabled = true;
+      try { await rpc("hr_applicant_score", { p_id: a.id, p_scores: inputs.map(i => Math.max(0, Math.min(5, +i.value || 0))) }, "Not saved"); toast("Saved ✓"); render(); } catch (e) { toast(e.message, true); save.disabled = false; } });
+    box.append(card("Interview scorecard", el("div", { class: "hr-actions" }, jobPick(b), csel),
+      el("p", { class: "small muted", text: a.name + " · " + (a.title || "") + (a.app.avail ? " · available " + fmtD(a.app.avail) : "") }),
+      el("div", { class: "hr-form" }, TRD.map((t, i) => el("label", {}, t[0] + " (0-5)", inputs[i]))), el("div", { class: "hr-actions" }, save),
+      el("h4", { text: "Panel scores" }), (a.panel || []).length ? el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, el("th", { text: "Interviewer" }), el("th", { text: "Total /35" }))),
+        el("tbody", {}, a.panel.map(p => el("tr", {}, el("td", { text: p.name }), el("td", { text: String(p.total) }))), el("tr", {}, el("td", {}, el("b", { text: "Average" })), el("td", {}, el("b", { text: panelAvg(a).toFixed(1) }))))))
+        : empty("No scores yet.")));
+  },
+  async Sheets(box, b, st) {
+    if (!b.jobs.length) return box.append(empty("No positions yet."));
+    const id = V.rj || b.jobs[0].id, job = jobOf(id), list = ((await rpc("hr_applicants", { p_job: id }, "The applicants could not load")) || []).filter(a => LATE.includes(a.stage));
+    const iv = Object.assign({ d: "", t: "", v: "" }, st.iv || {}, V.riv || {});
+    const d = el("input", { class: "input", type: "date", value: iv.d }), t = el("input", { class: "input", maxlength: 20, value: iv.t }), v = el("input", { class: "input", maxlength: 150, value: iv.v });
+    const cur = () => ({ d: d.value, t: t.value, v: v.value }); [d, t, v].forEach(x => x.addEventListener("change", () => { V.riv = cur(); }));
+    box.append(card("Interview sheets", el("div", { class: "hr-actions" }, jobPick(b)),
+      el("div", { class: "hr-form" }, el("label", {}, "Interview date", d), el("label", {}, "Interview time", t), el("label", { class: "full" }, "Venue", v)),
+      el("div", { class: "hr-actions" },
+        el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Print interview sheets", onclick: () => printHtml(interviewSheets(job, list, cur())) }),
+        el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Print summary", onclick: () => printHtml(summarySheet(job, list, st.w || {})) }),
+        el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Summary (Excel)", onclick: () => csv("summary-" + id, ["Sr", "Name", "Qualification", "Age", "Experience (years)", "Experience type", "Marital status", "Available from", "Skills match (%)", "Interview (35)", "Ranking score (%)", "Remarks"],
+          list.map((a, i) => [i + 1, a.name, eduTxt(a), ageOf(a.app.dob) ?? "", a.app.xy, a.app.et, a.app.ms, a.app.avail, sklv(a, job).toFixed(0), panelAvg(a) == null ? "" : panelAvg(a).toFixed(1), scv(a, job, st.w || {}).tot.toFixed(0), a.note])) }),
+        b.editor ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Save as the default interview", onclick: async () => { try { await rpc("hr_rc_settings_save", { p: { iv: cur() } }, "Not saved"); toast("Saved ✓"); } catch (e) { toast(e.message, true); } } }) : null),
+      el("p", { class: "small muted", text: list.length + " shortlisted candidate(s). The interview sheet has 4 candidates a page with the 7 traits (35 marks); the summary has the ranking score and the panel's average." })));
+  },
+  async CVs(box, b) {
+    if (!b.jobs.length) return box.append(empty("No positions yet."));
+    const id = V.rj || b.jobs[0].id, list = (await rpc("hr_applicants", { p_job: id }, "The applicants could not load")) || [], msg = el("p", { class: "small muted" });
+    const run = async (which, btn) => { const pick = list.filter(a => a.cv && (which === "all" || LATE.includes(a.stage))); if (!pick.length) return toast("No CVs to download", true);
+      btn.disabled = true; const files = [];
+      try { for (const a of pick) { msg.textContent = "Getting CV " + (files.length + 1) + " of " + pick.length + "…"; const c = await rpc("hr_applicant_cv", { p_id: a.id }, "A CV could not load");
+          if (c) files.push({ name: fileSafe(a.stage + " - " + a.name + " - " + a.id) + "." + (c.name.split(".").pop() || "pdf").toLowerCase(), data: b64u8(c.b64) }); }
+        const url = URL.createObjectURL(zipBlob(files)); el("a", { href: url, download: "CVs-" + id + "-" + (which === "all" ? "all" : "shortlisted") + ".zip" }).click(); setTimeout(() => URL.revokeObjectURL(url), 60000);
+        msg.textContent = files.length + " CVs downloaded ✓"; } catch (e) { msg.textContent = e.message; } btn.disabled = false; };
+    box.append(card("Download CVs", el("div", { class: "hr-actions" }, jobPick(b)),
+      el("div", { class: "hr-actions" }, el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Shortlisted (ZIP)", onclick: e => run("sel", e.currentTarget) }),
+        el("button", { class: "btn btn-outline btn-sm", type: "button", text: "All applicants (ZIP)", onclick: e => run("all", e.currentTarget) })),
+      el("p", { class: "small muted", text: list.filter(a => a.cv).length + " CVs for this job." }), msg));
+  },
+  async Messages(box, b, st) {
+    const TAGS = ["{{Full_Name}}", "{{Job_Title}}", "{{Application_ID}}", "{{Interview_Date}}", "{{Interview_Time}}", "{{Interview_Venue}}", "{{Signature}}"];
+    const WHEN = ["sent when a candidate applies (use \"E-mail Application received\" in Applicants)", "when moved to Under Review", "when moved to Shortlisted", "when moved to Interview Done", "when moved to Selected", "when moved to Regret"];
+    let focus = null; const sig = el("textarea", { class: "textarea", rows: 3, maxlength: 500, value: st.sig || "" });
+    const f = (st.msgs || []).map((m, i) => ({ s: el("input", { class: "input", maxlength: 150, value: m[1] }), t: el("textarea", { class: "textarea", rows: 8, maxlength: 2000, value: m[2] }),
+      a: el("input", { type: "checkbox", checked: i === 0 || !!m[3], disabled: i === 0 }) }));
+    f.forEach(x => [x.s, x.t].forEach(n => n.addEventListener("focus", () => { focus = n; })));
+    const save = el("button", { class: "btn btn-primary", type: "button", text: "Save messages" });
+    save.addEventListener("click", async () => { save.disabled = true;
+      try { await rpc("hr_rc_settings_save", { p: { sig: sig.value, msgs: (st.msgs || []).map((m, i) => [m[0], f[i].s.value, f[i].t.value, f[i].a.checked]) } }, "Not saved"); toast("Saved ✓"); render(); }
+      catch (e) { toast(e.message, true); save.disabled = false; } });
+    box.append(card("Candidate messages", el("p", { class: "small muted", text: "Sent by e-mail through the ERP's e-mail service, or by WhatsApp from a candidate's page. Ticked messages go out by e-mail automatically when HR moves a candidate to that stage." }),
+      el("label", { class: "full" }, "Signature", sig), el("div", { class: "hr-actions" }, el("span", { class: "small muted", text: "Insert into the box you are editing:" }),
+        TAGS.map(tg => el("button", { class: "btn btn-outline btn-sm", type: "button", text: tg, onclick: () => { if (!focus) return toast("Click inside a subject or message first", true);
+          const s0 = focus.selectionStart, s1 = focus.selectionEnd; focus.value = focus.value.slice(0, s0) + tg + focus.value.slice(s1); focus.focus(); focus.selectionStart = focus.selectionEnd = s0 + tg.length; } }))),
+      ...(st.msgs || []).map((m, i) => el("div", { class: "card", style: "margin-top:10px" }, el("b", { text: (i + 1) + ". " + m[0] }), el("div", { class: "small muted", text: WHEN[i] }),
+        el("label", {}, el("span", {}, f[i].a, i ? " Send automatically" : " Always offered for every new application")), el("label", {}, "Subject", f[i].s), el("label", {}, "Message", f[i].t))),
+      el("div", { class: "hr-actions" }, save)));
+  },
+  async Import(box, b) {
+    if (!b.jobs.length) return box.append(empty("Post the job first, then import its applicants."));
+    const id = V.rj || b.jobs[0].id, file = el("input", { class: "input", type: "file", accept: ".csv,.xlsx,.xls" }), out = el("div");
+    let rows = [];
+    file.addEventListener("change", async () => { out.replaceChildren(); rows = []; const fl = file.files[0]; if (!fl) return;
+      try { let grid;
+        if (/\.csv$/i.test(fl.name)) grid = csvRows(await fl.text());
+        else { const X = await loadXlsx(), wb = X.read(await fl.arrayBuffer(), { cellDates: true }); grid = X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: "" }); }
+        const m = mapRows(grid); rows = m.rows;
+        if (!m.found.includes("name") || !m.found.includes("cnic")) return out.append(empty("The first row must have the column names, at least Name and CNIC."));
+        const go1 = el("button", { class: "btn btn-primary", type: "button", text: "Import " + rows.length + " applicants" });
+        go1.addEventListener("click", async () => { go1.disabled = true; let add = 0, skip = 0, errs = [];
+          try { for (let i = 0; i < rows.length; i += 500) { const r = await rpc("hr_applicants_import", { p_job: id, p_rows: rows.slice(i, i + 500) }, "Not imported"); add += r.added; skip += r.skipped; errs = errs.concat(r.errors || []); }
+            toast(add + " imported ✓" + (skip ? " · " + skip + " already there" : "")); out.replaceChildren(el("p", { text: add + " imported, " + skip + " already there." }), ...errs.map(e => el("div", { class: "small muted", text: e }))); }
+          catch (e) { toast(e.message, true); go1.disabled = false; } });
+        out.append(el("p", { class: "small muted", text: "Columns found: " + m.found.join(", ") }), el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Name", "CNIC", "Phone", "Stage"].map(t => el("th", { text: t })))),
+          el("tbody", {}, rows.slice(0, 5).map(r => el("tr", {}, [r.name, r.cnic, r.ph, r.stage || "Received"].map(x => el("td", { text: String(x || "") }))))))), el("div", { class: "hr-actions" }, go1));
+      } catch (e) { out.append(empty(e.message)); } });
+    box.append(card("Import applicants", el("div", { class: "hr-actions" }, jobPick(b)),
+      el("p", { class: "small muted", text: "From the old Google Sheet or any Excel / CSV list: the first row has the column names (Name, Father name, CNIC, Email, Phone, Date of birth, Gender, City, Qualification, Institution, Passing year, Experience, Experience details, Marital status, Current salary, Expected salary, Earliest joining, Stage). Name and CNIC are needed; the same CNIC is never added twice to a job. CVs are not imported." }),
+      el("div", { class: "hr-actions" }, file, el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Download the template", onclick: () => csv("applicants-template", Object.values(IMPCOL).map(a => a[0].replace(/\b\w/g, c => c.toUpperCase())), []) })), out));
+  },
+  async Settings(box, b, st) {
+    const iv = st.iv || {}, d = el("input", { class: "input", type: "date", value: iv.d || "" }), t = el("input", { class: "input", maxlength: 20, value: iv.t || "" }), v = el("input", { class: "input", maxlength: 150, value: iv.v || "" });
+    const w = st.w || {}, n = k => el("input", { class: "input", type: "number", min: 0, max: 100, value: String(w[k] ?? "") }), q = n("q"), x = n("x"), k = n("k");
+    const save = el("button", { class: "btn btn-primary", type: "button", text: "Save settings" });
+    save.addEventListener("click", async () => { save.disabled = true;
+      try { await rpc("hr_rc_settings_save", { p: { iv: { d: d.value, t: t.value, v: v.value }, w: { q: +q.value || 0, x: +x.value || 0, k: +k.value || 0 } } }, "Not saved"); toast("Saved ✓"); render(); } catch (e) { toast(e.message, true); save.disabled = false; } });
+    box.append(card("Recruitment settings", el("h4", { text: "Default interview (used in messages and sheets when a candidate has none)" }),
+      el("div", { class: "hr-form" }, el("label", {}, "Date", d), el("label", {}, "Time", t), el("label", { class: "full" }, "Venue", v)),
+      el("h4", { text: "Ranking weights (%)" }), el("div", { class: "hr-form" }, el("label", {}, "Qualification", q), el("label", {}, "Experience", x), el("label", {}, "Skills match", k)),
+      el("div", { class: "hr-actions" }, save),
+      el("h4", { text: "Career page" }), el("p", { class: "small muted", text: "Candidates open this link; no sign-in. Its front page also shows a QR code you can print on posters. Who may work here is set on the main page → People & access → HR → Recruitment." }),
+      el("div", { class: "hr-actions" }, el("a", { class: "btn btn-outline btn-sm", href: CAREERS, target: "_blank", rel: "noopener", text: CAREERS }),
+        el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Copy link", onclick: async () => { try { await navigator.clipboard.writeText(CAREERS); toast("Link copied"); } catch (e) { prompt("Copy this link", CAREERS); } } }))));
+  },
+  async Activity(box) {
+    const log = (await rpc("hr_rc_log_list", {}, "The activity could not load")) || [];
+    box.append(card("Recruitment activity", log.length ? el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Time", "By", "Action", "About"].map(t => el("th", { text: t })))),
+      el("tbody", {}, log.map(l => el("tr", {}, [fmtDT(l.at), l.name, l.action, l.ref].map(x => el("td", { text: String(x || "") }))))))) : empty("No activity yet.")));
+  }
+};
+function applicantModal(a, editor, st) {
+  st = st || {};
   const p = a.app || {}, kv = el("dl", { class: "hr-kv" }), add = (k, v) => { if (v != null && v !== "") kv.append(el("dt", { text: k }), el("dd", { text: String(v) })); };
-  add("Application ID", a.id); add("Father's name", p.father); add("CNIC", a.cnic.replace(/^(\d{5})(\d{7})(\d)$/, "$1-$2-$3")); add("E-mail", a.email); add("Phone", p.ph);
-  add("Gender", p.g === "F" ? "Female" : p.g === "M" ? "Male" : p.g); add("Date of birth", fmtD(p.dob)); add("City", p.city); add("Marital status", p.ms);
-  add("Current salary", p.cs); add("Expected salary", p.es); add("Earliest joining", fmtD(p.avail)); add("Experience", (p.xy || 0) + " years" + (p.et ? "\n" + p.et : ""));
+  add("Application ID", a.id); add("Job", a.title); add("Father's name", p.father); add("CNIC", a.cnic.replace(/^(\d{5})(\d{7})(\d)$/, "$1-$2-$3")); add("E-mail", a.email); add("Phone", p.ph);
+  add("Gender", p.g === "F" ? "Female" : p.g === "M" ? "Male" : p.g); add("Date of birth", p.dob ? fmtD(p.dob) + " (age " + ageOf(p.dob) + ")" : ""); add("City", p.city); add("Marital status", p.ms);
+  add("Current salary", p.cs); add("Expected salary", p.es); add("Earliest joining", fmtD(p.avail)); add("Experience", (+p.xy || 0) + " years" + (p.et ? "\n" + p.et : ""));
   add("Education", (p.edu || []).map(e => [e.d, e.u, e.b, e.y, e.c ? "CGPA " + e.c : e.om ? e.om + "/" + e.tm : ""].filter(Boolean).join(" · ")).join("\n")); add("Applied", fmtDT(a.created_at));
+  const pa = panelAvg(a); add("Interview (panel average)", pa == null ? "" : pa.toFixed(1) + " / 35 from " + a.panel.length + " interviewer(s)");
   const cv = a.cv ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Open CV", onclick: async () => {
-    try { const c = await rpc("hr_applicant_cv", { p_id: a.id }, "The CV could not open"); const bin = atob(c.b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    try { const c = await rpc("hr_applicant_cv", { p_id: a.id }, "The CV could not open"); const u8 = b64u8(c.b64);
       const pdf = /\.pdf$/i.test(c.name), url = URL.createObjectURL(new Blob([u8], { type: pdf ? "application/pdf" : "application/octet-stream" }));
       el("a", { href: url, download: c.name, target: pdf ? "_blank" : null, rel: "noopener" }).click(); setTimeout(() => URL.revokeObjectURL(url), 60000); }
     catch (e) { toast(e.message, true); } } }) : null;
-  const st = el("select", { class: "select", disabled: !editor }, STAGES.map(x => el("option", { value: x, text: x }))); st.value = a.stage;
-  const iv = a.iv || {}, ivd = el("input", { class: "input", type: "date", value: iv.d || "", disabled: !editor }), ivt = el("input", { class: "input", type: "time", value: iv.t || "", disabled: !editor });
+  const sc = el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Interview scorecard", onclick: () => { closeModal(); V.rj = a.job; V.rsel = a.id; V.rt = "Scoring"; go("recruit"); } });
+  const st0 = el("select", { class: "select", disabled: !editor }, STAGES.map(x => el("option", { value: x, text: x }))); st0.value = a.stage;
+  const iv = a.iv || {}, ivd = el("input", { class: "input", type: "date", value: iv.d || "", disabled: !editor }), ivt = el("input", { class: "input", maxlength: 20, value: iv.t || "", disabled: !editor });
   const ivv = el("input", { class: "input", maxlength: 150, value: iv.v || "", placeholder: "e.g. AKF Office, G-9/2, Islamabad", disabled: !editor });
+  if (editor && !iv.d && (st.iv || {}).d) { ivd.value = st.iv.d; ivt.value = st.iv.t || ""; ivv.value = st.iv.v || ""; }   // the default interview, ready to use
   const mk = el("input", { class: "input", type: "number", min: 0, max: 100, value: a.marks ?? "" }), nt = el("textarea", { class: "textarea", rows: 3, maxlength: 1000, value: a.note || "" });
   const save = el("button", { class: "btn btn-primary", type: "button", text: "Save" });
   save.addEventListener("click", async () => { save.disabled = true;
-    try { await rpc("hr_applicant_save", { p_id: a.id, p_stage: st.value, p_iv: editor ? { d: ivd.value, t: ivt.value, v: ivv.value } : null, p_marks: mk.value === "" ? null : +mk.value, p_note: nt.value }, "Not saved");
-      toast("Saved ✓"); closeModal(); render(); } catch (e) { toast(e.message, true); save.disabled = false; } });
+    try { await rpc("hr_applicant_save", { p_id: a.id, p_stage: st0.value, p_iv: editor ? { d: ivd.value, t: ivt.value, v: ivv.value } : null, p_marks: mk.value === "" ? null : +mk.value, p_note: nt.value }, "Not saved");
+      let said = "Saved ✓"; const n = STAGES.indexOf(st0.value), m = (st.msgs || [])[n];
+      if (editor && st0.value !== a.stage && n > 0 && m && m[3] && a.email) {   // the stage's message goes out by itself when it is ticked in Messages
+        try { await rcSend(a, n, "email"); said += " · \"" + m[0] + "\" e-mailed"; } catch (e) { said += " · e-mail not sent: " + e.message; } }
+      toast(said); closeModal(); render(); } catch (e) { toast(e.message, true); save.disabled = false; } });
+  let msgBox = null;
+  if (editor && (st.msgs || []).length) {
+    const ms = el("select", { class: "select", "aria-label": "Message" }, st.msgs.map((m, i) => el("option", { value: String(i), text: m[0] + ((a.sent || {})[i] ? " (sent " + fmtD(a.sent[i]) + ")" : "") })));
+    ms.value = String(Math.max(0, STAGES.indexOf(a.stage)));
+    const send = how => async e => { const btn = e.currentTarget; btn.disabled = true; try { toast("\"" + st.msgs[+ms.value][0] + "\" " + await rcSend(a, +ms.value, how) + " ✓"); } catch (x) { toast(x.message, true); } btn.disabled = false; };
+    msgBox = el("div", {}, el("h4", { text: "Send a message" }), el("div", { class: "hr-actions" }, ms,
+      el("button", { class: "btn btn-outline btn-sm", type: "button", text: "E-mail", disabled: !a.email, onclick: send("email") }),
+      el("button", { class: "btn btn-outline btn-sm", type: "button", text: "WhatsApp", disabled: !p.ph, onclick: send("wa") })));
+  }
   const tl = el("ol", { class: "hr-tl" }, (a.history || []).map(h => el("li", {}, el("b", { text: h.action }), el("span", { text: " — " + (h.name || "") + " · " + fmtDT(h.at) }))));
   kv.style.whiteSpace = "pre-line";
-  modal(a.name + " · " + a.stage, ...[kv, cv ? el("div", { class: "hr-actions" }, cv) : null,
-    el("div", { class: "hr-form" }, el("label", {}, "Stage", st), el("label", {}, "Marks (0-100)", mk), el("label", {}, "Interview date", ivd), el("label", {}, "Interview time", ivt),
+  modal(a.name + " · " + a.stage, ...[kv, el("div", { class: "hr-actions" }, cv, LATE.includes(a.stage) ? sc : null),
+    el("div", { class: "hr-form" }, el("label", {}, "Stage", st0), el("label", {}, "Marks (0-100)", mk), el("label", {}, "Interview date", ivd), el("label", {}, "Interview time", ivt),
       el("label", { class: "full" }, "Interview place", ivv), el("label", { class: "full" }, "Note", nt)),
-    el("p", { class: "small muted", text: editor ? "Shortlisted candidates see the interview date, time and place when they track their application on the Career page." : "You can give marks and a note. HR moves candidates between stages." }),
-    el("div", { class: "hr-actions" }, save), (a.history || []).length ? el("h4", { text: "History" }) : null, tl].filter(Boolean));
+    el("p", { class: "small muted", text: editor ? "Shortlisted candidates see the interview date, time and place when they track their application on the Career page. Messages ticked in Messages are e-mailed when you change the stage." : "You can give marks and a note. HR moves candidates between stages." }),
+    el("div", { class: "hr-actions" }, save), msgBox, (a.history || []).length ? el("h4", { text: "History" }) : null, tl].filter(Boolean));
 }
 function editPay(p) {
   const g = el("input", { class: "input", type: "number", min: 0, step: 1, value: p.gross ?? "" }), b = el("input", { class: "input", maxlength: 80, value: p.bank || "" });
