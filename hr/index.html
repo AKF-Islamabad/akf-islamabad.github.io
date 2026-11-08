@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-FSneiBgDyEnVPZUYec7SI7cjWjPQy4J60eaeCKHqP4g='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-zgtdjrz60mhPJ9oyBBO2F+n0iNxRLiRmGnoSuf/Qi0k='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1146,6 +1146,7 @@ const fmtDT = s => { const d = new Date(s); return isNaN(d) ? "" : d.toLocaleStr
 const KIND = { Leave: "Leave", Attendance: "Attendance correction", Shift: "Shift change", Profile: "Profile correction", Document: "HR letter", Policy: "Policy change", Exit: "Exit",
   Medical: "Medical claim", Expense: "Expense claim", Loan: "Loan", Advance: "Salary advance", Phone: "Phone scheme", Overtime: "Overtime", Outstation: "TA/DA (out-station)", Encashment: "Leave encashment", Payroll: "Payroll", Recruitment: "Staff request (recruitment)" };
 const CAREERS = new URL("../careers/", location.href).href, STAGES = ["Received", "Under Review", "Shortlisted", "Interview Done", "Selected", "Regret"];
+const attLead = () => !!ME && ["regional_manager", "gen_sec", "president"].includes(ME.role);   // see everyone's attendance
 const isHead = () => !!ME && (["hod", "finance_hod"].includes(ME.role) || (ME.extraDepts || []).length > 0);
 const mayRecruit = () => !!ME && (ME.super || isHead() || can("recruit", "edit"));
 const MONEY = ["Medical", "Expense", "Overtime", "Outstation", "Loan", "Advance", "Phone", "Encashment"];
@@ -1171,7 +1172,7 @@ const NAVX = [
   { v: "apply", l: "Apply", ic: "plus", ok: () => can("apply", "add") },
   { v: "mine", l: "My requests", ic: "list", ok: () => can("apply") },
   { v: "approvals", l: "Approvals", ic: "inbox", ok: () => can("approvals"), count: () => REQ.filter(r => r.myStep).length },
-  { v: "attendance", l: "Attendance", ic: "clock", ok: () => can("attendance") },
+  { v: "attendance", l: "Attendance", ic: "clock", ok: () => can("attendance") || attLead() || isHead() },
   { v: "notices", l: "Announcements", ic: "bell", ok: () => can("notices"), count: () => NOTES.filter(n => n.needs_ack && !n.acked).length },
   { v: "calendar", l: "Leave calendar", ic: "cal", ok: () => can("calendar") },
   { v: "people", l: "People", ic: "users", ok: () => can("people") },
@@ -1336,7 +1337,7 @@ const VIEWS = {
   },
   async attendance(box) {
     const m = V.att || new Date().toISOString().slice(0, 7); V.att = m;
-    const who = V.attWho || ME.id, team = can("attendance", "edit") || can("people") || (["hod", "finance_hod"].includes(ME.role) && can("approvals"));
+    const who = V.attWho || ME.id, team = can("attendance", "edit") || can("people") || attLead() || isHead();
     if (can("attendance", "add") && who === ME.id) {
       const b = el("button", { class: "btn btn-primary btn-lg", type: "button" }, ic("pin"), el("span", { text: "Check in / out now" }));
       b.addEventListener("click", () => checkIn(b));
@@ -1359,9 +1360,14 @@ const VIEWS = {
     if (!team) return;
     const ds = V.attDay || new Date().toISOString().slice(0, 10); V.attDay = ds;
     let rows = []; try { rows = await rpc("hr_day_sheet", { p_day: ds }, "The day sheet could not load") || []; } catch (e) { box.append(empty(e.message)); return; }
+    const deps = [...new Set(rows.map(r => r.dept || ""))].filter(Boolean).sort();
+    if (V.attDep && !deps.includes(V.attDep)) V.attDep = "";
+    rows = rows.filter(r => !V.attDep || r.dept === V.attDep);
+    const dsel = deps.length > 1 ? el("select", { class: "select", "aria-label": "Department", onchange: e => { V.attDep = e.target.value; render(); } }, el("option", { value: "", text: "All departments" }), deps.map(d => el("option", { value: d, text: d }))) : null;
+    if (dsel) dsel.value = V.attDep || "";
     const by = {}; rows.forEach(r => { const k = r.late ? "Late" : r.status; by[k] = (by[k] || 0) + 1; });
     const ch = el("div"); if (window.AKF_CHARTS) ch.innerHTML = AKF_CHARTS.donut({ id: "hr-day", center: "staff", items: Object.entries(by).map(([k, v]) => ({ key: k, label: k, value: v })) });
-    box.append(card("Everyone you see · " + fmtD(ds), el("div", { class: "hr-filters" }, el("input", { class: "input", type: "date", value: ds, onchange: e => { V.attDay = e.target.value || ds; render(); } })), ch,
+    box.append(card((attLead() || can("attendance", "edit") || can("people") ? "All staff" : "My team") + " · " + fmtD(ds), el("div", { class: "hr-filters" }, el("input", { class: "input", type: "date", value: ds, onchange: e => { V.attDay = e.target.value || ds; render(); } }), dsel), ch,
       rows.length ? el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Name", "Department", "Status", "In", "Out", ""].map(t => el("th", { text: t })))),
         el("tbody", {}, rows.map(r => el("tr", {}, el("td", { text: r.name }), el("td", { text: r.dept || "" }), el("td", { text: r.status + (r.late ? " · late " + r.lateMin + " min" : "") }), el("td", { text: r.in || "" }), el("td", { text: r.out || "" }),
           el("td", {}, el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Month", onclick: () => { V.attWho = r.id; scrollTo(0, 0); render(); } }),
