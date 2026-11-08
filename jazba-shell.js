@@ -25,49 +25,48 @@
   // the original is re-rendered often, so find it again by its label at click time
   const proxy = (label, list) => () => { const o = list().find(b => labelOf(b) === label); if (o) o.click(); };
 
-  let rail, mine, acct, strip, stripLinks, meBox, portals = [];
+  let rail, mine, acct, railPortals, strip, stripLinks, meBox, avatar, portals = [];
+  const HOME = BASE + "home/";   // the new home page (Today), the same on live and staging
   const sh = () => { if (strip) document.documentElement.style.setProperty("--jz-strip-h", strip.offsetHeight + "px"); };
   // the signed-in person, read from the portal's own account button: full name and designation / role
   const meOf = () => { const n = document.querySelector(".me-t b, #me-name"), r = document.querySelector(".me-t span, #me-role");
     return [(n && n.textContent || "").trim(), (r && r.textContent || "").trim()]; };
+  const initials = n => n.split(/\s+/).filter(w => /^[A-Za-z]/.test(w)).slice(0, 2).map(w => w[0].toUpperCase()).join("") || "•";
+  // Frame = the new home page's layout (2026-11-08): a blue sidebar that STAYS on screen (no auto-hide; the toggle folds it
+  // to icons and is remembered, same setting as the home page) and a white top bar. Phones keep each portal's own menu.
+  const folded = () => { try { return localStorage.getItem("akf-nav") === "1"; } catch (e) { return false; } };
   function build() {
-    rail = el("nav", "jz-rail jz-shell-rail"); rail.setAttribute("aria-label", "Jazba"); rail.tabIndex = 0;
-    mine = el("div"); acct = el("div", "jz-shell-acct");
-    // the portals, Today and Search live once, in the top strip; the ☰ menu holds only this portal's own pages
-    rail.append(el("div", "jz-rail-h", "In this portal"), mine, acct);
-    // the rail is hidden so the portal uses the full width; every portal sits in a strip at the top, ☰ slides the rail out
-    strip = el("div", "jz-topstrip"); strip.setAttribute("role", "navigation"); strip.setAttribute("aria-label", "All portals");
-    const menu = el("button", "jz-ts-menu"); menu.type = "button"; menu.setAttribute("aria-label", "Menu: pages of this portal"); menu.setAttribute("aria-expanded", "false"); menu.title = "Menu";
-    menu.append(SVG("M4 6h16M4 12h16M4 18h16"));
-    menu.addEventListener("click", () => setOpen(!document.documentElement.classList.contains("jz-rail-open")));
-    const home = el("a", "jz-ts-home"); home.href = BASE; home.title = "Today (main page)"; const hi = el("img"); hi.src = BASE + "icon.jpg"; hi.alt = "Alkhidmat · Today"; hi.width = 30; hi.height = 30; home.append(hi);
-    stripLinks = el("div", "jz-ts-portals");
-    const find = el("button", "jz-ts-search"); find.type = "button"; find.title = "Search (Ctrl K)"; find.setAttribute("aria-label", "Search and ask Alkhidmat AI"); find.append(SVG(ICON.search)); find.addEventListener("click", openPalette);
-    meBox = el("div", "jz-ts-me"); meBox.setAttribute("aria-label", "Signed in as · click for my signature");
-    meBox.style.cursor = "pointer"; meBox.addEventListener("click", () => { if (window.AKF_SIGN) AKF_SIGN.open(); });   // add or change my signature
-    // the same all-portal bell as the Today page, so it is there in every portal; a click opens that portal and record (akf-desk.js)
-    const bell = el("button", "jz-ts-search jz-ts-bell"); bell.type = "button"; bell.title = "All notifications"; bell.setAttribute("aria-label", "All notifications from every portal");
+    document.documentElement.classList.toggle("jzs-folded", folded());
+    rail = el("nav", "jzs-rail"); rail.setAttribute("aria-label", "Jazba");
+    const brand = el("a", "jzs-brand"); brand.href = HOME; brand.title = "Home";
+    const bi = el("img"); bi.src = BASE + "icon.jpg"; bi.alt = ""; bi.width = 40; bi.height = 40;
+    const bt = el("span", "jzs-text"); bt.append(el("b", "", "Alkhidmat"), el("small", "", "Islamabad · Jazba")); brand.append(bi, bt);
+    const homeLink = el("a", "jzs-link"); homeLink.href = HOME; homeLink.title = "Home"; homeLink.append(el("span", "jzs-ic", ""), el("span", "jzs-text", "Home"));
+    homeLink.firstChild.append(SVG(ICON.home));
+    railPortals = el("div", "jzs-group jzs-portals"); mine = el("div", "jzs-group"); acct = el("div", "jzs-group jzs-acct");
+    rail.append(brand, homeLink, el("div", "jzs-h", "Portals"), railPortals, el("div", "jzs-h", "In this portal"), mine, acct);
+    // top bar, as on the home page: fold button, search, all-portal bell, my signature, who I am
+    strip = el("header", "jzs-top"); strip.setAttribute("aria-label", "Jazba top bar");
+    const menu = el("button", "jzs-btn jzs-fold"); menu.type = "button"; menu.append(SVG("M3 3h18v18H3zM9 3v18"));
+    const syncFold = () => { const f = document.documentElement.classList.contains("jzs-folded"); menu.title = f ? "Show the menu names" : "Fold the menu to icons"; menu.setAttribute("aria-label", menu.title); menu.setAttribute("aria-pressed", String(f)); };
+    menu.addEventListener("click", () => { const f = document.documentElement.classList.toggle("jzs-folded"); try { localStorage.setItem("akf-nav", f ? "1" : "0"); } catch (e) {} syncFold(); });
+    syncFold();
+    const find = el("button", "jzs-search"); find.type = "button"; find.setAttribute("aria-label", "Search and ask Alkhidmat AI");
+    find.append(SVG(ICON.search), el("span", "", "Search pages and portals, or ask Alkhidmat AI…"), el("kbd", "", "Ctrl K")); find.addEventListener("click", openPalette);
+    stripLinks = el("div", "jz-ts-portals jzs-phone-portals");   // phones: the portals in one row you swipe
+    const bell = el("button", "jzs-btn jzs-bell"); bell.type = "button"; bell.title = "All notifications"; bell.setAttribute("aria-label", "All notifications from every portal");
     const badge = el("span", "jz-ts-badge"); badge.hidden = true; bell.append(SVG(ICON.bell), badge);
     bell.addEventListener("click", () => window.AKF_DESK && AKF_DESK.openInbox && AKF_DESK.openInbox(bell));
     const count = n => { badge.hidden = !n; badge.textContent = n > 99 ? "99+" : String(n); bell.setAttribute("aria-label", n + " notifications from every portal"); };
     document.addEventListener("akf-inbox", e => count(e.detail.count || 0));
-    if (window.AKF_DESK && AKF_DESK.inbox) count(AKF_DESK.inbox().length);   // the list may have arrived before this strip
-    strip.append(menu, home, stripLinks, meBox, bell, find);
+    if (window.AKF_DESK && AKF_DESK.inbox) count(AKF_DESK.inbox().length);   // the list may have arrived before this bar
+    const sign = el("button", "jzs-btn", "✍"); sign.type = "button"; sign.title = "My signature: add or change it"; sign.setAttribute("aria-label", "My signature");
+    sign.addEventListener("click", () => { if (window.AKF_SIGN) AKF_SIGN.open(); });
+    meBox = el("div", "jzs-me"); avatar = el("span", "jzs-avatar");
+    strip.append(menu, find, stripLinks, el("span", "jzs-grow"), bell, sign, meBox, avatar);
     document.body.prepend(rail); document.body.prepend(strip);
-    // the strip's height (one or two rows of portal names): sticky page headers and the menu sit just below it
     sh(); addEventListener("resize", sh);
     if (window.ResizeObserver) new ResizeObserver(sh).observe(strip);
-    const setOpen = (on, focus = true) => { clearTimeout(hideT); document.documentElement.classList.toggle("jz-rail-open", on); menu.setAttribute("aria-expanded", String(on)); if (on && focus) rail.focus(); };
-    // auto open / hide with a mouse: point at ☰ or the left edge to open, move away to hide (touch and keyboard: ☰ click)
-    let hideT = 0;
-    if (matchMedia("(hover: hover)").matches) {
-      const edge = el("div", "jz-edge"); edge.setAttribute("aria-hidden", "true"); document.body.append(edge);
-      const show = () => setOpen(true, false), later = () => { clearTimeout(hideT); hideT = setTimeout(() => { if (rail.contains(document.activeElement)) document.activeElement.blur(); setOpen(false); }, 350); };
-      [menu, edge, rail].forEach(x => { x.addEventListener("pointerenter", x === rail ? () => clearTimeout(hideT) : show); x.addEventListener("pointerleave", later); });
-    }
-    document.addEventListener("pointerdown", e => { if (!rail.contains(e.target) && !menu.contains(e.target)) setOpen(false); });
-    addEventListener("keydown", e => { if (e.key === "Escape" && document.documentElement.classList.contains("jz-rail-open")) { setOpen(false); menu.focus(); } });
-    rail.addEventListener("click", e => { if (e.target.closest("a,button")) setOpen(false); });
   }
   function paintMine() {
     if (!mine) return;
@@ -82,29 +81,31 @@
     const sig = navItems().map(b => labelOf(b) + "|" + b.classList.contains("active") + "|" + countOf(b)).concat(accountItems().map(labelOf), who).join("\n");
     if (sig === paintMine.sig) return; paintMine.sig = sig;
     meBox.replaceChildren(...(who[0] ? [el("b", "", who[0]), el("small", "", who[1])] : [])); meBox.title = who.filter(Boolean).join(" · ");
-    mine.replaceChildren(...navItems().map(b => {
-      const label = labelOf(b); if (!label) return null;
-      const a = el("button", "jz-rail-link" + (b.classList.contains("active") ? " on" : "")); a.type = "button"; a.title = label;
-      const ic = b.querySelector("svg"); a.append(ic ? ic.cloneNode(true) : SVG(ICON.dot), el("span", "jz-rail-text", label));
-      const n = countOf(b); if (n) a.append(el("span", "jz-rail-count", n));
-      if (b.classList.contains("active")) a.setAttribute("aria-current", "page");
-      a.addEventListener("click", proxy(label, navItems)); return a;
-    }).filter(Boolean));
+    avatar.textContent = who[0] ? initials(who[0]) : ""; avatar.hidden = !who[0];
+    const link = (label, ic, on, n, go) => { const a = el("button", "jzs-link" + (on ? " on" : "")); a.type = "button"; a.title = label;
+      const i = el("span", "jzs-ic"); i.append(ic ? ic.cloneNode(true) : SVG(ICON.dot)); a.append(i, el("span", "jzs-text", label));
+      if (n) a.append(el("span", "jzs-count", n)); if (on) a.setAttribute("aria-current", "page"); a.addEventListener("click", go); return a; };
+    mine.replaceChildren(...navItems().map(b => { const label = labelOf(b); if (!label) return null;
+      return link(label, b.querySelector("svg"), b.classList.contains("active"), countOf(b), proxy(label, navItems)); }).filter(Boolean));
     acct.replaceChildren(...accountItems().map(b => { const label = labelOf(b); if (!label) return null;
-      const a = el("button", "jz-rail-link"); a.type = "button"; a.title = label; const ic = b.querySelector("svg"); a.append(ic ? ic.cloneNode(true) : SVG(ICON.dot), el("span", "jz-rail-text", label));
-      a.addEventListener("click", proxy(label, accountItems)); return a; }).filter(Boolean));
+      return link(label, b.querySelector("svg"), false, "", proxy(label, accountItems)); }).filter(Boolean));
   }
   function paintPortals() {
-    stripLinks.replaceChildren(); if (!portals.length) return sh();
+    stripLinks.replaceChildren(); railPortals.replaceChildren(); if (!portals.length) return sh();
     portals.forEach(p => { const href = safeLink(p.url); if (!href) return;
-      const here = location.href.startsWith(href);
-      const dot = el("span", "jz-rail-dot"); dot.style.background = /^#[0-9a-f]{6}$/i.test(p.color || "") ? p.color : "#0060AE";
-      if (here) document.documentElement.style.setProperty("--jz-pc", dot.style.background);
+      const here = location.href.startsWith(href), color = /^#[0-9a-f]{6}$/i.test(p.color || "") ? p.color : "#0060AE";
+      if (here) document.documentElement.style.setProperty("--jz-pc", color);
+      // sidebar (desktop): coloured square with the portal's initial, the open portal is a white pill
+      const r = el("a", "jzs-link" + (here ? " on" : "")); r.href = href; r.title = p.name; if (here) r.setAttribute("aria-current", "page");
+      const sq = el("span", "jzs-ic jzs-sq", (p.name || "?").trim()[0]); sq.style.setProperty("--c", color);
+      r.append(sq, el("span", "jzs-text", p.name)); railPortals.append(r);
+      // top bar (phones): the portals in one row
+      const dot = el("span", "jz-rail-dot"); dot.style.background = color;
       const s = el("a", "jz-ts-link" + (here ? " on" : "")); s.href = href; s.title = p.name; if (here) s.setAttribute("aria-current", "page");
       s.append(dot, el("span", "", p.name)); stripLinks.append(s);
-      if (here) requestAnimationFrame(() => { stripLinks.scrollLeft = Math.max(0, s.offsetLeft - 40); });   // phones: this portal visible in the one-row list
+      if (here) requestAnimationFrame(() => { stripLinks.scrollLeft = Math.max(0, s.offsetLeft - 40); });
     });
-    sh();   // the names may need a second row: move the page down to match
+    sh();
   }
 
   /* Ctrl/Cmd+K: this portal's pages, other portals, Ask Alkhidmat AI (opens the portal's own assistant) */
@@ -113,7 +114,7 @@
     const back = document.activeElement;
     const items = navItems().map(b => ({ g: "In this portal", t: labelOf(b), go: proxy(labelOf(b), navItems) })).filter(i => i.t)
       .concat(portals.filter(p => safeLink(p.url)).map(p => ({ g: "Portals", t: p.name, go: () => { location.href = safeLink(p.url); } })))
-      .concat([{ g: "Today", t: "Today (main page)", go: () => { location.href = BASE; } }]);
+      .concat([{ g: "Today", t: "Home", go: () => { location.href = HOME; } }]);
     const input = el("input"); input.type = "text"; input.placeholder = "Search pages and portals, or ask a question…"; input.setAttribute("aria-label", "Search or ask");
     const list = el("div", "jz-palette-list"); let shown = [], sel = 0;
     const scrim = el("div", "jz-scrim"); scrim.setAttribute("role", "dialog"); scrim.setAttribute("aria-modal", "true"); scrim.setAttribute("aria-label", "Search or ask Alkhidmat AI");

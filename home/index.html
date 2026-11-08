@@ -361,12 +361,12 @@ textarea.input { height: auto; min-height: 80px; padding: 8px 10px; resize: vert
   .nav-label, .side-brand > span, .nav-section, .side-card { transition: opacity .28s var(--ease), transform .4s cubic-bezier(.2, .9, .25, 1); transition-delay: calc(var(--i, 0) * 22ms); }
   .nav-badge { transition: all .3s cubic-bezier(.2, .9, .25, 1); }
   body.nav-collapsed { --sidebar-w: 84px; }
-  body.nav-collapsed .sidebar:not(:hover):not(:focus-within) :is(.nav-label, .side-brand > span, .nav-section, .side-card) { opacity: 0; transform: translateX(-12px); pointer-events: none; transition-delay: 0s; }
-  body.nav-collapsed .sidebar:not(:hover):not(:focus-within) .nav-item { padding-left: 14px; }
+  body.nav-collapsed .sidebar :is(.nav-label, .side-brand > span, .nav-section, .side-card) { opacity: 0; transform: translateX(-12px); pointer-events: none; transition-delay: 0s; }
+  body.nav-collapsed .sidebar .nav-item { padding-left: 14px; }
   /* Counts shrink into a little bubble on the icon tile */
-  body.nav-collapsed .sidebar:not(:hover):not(:focus-within) .nav-badge { position: absolute; left: 32px; top: 1px; min-width: 16px; padding: 0 4px; font-size: 10px; line-height: 16px; text-align: center; background: #DC0505; color: #fff; box-shadow: 0 0 0 2px var(--sb-2); }
-  body.nav-collapsed .sidebar:hover, body.nav-collapsed .sidebar:focus-within { width: 230px; box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 30px 70px -20px rgba(0,10,30,.7); transition-delay: .15s; }
-  body.nav-collapsed .sidebar:hover :is(.nav-label, .side-brand > span, .nav-section, .side-card) { transition-delay: calc(.2s + var(--i, 0) * 22ms); }
+  body.nav-collapsed .sidebar .nav-badge { position: absolute; left: 32px; top: 1px; min-width: 16px; padding: 0 4px; font-size: 10px; line-height: 16px; text-align: center; background: #DC0505; color: #fff; box-shadow: 0 0 0 2px var(--sb-2); }
+  /* no hover pop-out: a folded menu stays folded until the fold button is pressed (same as every portal) */
+  /* no hover pop-out: a folded menu stays folded until the fold button is pressed (same as every portal) */
 }
 @media (max-width: 860px) {
   .shell { grid-template-columns: minmax(0, 1fr); }

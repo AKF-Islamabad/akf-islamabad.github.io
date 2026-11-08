@@ -233,3 +233,61 @@ html[data-jz-family] .btn-primary{background:linear-gradient(180deg,#1a7bd0 0%,#
 html[data-jz-family] .btn-primary:hover{background:linear-gradient(180deg,#0A74C9 0%,#004F90 100%)}
 html[data-jz-family] .seg button.active, html[data-jz-family] .pager button.on{background:linear-gradient(180deg,#1a7bd0,#0060AE)}
 @media (prefers-reduced-motion:reduce){ html[data-jz-family] .kpi:hover{transform:none} }
+
+/* ---------- layer 4: the frame = the new home page's layout (jazba-shell.js), the same in every portal ----------
+   Desktop (821 px and wider): a blue sidebar that stays on screen (no auto-hide; the fold button keeps icons only,
+   remembered with the home page's setting) and a white top bar. Phones keep each portal's own menu, with the
+   portals in one swipe row at the top. To undo: restore jazba-shell.js and delete this block. */
+:root{ --jzs-w:240px; --jzs-top:64px }
+html.jzs-folded{ --jzs-w:84px }
+.jzs-rail{position:fixed;left:0;top:0;bottom:0;z-index:56;width:var(--jzs-w);box-sizing:border-box;display:flex;flex-direction:column;gap:2px;padding:12px 10px;overflow:hidden auto;scrollbar-width:thin;color:#fff;
+  background:var(--jz-star) 0 0/56px 56px, radial-gradient(120% 50% at 0% 0%, rgba(255,255,255,.14), transparent 60%), linear-gradient(180deg,#063a6b 0%,#04305a 45%,#003C73 100%);
+  box-shadow:inset -1px 0 0 rgba(255,255,255,.06),8px 0 30px -18px rgba(4,37,68,.6);transition:width .35s cubic-bezier(.2,.9,.25,1);font-family:var(--jz-font)}
+.jzs-brand{display:flex;align-items:center;gap:10px;padding:4px 6px 14px;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,.10);color:#fff;text-decoration:none;white-space:nowrap}
+.jzs-brand img{width:40px;height:40px;flex:none;border-radius:11px;background:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.22),0 6px 14px -4px rgba(0,0,0,.45)}
+.jzs-brand b{display:block;font-size:14px;font-weight:600;line-height:1.15} .jzs-brand small{font-size:11px;color:rgba(255,255,255,.6)}
+.jzs-h{padding:14px 10px 6px;font-size:10.5px;font-weight:600;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}
+.jzs-group{display:grid;gap:2px}
+.jzs-acct{margin-top:auto;padding-top:10px;border-top:1px solid rgba(255,255,255,.12)}
+.jzs-link{display:flex;align-items:center;gap:10px;width:100%;min-height:38px;padding:0 10px;border:0;border-radius:10px;background:none;color:rgba(255,255,255,.78);font:500 13px/1.2 var(--jz-font);text-align:left;text-decoration:none;white-space:nowrap;cursor:pointer;transition:background .2s,color .2s}
+.jzs-link:hover{background:rgba(255,255,255,.09);color:#fff}
+.jzs-link.on{background:#fff;color:#003C73;box-shadow:0 1px 2px rgba(0,0,0,.12),0 6px 16px -6px rgba(0,0,0,.4)}
+.jzs-link:focus-visible,.jzs-brand:focus-visible{outline:2px solid #FFB25B;outline-offset:1px}
+.jzs-ic{flex:none;display:grid;place-items:center;width:24px;height:24px} .jzs-ic svg{width:18px;height:18px}
+.jzs-sq{border-radius:7px;background:var(--c,#0060AE);color:#fff;font-size:11.5px;font-weight:700;box-shadow:inset 0 1px 0 rgba(255,255,255,.3)}
+.jzs-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;transition:opacity .2s}
+.jzs-count{flex:none;padding:0 7px;border-radius:99px;font:600 11px/18px var(--jz-font);background:rgba(255,255,255,.16);color:#fff}
+.jzs-link.on .jzs-count{background:#0060AE}
+html.jzs-folded .jzs-text, html.jzs-folded .jzs-h{opacity:0;pointer-events:none}
+html.jzs-folded .jzs-h{height:8px;padding:0}
+html.jzs-folded .jzs-count{position:absolute;margin-left:18px;margin-top:-18px;min-width:16px;padding:0 4px;font-size:10px;line-height:16px;text-align:center;background:#DC0505}
+html.jzs-folded .jzs-link{position:relative;justify-content:center;padding:0}
+.jzs-top{position:fixed;top:0;right:0;left:var(--jzs-w);z-index:55;height:var(--jzs-top);box-sizing:border-box;display:flex;align-items:center;gap:10px;padding:0 20px;
+  background:color-mix(in srgb,var(--surface,#fff) 88%,transparent);backdrop-filter:saturate(1.6) blur(12px);-webkit-backdrop-filter:saturate(1.6) blur(12px);border-bottom:1px solid var(--line,#E3E8EF);
+  color:var(--ink,#0F1B2D);font-family:var(--jz-font);transition:left .35s cubic-bezier(.2,.9,.25,1)}
+.jzs-grow{flex:1}
+.jzs-btn{flex:none;position:relative;display:grid;place-items:center;width:38px;height:38px;border:1px solid var(--line,#E3E8EF);border-radius:10px;background:var(--surface,#fff);color:var(--ink-2,#4A5A70);font-size:17px;cursor:pointer;transition:background .2s,color .2s,border-color .2s}
+.jzs-btn:hover{color:var(--ink,#0F1B2D);border-color:var(--line-2,#CBD6E3)} .jzs-btn svg{width:18px;height:18px}
+.jzs-btn .jz-ts-badge{box-shadow:0 0 0 2px var(--surface,#fff)}
+.jzs-search{flex:0 1 420px;min-width:0;display:flex;align-items:center;gap:10px;height:38px;padding:0 10px 0 12px;border:1px solid var(--line,#E3E8EF);border-radius:10px;background:var(--surface,#fff);color:var(--ink-3,#7C8BA0);font:400 13.5px var(--jz-font);cursor:pointer;text-align:left}
+.jzs-search:hover{border-color:var(--line-2,#CBD6E3)} .jzs-search svg{width:17px;height:17px;flex:none} .jzs-search span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jzs-search kbd{flex:none;padding:2px 6px;border:1px solid var(--line,#E3E8EF);border-radius:6px;font:500 11px var(--jz-font);color:var(--ink-3,#7C8BA0)}
+.jzs-me{display:grid;text-align:right;line-height:1.25;max-width:24vw} .jzs-me b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .jzs-me small{font-size:12px;color:var(--ink-3,#7C8BA0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jzs-avatar{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:99px;background:linear-gradient(135deg,#0A74C9,#003C73);color:#fff;font:600 13px var(--jz-font)}
+.jzs-avatar[hidden]{display:none}
+.jzs-phone-portals{display:none}
+@media (min-width:821px){
+  html[data-jz-shell="on"] body{padding-left:var(--jzs-w)!important;transition:padding-left .35s cubic-bezier(.2,.9,.25,1)}
+  html[data-jz-shell="on"] .akd{left:calc(var(--jzs-w) + 16px)}   /* My note sits beside the sidebar */
+}
+@media (max-width:820px){
+  .jzs-rail,.jzs-fold,.jzs-search,.jzs-me,.jzs-grow{display:none!important}
+  .jzs-top{left:0;height:auto;min-height:52px;padding:6px 8px;gap:6px;background:linear-gradient(90deg,#001B40,#042544 45%,#063a6b);border:0;color:#fff}
+  .jzs-top .jzs-btn{width:34px;height:34px;background:rgba(255,255,255,.08);border-color:transparent;color:#fff}
+  .jzs-phone-portals{display:flex;flex:1;min-width:0;color:#fff}
+  .jzs-avatar{width:30px;height:30px;font-size:11px}
+}
+@media (prefers-reduced-motion:reduce){ .jzs-rail,.jzs-top,html[data-jz-shell="on"] body{transition:none} }
+@media print{ .jzs-rail,.jzs-top{display:none!important} html[data-jz-shell="on"] body{padding:0!important} }
+/* the open portal is a soft highlight; the page you are on (In this portal) is the white pill */
+.jzs-portals .jzs-link.on{background:rgba(255,255,255,.16);color:#fff;box-shadow:inset 3px 0 0 var(--c-on,#FFB25B)}
