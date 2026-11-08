@@ -1397,6 +1397,8 @@ body.nav-collapsed #sidebar-toggle .i { transform: scaleX(-1); }
 .live-tabs button[aria-selected="true"] { background: var(--color-surface); color: var(--color-text); box-shadow: var(--premium-glow); }
 .live-chart { max-width: 560px; }
 .sign-btn { font-size: 17px; }
+/* My note (akf-desk.js) sits beside the sidebar instead of over it */
+@media (min-width: 861px) { :root.live .akd { left: calc(var(--sidebar-w) + 14px); } }
 /* Super Admin tools inside the page */
 .admin-head { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; }
 .admin-head h1 { margin: 2px 0 0; font-size: 24px; letter-spacing: -0.02em; }
@@ -3160,7 +3162,7 @@ class AdminView {
   html() {
     const [title, ic] = ADMIN_TABS[this.tab];
     return `<header class="admin-head"><span class="admin-ic">${icon(ic)}</span><div><p class="eyebrow">${icon('shield')} Super Admin</p><h1 id="page-h1" tabindex="-1">${title}</h1></div></header>
-      <iframe class="admin-frame" src="../?embed=admin&amp;tab=${this.tab}&amp;v=2026-11-08e" title="${title}"></iframe>`;
+      <iframe class="admin-frame" src="../?embed=admin&amp;tab=${this.tab}&amp;v=2026-11-08f" title="${title}"></iframe>`;
   }
 }
 
@@ -3260,8 +3262,8 @@ const Sidebar = {
         <img src="../icon.jpg" alt="" width="40" height="40">
         <span><b>Alkhidmat</b><small>Islamabad · ${Live.on ? 'Jazba' : 'Internal Portal'}</small></span></a>`
       + item('#/', 'home', 'home', 'Home')
-      + '<div class="nav-section">Portals</div>'
-      + NAV().map(p => item(p.href || `#/${p.id}`, p.id, p.icon, p.short, p.badge?.(), p.tone, p.color)).join('')
+      + (Live.on ? ''   // live: the portals are the cards on the page; listed once, not again here
+        : '<div class="nav-section">Portals</div>' + NAV().map(p => item(p.href || `#/${p.id}`, p.id, p.icon, p.short, p.badge?.(), p.tone, p.color)).join(''))
       + (Live.on
         ? (Live.me?.is_super ? `<div class="nav-section">Admin</div>` + Object.entries(ADMIN_TABS).map(([k, [t, ic]]) => item(`#/admin/${k}`, `admin/${k}`, ic, t)).join('') : '')
           + `<div class="side-card"><div class="side-card-top"><span>Waiting on you</span><b>${n}</b></div>

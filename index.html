@@ -438,7 +438,7 @@ async function adminCall(body) {
    This page still handles new passwords, the Super Admin's authenticator set-up and "no access", and the Super Admin
    tools (People & access, Portals, Settings, Activity) when opened as ./#admin.
    To go back to this page (own sign-in and Today) for everyone: set SIGN_IN_PAGE = "" and publish. ---------- */
-const SIGN_IN_PAGE = "home/?v=2026-11-08e";   // ?v= : change it whenever home/ changes, so no browser opens an old saved copy
+const SIGN_IN_PAGE = "home/?v=2026-11-08f";   // ?v= : change it whenever home/ changes, so no browser opens an old saved copy
 // The Super Admin tools (People & access, Portals & departments, Settings, Activity & usage) now open INSIDE the new page:
 // it shows this page in a frame with ?embed=admin&tab=… (no old rail, top bar, Today, note or assistant here).
 const EMBED = !!window.AKF_EMBED;
