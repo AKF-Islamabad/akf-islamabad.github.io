@@ -1694,6 +1694,12 @@ body.nav-collapsed #sidebar-toggle .i { transform: scaleX(-1); }
           </div>
           <span class="caps" id="caps"><span data-icon="alert"></span>Caps Lock is on</span>
         </div>
+        <div class="lf" id="lf-code" hidden>
+          <label for="lg-code">6-digit code <a href="#" data-action="sign-out">Use another account</a></label>
+          <div class="lf-wrap"><span data-icon="shield"></span>
+            <input class="input" id="lg-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" aria-describedby="login-error">
+          </div>
+        </div>
         <div class="lc-row">
           <label><input type="checkbox" name="remember" id="lg-remember"> Keep me signed in</label>
         </div>
@@ -1866,7 +1872,7 @@ const Live = {
     this.sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT' && this.me) { this.me = null; Role.apply(); Auth.show(); } });
     const { data } = await this.sb.auth.getSession();
     if (!data.session) return Auth.show();
-    try { if (await this.load()) Auth.hide(false); }
+    try { const r = await this.load(); if (r === true) Auth.hide(false); else if (r === 'code') { Auth.show(); Auth.codeMode(true); } }
     catch (e) { Auth.show(); Auth.error('Your account could not be loaded. Check the internet connection and try again.'); console.warn('[live]', e && e.message); }
   },
   // Loads the signed-in person; false when the main page must take over (new password, Super Admin code, no access).
@@ -1876,9 +1882,12 @@ const Live = {
     const { data: me, error } = await this.sb.from('core_profiles').select('id,email,full_name,designation,dept,is_super,active,must_change_password').eq('id', session.user.id).maybeSingle();
     if (error) throw error;
     if (!me || !me.active || me.must_change_password) { location.replace(this.HOME); return false; }
-    if (me.is_super) {
+    if (me.is_super) {   // Super Admin needs the authenticator code (the database checks it too, 016b_two_step.sql)
       const { data: aal } = await this.sb.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (!aal || aal.currentLevel !== 'aal2') { location.replace(this.HOME); return false; }
+      if (!aal || aal.currentLevel !== 'aal2') {
+        if (aal && aal.nextLevel === 'aal2') return 'code';   // app already set up: type the code here
+        location.replace(this.HOME); return false;            // first-time set-up (QR code) happens on the main page
+      }
     }
     const [p, i] = await Promise.all([this.sb.rpc('core_my_portals'), this.sb.rpc('core_my_inbox')]);
     if (p.error) throw p.error;
@@ -3958,7 +3967,38 @@ const Auth = {
     Modal.setInert(false);
     setTimeout(() => { document.documentElement.classList.remove('locked'); $('#login').classList.remove('leaving'); }, animate ? 500 : 0);
   },
+  // Super Admin second step: swaps the username/password fields for the authenticator code.
+  mode: 'password',
+  codeMode(on) {
+    this.mode = on ? 'code' : 'password';
+    ['#lg-email', '#lg-pass'].forEach(s => { $(s).closest('.lf').hidden = on; });
+    $('.lc-row').hidden = on;
+    $('#lf-code').hidden = !on;
+    $('#login-title').textContent = on ? 'Enter your code' : 'Welcome back';
+    $('.lc-sub').textContent = on ? 'Super Admin: open your authenticator app and type the 6-digit code for Jazba.' : 'Sign in with your Alkhidmat work account.';
+    $('#lg-submit .lbl-idle').textContent = on ? 'Confirm' : 'Sign in';
+    $('#lg-code').value = '';
+    if (on) setTimeout(() => $('#lg-code').focus(), 60);
+  },
+  async submitCode() {
+    const code = $('#lg-code').value.trim(), btn = $('#lg-submit');
+    this.error('');
+    if (!/^[0-9]{6}$/.test(code)) return this.error('Type the 6 digits shown in the app.', '#lg-code');
+    btn.classList.add('loading'); btn.disabled = true;
+    const done = () => { btn.classList.remove('loading'); btn.disabled = false; };
+    try {
+      const { data: f, error: fe } = await Live.sb.auth.mfa.listFactors();
+      const factor = !fe && (f?.totp || []).find(x => x.status === 'verified');
+      if (!factor) { location.replace(Live.HOME); return; }
+      const { error } = await Live.sb.auth.mfa.challengeAndVerify({ factorId: factor.id, code });
+      if (error) { done(); $('#lg-code').select(); return this.error(/rate|too many/i.test(error.message) ? 'Too many tries. Wait a minute.' : 'That code is not right, or it has just changed. Type the new code.', '#lg-code'); }
+      const r = await Live.load();
+      done();
+      if (r === true) { this.codeMode(false); this.hide(); toast(`Welcome, ${Live.first()}. You are signed in.`); }
+    } catch (e) { done(); console.warn('[live]', e && e.message); this.error('The code could not be checked. Check the internet connection and try again.'); }
+  },
   async submitLive() {
+    if (this.mode === 'code') return this.submitCode();
     const user = $('#lg-email').value.trim(), pw = $('#lg-pass').value, btn = $('#lg-submit');
     this.error('');
     if (!user) return this.error('Enter your username or work e-mail.', '#lg-email');
@@ -3970,10 +4010,11 @@ const Auth = {
     if (error) { done(); return this.error(/rate|too many/i.test(error.message) ? 'Too many attempts. Wait a few minutes and try again.' : 'E-mail or password is incorrect.', '#lg-pass'); }
     $('#lg-pass').value = '';
     try { if ($('#lg-remember').checked) localStorage.setItem('akf-last-user', user); else localStorage.removeItem('akf-last-user'); } catch (e) {}
-    let ok = false;
-    try { ok = await Live.load(); } catch (e) { console.warn('[live]', e && e.message); this.error('Signed in, but your account could not be loaded. Check the internet connection and try again.'); }
+    let r = false;
+    try { r = await Live.load(); } catch (e) { console.warn('[live]', e && e.message); this.error('Signed in, but your account could not be loaded. Check the internet connection and try again.'); }
     done();
-    if (ok) { this.hide(); toast(`Welcome, ${Live.first()}. You are signed in.`); }
+    if (r === 'code') this.codeMode(true);
+    else if (r === true) { this.hide(); toast(`Welcome, ${Live.first()}. You are signed in.`); }
   },
   show() {
     document.documentElement.classList.add('locked');
@@ -4037,6 +4078,7 @@ const Auth = {
   async signOut() {
     Drawer.close(); Palette.close(false); Notifs.toggle(false);
     if (Live.on) {
+      this.codeMode(false);
       Live.me = null; Live.portals = []; Live.inbox = [];
       try { await Live.sb?.auth.signOut(); } catch (e) {}
       Notifs.render();
