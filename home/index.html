@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by tools/csp-hash.js (inline scripts by hash). Fonts, the background library and images are all served from this site. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1397,6 +1397,12 @@ body.nav-collapsed #sidebar-toggle .i { transform: scaleX(-1); }
 .live-tabs button[aria-selected="true"] { background: var(--color-surface); color: var(--color-text); box-shadow: var(--premium-glow); }
 .live-chart { max-width: 560px; }
 .sign-btn { font-size: 17px; }
+/* Super Admin tools inside the page */
+.admin-head { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; }
+.admin-head h1 { margin: 2px 0 0; font-size: 24px; letter-spacing: -0.02em; }
+.admin-head .eyebrow { margin: 0; color: var(--color-text-muted); }
+.admin-ic { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 12px; color: #fff; background: linear-gradient(150deg, var(--b-light), var(--b)); box-shadow: 0 10px 20px -10px rgba(0,60,115,.8); }
+.admin-frame { display: block; width: 100%; height: calc(100vh - 190px); min-height: 520px; border: 1px solid var(--glow-border); border-radius: var(--border-radius-premium); background: var(--color-surface); box-shadow: var(--premium-glow); }
 /* the whole portal card opens the portal (not only the Open button) */
 a.portal-link { color: inherit; text-decoration: none; cursor: pointer; }
 a.portal-link:hover { transform: translateY(-2px); box-shadow: var(--shadow-xl); }
@@ -2054,6 +2060,9 @@ const ICONS = {
   camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/>',
   filePlus: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15h6"/>',
   trash: '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  chart: '<path d="M3 3v18h18"/><path d="M8 17v-5M13 17V8M18 17v-9"/>',
   shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>',
 };
 const icon = (name, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
@@ -3142,6 +3151,19 @@ class PortalView {
 /* ============================================================
    ROUTER (hash based, cross-fades between views)
    ============================================================ */
+/* Super Admin tools: the proven People & access, Portals & departments, Settings and Activity screens, shown inside
+   this page (the main page in "embed" mode, ../?embed=admin). The database and the admin-users function still decide
+   what a Super Admin may do; the frame only shows it. */
+const ADMIN_TABS = { people: ['People & access', 'users'], setup: ['Portals & departments', 'grid'], settings: ['Settings', 'settings'], activity: ['Activity & usage', 'chart'] };
+class AdminView {
+  constructor(tab) { this.tab = tab; }
+  html() {
+    const [title, ic] = ADMIN_TABS[this.tab];
+    return `<header class="admin-head"><span class="admin-ic">${icon(ic)}</span><div><p class="eyebrow">${icon('shield')} Super Admin</p><h1 id="page-h1" tabindex="-1">${title}</h1></div></header>
+      <iframe class="admin-frame" src="../?embed=admin&amp;tab=${this.tab}&amp;v=2026-11-08e" title="${title}"></iframe>`;
+  }
+}
+
 const Router = {
   page: null, token: 0, first: true,
   parse() {
@@ -3151,13 +3173,14 @@ const Router = {
   go(hash) { if (location.hash === hash) this.render(); else location.hash = hash; },
   render(animate = true) {
     const { id, params } = this.parse();
-    if (Live.on && id !== 'home') {   // live: each portal is its own ERP page
+    const adm = Live.on && /^admin\/(people|setup|settings|activity)$/.exec(id);   // Super Admin tools, shown inside this page
+    if (Live.on && id !== 'home' && !adm) {   // live: each portal is its own ERP page
       const p = Live.nav().find(x => x.id === id);
       if (p && p.href !== '#') { location.assign(p.href); return; }
       history.replaceState(null, '', location.pathname + location.search);
     }
     const portal = Live.on ? null : PORTALS.find(p => p.id === id);
-    const page = portal ? new PortalView(portal, params) : new HomeView();
+    const page = adm ? (Live.me?.is_super ? new AdminView(adm[1]) : new HomeView()) : portal ? new PortalView(portal, params) : new HomeView();
     const el = $('#view'), token = ++this.token, wasFirst = this.first;
     this.first = false;
     const swap = () => {
@@ -3175,8 +3198,8 @@ const Router = {
       }
     };
     if (animate && !wasFirst) { el.classList.add('is-leaving'); setTimeout(swap, 160); } else swap();
-    document.title = `${portal ? portal.short : 'Home'} · ${Live.on ? 'Jazba' : 'Alkhidmat Portal'}`;
-    Sidebar.render(portal ? portal.id : 'home');
+    document.title = `${adm && Live.me?.is_super ? ADMIN_TABS[adm[1]][0] : portal ? portal.short : 'Home'} · ${Live.on ? 'Jazba' : 'Alkhidmat Portal'}`;
+    Sidebar.render(adm && Live.me?.is_super ? id : portal ? portal.id : 'home');
     document.body.classList.remove('nav-open');
   },
 };
@@ -3229,7 +3252,7 @@ const Sidebar = {
       <a class="tn-item" href="${p.href || `#/${p.id === 'home' ? '' : p.id}`}" style="--mc:${p.color}" ${active === p.id ? 'aria-current="page"' : ''} title="${p.name || p.short} (Alt+${keyOf(p.id)})" aria-keyshortcuts="Alt+${keyOf(p.id)}">
         <i class="tn-dot" aria-hidden="true"></i>${p.name || p.short}${p.badge?.() ? `<span class="tn-badge">${p.badge()}<span class="sr-only"> waiting</span></span>` : ''}</a>`).join('');
     const item = (href, id, ic, label, badge, tone, color) => `
-      <a class="nav-item" href="${href}" ${active === id ? 'aria-current="page"' : ''} title="${label} (Alt+${keyOf(id)})" aria-keyshortcuts="Alt+${keyOf(id)}">
+      <a class="nav-item" href="${href}" ${active === id ? 'aria-current="page"' : ''} title="${label}${keyOf(id) ? ` (Alt+${keyOf(id)})` : ''}"${keyOf(id) ? ` aria-keyshortcuts="Alt+${keyOf(id)}"` : ''}>
         <span class="nav-ic"${color ? ` style="--mc:${color}"` : ''}>${icon(ic)}</span><span class="nav-label">${label}</span>${badge ? `<span class="nav-badge tone-${tone}">${badge}<span class="sr-only"> waiting</span></span>` : ''}
       </a>`;
     const q = Live.on ? null : Metrics.queue(), n = Live.on ? Live.inbox.length : 0;
@@ -3240,7 +3263,7 @@ const Sidebar = {
       + '<div class="nav-section">Portals</div>'
       + NAV().map(p => item(p.href || `#/${p.id}`, p.id, p.icon, p.short, p.badge?.(), p.tone, p.color)).join('')
       + (Live.on
-        ? (Live.me?.is_super ? `<a class="nav-item" href="${Live.HOME}#admin" title="People, access and settings on the main page"><span class="nav-ic">${icon('shield')}</span><span class="nav-label">Admin (main page)</span></a>` : '')
+        ? (Live.me?.is_super ? `<div class="nav-section">Admin</div>` + Object.entries(ADMIN_TABS).map(([k, [t, ic]]) => item(`#/admin/${k}`, `admin/${k}`, ic, t)).join('') : '')
           + `<div class="side-card"><div class="side-card-top"><span>Waiting on you</span><b>${n}</b></div>
           <small>${n ? `${plural(n, 'item', 'items')} across your portals` : 'Nothing is waiting on you.'}</small></div>`
         : `<div class="side-card"><div class="side-card-top"><span>Your approval queue</span><b>${q.decided}/${q.total}</b></div>
@@ -3802,7 +3825,7 @@ const Palette = {
     if (Live.on) return [
       { group: 'Navigate', label: 'Home', icon: 'home', hint: 'Overview', run: () => Router.go('#/') },
       ...Live.nav().map(p => ({ group: 'Portals', label: p.name, icon: p.icon, hint: p.role ? `Your access: ${p.role}` : '', run: () => location.assign(p.href) })),
-      ...(Live.me?.is_super ? [{ group: 'Admin', label: 'People, access and settings', icon: 'shield', hint: 'Main page', run: () => location.assign(Live.HOME + "#admin") }] : []),
+      ...(Live.me?.is_super ? Object.entries(ADMIN_TABS).map(([k, [t, ic]]) => ({ group: 'Admin', label: t, icon: ic, hint: 'Super Admin', run: () => Router.go(`#/admin/${k}`) })) : []),
       { group: 'Actions', label: 'Ask Alkhidmat AI a question', icon: 'bolt', hint: 'AI assistant', run: () => { const f = document.querySelector('.kai-fab'); if (f) f.click(); else toast('Alkhidmat AI is still loading. Try again in a moment.'); } },
       { group: 'Actions', label: 'My signature', icon: 'checkCircle', hint: 'Add or change it', run: () => App.actions['my-signature']() },
       { group: 'Actions', label: 'Toggle light / dark mode', icon: 'moon', hint: 'Appearance', run: () => Theme.toggle() },
