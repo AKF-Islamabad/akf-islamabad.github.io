@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="light" data-jz-page="hub">
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by tools/csp-hash.js (inline scripts by hash). Fonts, the background library and images are all served from this site. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; media-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -24,6 +24,10 @@
 </style>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<!-- the same helpers as the main page: Alkhidmat AI, and "My desk" (sticky note, push notifications, signature).
+     data-jz-page="hub" tells akf-desk.js this is the main page, so it does not add the portal frame or portal styles. -->
+<script src="../akf-assistant.js"></script>
+<script src="../akf-desk.js"></script>
 <script src="daily-inspiration.js"></script>
 <script>
   // Apply theme before first paint to avoid a flash.
@@ -1385,6 +1389,15 @@ body.nav-collapsed #sidebar-toggle .i { transform: scaleX(-1); }
 .lg-preview[hidden] { display: none; }
 :root:not(.su) [data-su] { display: none !important; } /* appearance controls: super admin only */
 :root.live .fab, :root.live .lg-preview [data-action="login-use"] { display: none !important; } /* sample-only controls are not shown on the live page */
+/* live home: old "Today" panels in the new design */
+.live-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.live-grid > .brief { margin: 0; }
+@media (max-width: 1000px) { .live-grid { grid-template-columns: minmax(0, 1fr); } }
+.live-tabs { flex: none; }
+.live-tabs button[aria-selected="true"] { background: var(--color-surface); color: var(--color-text); box-shadow: var(--premium-glow); }
+.live-chart { max-width: 560px; }
+.sign-btn { font-size: 17px; }
+.brief-head { flex-wrap: wrap; }
 .lg-preview .btn-secondary { color: var(--color-text); }
 
 /* Daily inspiration card (dark by default: sits on the navy brand panel) */
@@ -1766,6 +1779,7 @@ body.nav-collapsed #sidebar-toggle .i { transform: scaleX(-1); }
         <div class="ap-body" id="appear-body"></div>
       </div>
     </div>
+    <button class="icon-btn sign-btn" data-action="my-signature" aria-label="My signature" title="My signature: add or change it" id="sign-btn" hidden>✍</button>
     <button class="icon-btn theme-btn" data-action="toggle-theme" aria-label="Toggle light or dark mode" id="theme-btn"></button>
     <button class="icon-btn signout-btn" data-action="sign-out" aria-label="Sign out" title="Sign out" id="signout-btn"></button>
     <div class="user-card" title="Anwar Ullah · Manager Admin &amp; HR">
@@ -1898,7 +1912,41 @@ const Live = {
     Role.apply();
     Notifs.render();
     Router.render(false);
+    this.assistant();
+    this.today = null; this.todayErr = false; this.loadToday();
     return true;
+  },
+  // The old main page's "Today" data, unchanged: core_my_today (013_today.sql) plus HR's own list (hr_today); refreshed every 2 minutes.
+  async loadToday() {
+    clearTimeout(this.timer);
+    if (!this.me) return;
+    if (document.hidden && this.today) { this.timer = setTimeout(() => this.loadToday(), 120000); return; }   // background tab: no fetch
+    const before = JSON.stringify([this.today, this.todayErr]);
+    try { const r = await this.sb.rpc('core_my_today'); if (r.error) throw r.error; this.today = r.data; this.todayErr = false; }
+    catch (e) { this.todayErr = true; }
+    if (this.today) try {
+      const r = await this.sb.rpc('hr_today'), h = r.data;
+      if (!r.error && h && Array.isArray(h.actions)) {
+        const T = this.today, C = T.counts || (T.counts = {}), late = h.actions.filter(a => Date.now() - new Date(a.since).getTime() > 2 * 864e5).length;
+        T.actions = (T.actions || []).concat(h.actions).sort((a, b) => String(a.since || '').localeCompare(String(b.since || '')));
+        C.actions = (C.actions || 0) + h.actions.length; C.late = (C.late || 0) + late; C.my_open_requests = (C.my_open_requests || 0) + (+h.mine_open || 0);
+      }
+    } catch (e) { }
+    // repaint only when something changed and nobody is working in the lists (keeps focus and scroll)
+    const busy = document.activeElement?.closest?.('.live-grid');
+    if (this.me && Router.parse().id === 'home' && JSON.stringify([this.today, this.todayErr]) !== before && !busy) Router.render(false);
+    this.timer = setTimeout(() => this.loadToday(), 120000);
+  },
+  // The one bell for every portal (akf-desk.js), as on the old main page.
+  bellCount() { return window.AKF_DESK && AKF_DESK.inbox ? AKF_DESK.inbox().length : this.inbox.length; },
+  // Alkhidmat AI, as on the main page: it knows which portals this person has, nothing personal.
+  assistant() {
+    if (this.aiOn || !window.AKF_ASSISTANT) return;
+    this.aiOn = true;
+    AKF_ASSISTANT({ sb: this.sb, portal: 'Jazba (home page)', user: this.me.full_name,
+      context: () => JSON.stringify({ today: new Date().toISOString().slice(0, 10), page: 'Home page: what is waiting on me and my portals', isSuperAdmin: !!this.me?.is_super,
+        myPortals: this.portals.map(p => ({ name: p.name, what: p.description, myAccess: this.ROLE[p.role] || p.role })), waitingOnMe: this.inbox.length }),
+      hints: ['What can I do in each portal?', 'Which portal should I use for a purchase?', 'What is waiting for my approval?'] });
   },
   first() { return (this.me?.full_name || '').trim().split(/\s+/)[0] || 'there'; },
   paintUser() {
@@ -1907,6 +1955,7 @@ const Live = {
     $('.user-card .avatar').textContent = initials(name);
     $('.user-name').textContent = name;
     $('.user-role').textContent = role;
+    $('#sign-btn').hidden = false;
   },
   // Portals as sidebar / top-tab / palette items, in the order the Super Admin set.
   nav() {
@@ -1918,7 +1967,11 @@ const Live = {
   when(at) { const t = Date.parse(at || ''); if (!t) return ''; const m = Math.round((Date.now() - t) / 6e4); return m < 60 ? `${Math.max(m, 1)} min` : m < 1440 ? `${Math.round(m / 60)} h` : `${Math.round(m / 1440)} d`; },
 };
 const NAV = () => Live.on ? Live.nav() : PORTALS;
-if (Live.on) document.documentElement.classList.add('live');   // hides the sample-only quick-create button
+if (Live.on) {
+  document.documentElement.classList.add('live');   // hides the sample-only quick-create button
+  document.addEventListener('akf-inbox', () => { if (Live.me) Notifs.render(); });   // the shared bell's count changed (akf-desk.js)
+  document.addEventListener('akf-chart-pick', e => { if (e.detail?.chart !== 'today-portals') return; const p = Live.nav().find(x => x.id === e.detail.key); if (p && p.href !== '#') location.href = p.href; });
+}
 
 // Super Admin = the ERP's own flag (core_profiles.is_super, protected by the database and the authenticator code).
 // Preview without config.js: only the demo e-mail below.
@@ -2789,21 +2842,35 @@ console.assert(Smart.similar('Winter blankets')?.id === 'PO-2611-0142' && !Smart
 console.assert(Smart.budget('disaster').used === 7120000, 'budget calc broken');
 
 class HomeView {
-  // Live home: only real numbers from the ERP (the person's portals and their "waiting on you" list).
+  // Live home: the same live data as the old main page's "Today" (core_my_today + hr_today), in the new design.
+  // Old features with a new-design equivalent use it (banner numbers, tiles, list); the rest are kept as they were
+  // (waiting-by-portal chart, My tasks panel, Approvals / To do tabs, late days, amounts).
   live() {
-    const me = Live.me, inbox = Live.inbox, nav = Live.nav(), w = inbox.length, hour = new Date().getHours();
-    const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+    const me = Live.me, nav = Live.nav(), T = Live.today, C = (T && T.counts) || {}, I = (T && T.impact) || {}, A = (T && T.actions) || [];
+    const hour = new Date().getHours(), greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
     const dateStr = `${TODAY.toLocaleDateString('en-GB', { weekday: 'long' })} ${pad(TODAY.getDate())}-${TODAY.toLocaleDateString('en-GB', { month: 'short' })}`;
-    const words = String(me.full_name || me.email).trim().split(/\s+/);
-    const sev = x => /^Overdue/i.test(x.title) ? 3 : /approval|waiting for you|review|needs your/i.test(x.title) ? 2 : 1;
-    const overdue = inbox.filter(x => sev(x) === 3).length, toApprove = inbox.filter(x => sev(x) === 2).length;
-    const byPortal = nav.map(p => ({ ...p, n: p.badge() })).sort((a, b) => b.n - a.n);
+    const words = String(me.full_name || me.email).trim().split(/\s+/), w = T ? (C.actions || 0) : null;
+    const h = I.avg_approval_hours, avg = h == null ? '—' : h >= 24 ? (h / 24).toFixed(1) : String(Math.round(h)), avgUnit = h == null ? '' : h >= 24 ? 'days' : 'h';
     const quick = ['procurement', 'tasks'].map(k => nav.find(p => p.id === k)).filter(Boolean);
-    const items = inbox.map(x => ({ x, s: sev(x) })).sort((a, b) => b.s - a.s);
-    const shown = items.slice(0, 6).map(({ x, s }) => {
-      const p = nav.find(q => q.id === x.portal);
-      return { sev: s, icon: Live.ICON[x.portal] || 'inbox', title: x.title, meta: [p?.name, x.body, Live.when(x.at) && `${Live.when(x.at)} ago`].filter(Boolean).join(' · '), actions: [['Open', `href="${esc(Live.open(x))}"`, 1]] };
-    });
+    const portalOf = k => nav.find(p => p.id === k);
+    const days = s => { const d = Math.floor((Date.now() - new Date(s).getTime()) / 864e5); return isFinite(d) ? d : 0; };
+    const link = a => { const p = portalOf(a.portal); if (!p || p.href === '#') return ''; return p.href + (['procurement', 'store'].includes(a.portal) && /^[\w.-]+$/.test(a.ref || '') ? '#track=' + a.ref : a.portal === 'fleet' ? '#track' : ''); };
+    const tab = Live.tab || 'all', show = A.filter(a => tab === 'all' || (tab === 'approve' ? a.kind !== 'do' : a.kind === 'do'));
+    const items = show.slice(0, 20).map(a => { const p = portalOf(a.portal), late = days(a.since) > 2, url = link(a);
+      return { sev: late ? 3 : a.kind === 'do' ? 1 : 2, icon: Live.ICON[a.portal] || 'inbox', title: a.title || a.ref,
+        meta: [p ? p.name : a.portal, a.sub, late ? `waiting ${days(a.since)} days` : '', a.amount ? 'Rs ' + Number(a.amount).toLocaleString('en-PK') : ''].filter(Boolean).join(' · '),
+        actions: url ? [['Open', `href="${esc(url)}"`, 1]] : [] }; });
+    const rest = {}; show.slice(20).forEach(a => { const n = portalOf(a.portal)?.name || a.portal; rest[n] = (rest[n] || 0) + 1; });
+    const tasksP = portalOf('tasks'), day = d => { const x = new Date(d); return isNaN(x) ? d : x.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); };
+    const byPortal = {}; A.forEach(a => { byPortal[a.portal] = (byPortal[a.portal] || 0) + 1; });
+    const chart = T && A.length && window.AKF_CHARTS ? AKF_CHARTS.donut({ id: 'today-portals', center: 'waiting',
+      items: Object.keys(byPortal).map(k => { const p = portalOf(k); return { key: k, label: p ? p.name : k, value: byPortal[k], color: p ? p.color : '' }; }) }) : '';
+    const card = (tone, ic, n, label, foot, target) => `
+      <a class="status-card spot tilt tone-${tone}" href="#${target}" data-action="scroll-to" data-target="${target}">
+        <div class="sc-head"><span>${label}</span><span class="sc-icon">${icon(ic)}</span></div>
+        <div class="sc-value"><span data-count="${n || 0}">${n || 0}</span><small>${n === 1 ? 'item' : 'items'}</small></div>
+        <div class="sc-foot"><span style="display:flex;align-items:center;gap:8px">${foot}</span><span class="go">View ${icon('arrowRight')}</span></div>
+      </a>`;
     return `
       <section class="welcome" aria-labelledby="page-h1">
         <div class="shader-bg" data-shader aria-hidden="true"></div>
@@ -2815,32 +2882,42 @@ class HomeView {
         <div>
           <div class="hero-top"><p class="eyebrow">${icon('shield')} Islamabad Region · ${esc(me.dept || 'Jazba')}</p><span class="hero-clock" id="hero-clock">${Clock.now()}</span><button type="button" class="hero-bg-btn" data-su data-action="toggle-appear">${icon('palette')}Background</button></div>
           <h1 id="page-h1" tabindex="-1"><span class="nowrap"><span class="w" style="--i:0">Assalam&#8209;o&#8209;Alaikum,</span></span> <span class="grad-name">${words.map((t, i) => `<span class="w" style="--i:${i + 1}">${esc(t)}${i === words.length - 1 ? '.' : ''}</span>`).join(' ')}</span></h1>
-          <p class="welcome-sub">${greet} · ${dateStr} · ${w ? `You have <strong>${plural(w, 'thing', 'things')}</strong> waiting on you.` : 'Nothing is waiting on you.'}</p>
+          <p class="welcome-sub">${greet} · ${dateStr}${w == null ? '' : ` · ${w ? `You have <strong>${plural(w, 'thing', 'things')}</strong> waiting on you.` : 'Nothing is waiting on you.'}`}</p>
           ${quick.length ? `<div class="welcome-actions">${quick.map((p, i) => `<a class="btn ${i ? 'btn-secondary' : 'btn-primary'}" href="${esc(p.href)}">${icon(p.id === 'procurement' ? 'filePlus' : 'plus')}${p.id === 'procurement' ? 'Raise a request' : 'Open Tasks'}</a>`).join('')}</div>` : ''}
           ${Daily.heroLine()}
         </div>
-        <dl class="impact" aria-label="Your day">
-          <div class="tone-accent"><dt>${icon('inbox')}Waiting on you</dt><dd data-count="${w}">${w}</dd></div>
-          <div class="tone-primary"><dt>${icon('checkCircle')}To approve or review</dt><dd data-count="${toApprove}">${toApprove}</dd></div>
-          <div class="tone-secondary"><dt>${icon('clock')}Overdue tasks</dt><dd data-count="${overdue}">${overdue}</dd></div>
-        </dl>
+        ${T ? `<dl class="impact" aria-label="Team impact this month">
+          <div class="tone-secondary"><dt>${icon('users')}Families helped</dt><dd data-count="${I.families_month || 0}">${I.families_month || 0}</dd></div>
+          <div class="tone-primary"><dt>${icon('checkCircle')}Requests approved</dt><dd data-count="${I.approved_month || 0}">${I.approved_month || 0}</dd></div>
+          <div class="tone-accent"><dt>${icon('clock')}Avg. approval time</dt><dd>${avg === '—' ? '—' : `<span data-count="${avg}">${avg}</span><small>${avgUnit}</small>`}</dd></div>
+        </dl>` : ''}
       </section>
 
-      ${byPortal.length ? `<section class="status-row" aria-label="Your portals with the most waiting">
-        ${byPortal.slice(0, 3).map((p, i) => `
-          <a class="status-card spot tilt tone-${['accent', 'secondary', 'neutral'][i]}" href="${esc(p.href)}">
-            <div class="sc-head"><span>${esc(p.name)}</span><span class="sc-icon">${icon(p.icon)}</span></div>
-            <div class="sc-value"><span data-count="${p.n}">${p.n}</span><small>${p.n === 1 ? 'item' : 'items'}</small></div>
-            <div class="sc-foot"><span style="display:flex;align-items:center;gap:8px">${p.n ? '<span class="pulse"></span>Waiting on you' : 'All clear'}</span><span class="go">Open ${icon('arrowRight')}</span></div>
-          </a>`).join('')}
-      </section>` : ''}
-
-      <section class="brief" aria-labelledby="brief-h">
-        <div class="brief-head"><div><h2 id="brief-h">${icon('bolt')}Needs your attention</h2>
-          <p>${w ? `${plural(w, 'item', 'items')} from your portals, most urgent first` : 'Nothing needs you right now.'}</p></div>
-          ${w > shown.length ? `<span class="brief-more">+${w - shown.length} more in the bell</span>` : ''}</div>
-        ${shown.length ? Smart.list(shown) : `<div class="brief-empty">${icon('checkCircle')}All caught up. JazakAllah khair.</div>`}
+      ${!T ? `<div class="brief-empty">${icon(Live.todayErr ? 'alert' : 'clock')}${Live.todayErr ? 'Live numbers unavailable right now. Your portals below still work.' : 'Loading your day…'}</div>` : `
+      <section class="status-row" aria-label="Your day">
+        ${card('accent', 'inbox', C.actions, 'Waiting on you', C.late ? `<span class="pulse"></span>${C.late} waiting more than 2 days` : C.actions ? '<span class="pulse"></span>Needs your action' : 'All clear', 'brief-h')}
+        ${card('secondary', 'tasks', C.tasks_week, 'My tasks this week', 'Due in the next 7 days', 'tasks-h')}
+        ${card('neutral', 'send', C.my_open_requests, 'Requests I started', 'Still in progress', 'brief-h')}
       </section>
+
+      ${chart ? `<section class="brief" aria-labelledby="chart-h"><div class="brief-head"><div><h2 id="chart-h">${icon('bolt')}Waiting on you, by portal</h2><p>Click a portal to open it.</p></div></div><div class="live-chart">${chart}</div></section>` : ''}
+
+      <div class="live-grid">
+        <section class="brief" aria-labelledby="brief-h">
+          <div class="brief-head"><div><h2 id="brief-h">${icon('bolt')}Needs your action</h2>
+            <p>${show.length ? `${plural(show.length, 'item', 'items')}, longest waiting first` : 'Nothing is waiting on you right now.'}</p></div>
+            <div class="seg live-tabs" role="tablist">${[['all', 'All'], ['approve', 'Approvals'], ['do', 'To do']].map(([k, t]) => `<button type="button" role="tab" aria-selected="${tab === k}" data-action="live-tab" data-value="${k}">${t}</button>`).join('')}</div></div>
+          ${items.length ? Smart.list(items) : `<div class="brief-empty">${icon('checkCircle')}All clear. JazakAllah khair!</div>`}
+          ${Object.keys(rest).length ? `<p class="brief-more" style="margin:10px 0 0">${Object.entries(rest).map(([n, c]) => `+${c} more in ${esc(n)}`).join(' · ')}</p>` : ''}
+        </section>
+        <section class="brief" aria-labelledby="tasks-h">
+          <div class="brief-head"><div><h2 id="tasks-h">${icon('tasks')}My tasks</h2><p>Due this week</p></div>${tasksP ? `<a class="btn btn-xs btn-secondary" href="${esc(tasksP.href)}">Tasks &amp; Events</a>` : ''}</div>
+          ${(T.tasks || []).length ? `<ol class="brief-list">${T.tasks.slice(0, 8).map(t => `<li class="brief-item sev-${t.late ? 3 : 1}">
+              <span class="bi-ic">${icon('tasks')}</span>
+              <div class="bi-body"><div class="bi-title">${esc(t.title || t.id)}</div><div class="bi-meta">${t.late ? '<span class="sev-tag">Late</span>' : ''}<span>${t.kind === 'todo' ? 'To-do' : 'Task'} · due ${esc(day(t.due))}</span></div></div></li>`).join('')}</ol>`
+            : `<div class="brief-empty">${icon('checkCircle')}Nothing due this week. ${tasksP ? 'Enjoy the calm.' : 'No tasks in Tasks &amp; Events.'}</div>`}
+        </section>
+      </div>`}
 
       <div class="section-head"><h2>Programmes</h2><span>Alkhidmat Islamabad service areas</span></div>
       <section class="prog-grid">
@@ -2849,17 +2926,17 @@ class HomeView {
 
       <div class="section-head"><h2>Your portals</h2><span>${plural(nav.length, 'portal', 'portals')} you can open</span></div>
       ${nav.length ? `<section class="portal-grid">
-        ${nav.map(p => `
+        ${nav.map(p => { const n = byPortal[p.id] || 0; return `
           <article class="portal-card spot tilt" style="--mc:${p.color}">
             <span class="pc-watermark" aria-hidden="true">${icon(p.icon)}</span>
             <div class="pc-top"><span class="pc-icon">${icon(p.icon)}</span>${p.role ? `<span class="role">${icon('shield')}Your access: ${esc(p.role)}</span>` : ''}</div>
             <h3>${esc(p.name)}</h3>
             <p>${esc(p.desc)}</p>
             <div class="pc-foot">
-              <span class="pc-stat"><i></i>${p.badge() ? `${plural(p.badge(), 'item', 'items')} waiting on you` : 'Nothing waiting'}</span>
+              <span class="pc-stat"><i></i>${n ? `${plural(n, 'item', 'items')} waiting on you` : 'Nothing waiting'}</span>
               <a class="btn btn-xs pc-open" href="${esc(p.href)}" aria-label="Open ${esc(p.name)}">Open ${icon('arrowUpRight')}</a>
             </div>
-          </article>`).join('')}
+          </article>`; }).join('')}
       </section>` : `<div class="brief-empty">${icon('shield')}You have no portals yet. Ask the Super Admin to give you access.</div>`}`;
   }
   html() {
@@ -3152,7 +3229,7 @@ const Sidebar = {
       + '<div class="nav-section">Portals</div>'
       + NAV().map(p => item(p.href || `#/${p.id}`, p.id, p.icon, p.short, p.badge?.(), p.tone, p.color)).join('')
       + (Live.on
-        ? (Live.me?.is_super ? `<a class="nav-item" href="${Live.HOME}" title="People, access and settings on the main page"><span class="nav-ic">${icon('shield')}</span><span class="nav-label">Admin (main page)</span></a>` : '')
+        ? (Live.me?.is_super ? `<a class="nav-item" href="${Live.HOME}#admin" title="People, access and settings on the main page"><span class="nav-ic">${icon('shield')}</span><span class="nav-label">Admin (main page)</span></a>` : '')
           + `<div class="side-card"><div class="side-card-top"><span>Waiting on you</span><b>${n}</b></div>
           <small>${n ? `${plural(n, 'item', 'items')} across your portals` : 'Nothing is waiting on you.'}</small></div>`
         : `<div class="side-card"><div class="side-card-top"><span>Your approval queue</span><b>${q.decided}/${q.total}</b></div>
@@ -3208,10 +3285,10 @@ const Theme = {
 const Notifs = {
   el: null,
   render() {
-    if (Live.on) {   // live: the ERP's own "waiting on you" list from every portal
-      const list = Live.inbox, n = list.length, badge = $('#bell-count');
-      badge.textContent = n; badge.hidden = !n;
-      $('#bell-btn').setAttribute('aria-label', `Waiting on you, ${n} item${n === 1 ? '' : 's'}`);
+    if (Live.on) {   // live: the bell is the ERP's one bell for every portal (opens akf-desk.js's list); this popover is its fallback
+      const list = Live.inbox, n = Live.bellCount(), badge = $('#bell-count');
+      badge.textContent = n > 99 ? '99+' : n; badge.hidden = !n;
+      $('#bell-btn').setAttribute('aria-label', `${n} notifications from every portal`);
       $('#notif-list').innerHTML = n ? list.slice(0, 30).map(x => `
         <li><a class="notif unread" href="${esc(Live.open(x))}">
           <span class="notif-dot"></span>
@@ -3714,7 +3791,9 @@ const Palette = {
     if (Live.on) return [
       { group: 'Navigate', label: 'Home', icon: 'home', hint: 'Overview', run: () => Router.go('#/') },
       ...Live.nav().map(p => ({ group: 'Portals', label: p.name, icon: p.icon, hint: p.role ? `Your access: ${p.role}` : '', run: () => location.assign(p.href) })),
-      ...(Live.me?.is_super ? [{ group: 'Admin', label: 'People, access and settings', icon: 'shield', hint: 'Main page', run: () => location.assign(Live.HOME) }] : []),
+      ...(Live.me?.is_super ? [{ group: 'Admin', label: 'People, access and settings', icon: 'shield', hint: 'Main page', run: () => location.assign(Live.HOME + "#admin") }] : []),
+      { group: 'Actions', label: 'Ask Alkhidmat AI a question', icon: 'bolt', hint: 'AI assistant', run: () => { const f = document.querySelector('.kai-fab'); if (f) f.click(); else toast('Alkhidmat AI is still loading. Try again in a moment.'); } },
+      { group: 'Actions', label: 'My signature', icon: 'checkCircle', hint: 'Add or change it', run: () => App.actions['my-signature']() },
       { group: 'Actions', label: 'Toggle light / dark mode', icon: 'moon', hint: 'Appearance', run: () => Theme.toggle() },
       ...(Role.isSuper() ? [{ group: 'Actions', label: 'Change background or colour style', icon: 'palette', hint: 'Super admin', run: () => Appear.toggle(true) }] : []),
       ...Live.inbox.map(x => ({ group: 'Waiting on you', record: true, label: x.title, icon: Live.ICON[x.portal] || 'inbox', hint: x.body, run: () => location.assign(Live.open(x)) })),
@@ -4080,7 +4159,9 @@ const Auth = {
     if (Live.on) {
       this.codeMode(false);
       Live.me = null; Live.portals = []; Live.inbox = [];
-      try { await Live.sb?.auth.signOut(); } catch (e) {}
+      clearTimeout(Live.timer); Live.today = null;
+      $('#sign-btn').hidden = true;
+      try { await Live.sb?.auth.signOut({ scope: 'global' }); } catch (e) {}   // as before: signs out of every portal
       Notifs.render();
     }
     this.clear();
@@ -4130,7 +4211,10 @@ const App = {
     'open-palette': () => Palette.open(),
     'palette-backdrop': (el, e) => { if (e.target === el) Palette.close(); },
     'palette-run': el => Palette.run(+el.dataset.idx),
-    'toggle-notifs': () => Notifs.toggle(),
+    'toggle-notifs': () => { if (Live.on && window.AKF_DESK && AKF_DESK.openInbox) AKF_DESK.openInbox($('#bell-btn')); else Notifs.toggle(); },
+    'live-tab': el => { Live.tab = el.dataset.value; Router.render(false); $(`[data-action="live-tab"][data-value="${Live.tab}"]`)?.focus(); },
+    'scroll-to': (el, e) => { e.preventDefault(); document.getElementById(el.dataset.target)?.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'start' }); },
+    'my-signature': () => { if (window.AKF_SIGN) AKF_SIGN.open(); else toast('Still loading. Try again in a moment.'); },
     'notifs-read-all': () => { state.notifs.forEach(n => { n.unread = false; }); Notifs.render(); },
     'notif-open': el => { const n = state.notifs.find(x => x.id === +el.dataset.id); if (n) n.unread = false; Notifs.render(); Notifs.toggle(false); },
     'drawer-open': el => Drawer.open(el.dataset.mode),

@@ -424,6 +424,13 @@ async function adminCall(body) {
   return j;
 }
 
+/* ---------- front door: since 2026-11-08 staff sign in and land on the new home page (home/).
+   This page still handles new passwords, the Super Admin's authenticator set-up, "no access", and the
+   Super Admin tools (People & access, Portals, Settings, Activity) when opened as ./#admin.
+   To go back to this page as everyone's home: set FRONT_DOOR = "" and publish. ---------- */
+const FRONT_DOOR = "home/";
+const ADMIN_VIEW = () => /^#admin/.test(location.hash);
+
 /* ---------- start-up: refuse to run without a safe configuration ---------- */
 function configError() {
   if (!CFG || !CFG.url || !CFG.anonKey || /YOUR-/i.test(CFG.url + CFG.anonKey)) return "config.js is missing or still has placeholder values.";
@@ -460,6 +467,7 @@ async function loadMe() {
       const { data: aal, error } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
       if (error || !aal || aal.currentLevel !== "aal2") { S.view = "mfa"; S.mfaNew = !aal || aal.nextLevel !== "aal2"; return render(); }
     }
+    if (FRONT_DOOR && !ADMIN_VIEW()) { location.replace(FRONT_DOOR); return; }   // everyone's home is the new page; Super Admin tools open with #admin
     S.portals = await q(sb.rpc("core_my_portals"));
     S.view = "home"; render(); loadToday();
     /* Alkhidmat AI on the main page too (every page has it); it knows which portals this person has, nothing personal */
@@ -501,6 +509,7 @@ function render() {
   if (v === "boot") { showLoader("Opening " + HUB + "…", true); return; }
   if (document.getElementById("ak-loader") && !S.adminLoading) { loaderN = 0; hideLoader(); }
   if (v === "config") return app.append(authCard("Setup needed", [el("div", { class: "notice bad", text: S.configErr }), el("p", { class: "small", text: "The page will not start until config.js is correct. See ERP-SETUP-GUIDE.md." })]));
+  if (v === "signin" && FRONT_DOOR) { location.replace(FRONT_DOOR); return; }   // the new home page has the sign-in screen
   if (v === "signin") return app.append(signIn());
   if (v === "setpw") return app.append(setPassword());
   if (v === "mfa") return app.append(twoStep());
