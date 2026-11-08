@@ -1869,6 +1869,7 @@ const Live = {
   on: !!CFG,
   sb: null, me: null, portals: [], inbox: [],
   HOME: new URL('../', location.href).href,
+  SIGN_IN_ONLY: true,   // true = this page is only the sign-in screen; false = it also shows the new home page
   ICON: { procurement: 'cart', store: 'box', tasks: 'tasks', donor: 'heart', donors: 'heart', fleet: 'ambulance', assistance: 'wallet', hr: 'users', track: 'send' },
   ROLE: { viewer: 'Viewer', staff: 'Staff', manager: 'Manager', admin: 'Admin', custom: 'Custom' },
   configError() {
@@ -1905,6 +1906,8 @@ const Live = {
         location.replace(this.HOME); return false;            // first-time set-up (QR code) happens on the main page
       }
     }
+    // Decision 2026-11-08: only the sign-in screen is new. Once signed in, everyone goes to the main page, as before.
+    if (this.SIGN_IN_ONLY) { location.replace(this.HOME); return 'away'; }
     const [p, i] = await Promise.all([this.sb.rpc('core_my_portals'), this.sb.rpc('core_my_inbox')]);
     if (p.error) throw p.error;
     this.me = me;
