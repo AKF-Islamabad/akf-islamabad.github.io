@@ -1866,10 +1866,10 @@ const ME = 'Anwar Ullah';   // sample data only; the live page uses Live.me
    ============================================================ */
 const CFG = window.AKF_SUPABASE;
 const Live = {
-  on: !!CFG,
+  on: true,   // always the real ERP: without a working config.js the page shows "Setup needed", never the sample design data
   sb: null, me: null, portals: [], inbox: [],
   HOME: new URL('../', location.href).href,
-  SIGN_IN_ONLY: true,   // true = this page is only the sign-in screen; false = it also shows the new home page
+  SIGN_IN_ONLY: false,  // false = sign-in + the new home page for everyone (decision 2026-11-08); true = sign-in screen only
   ICON: { procurement: 'cart', store: 'box', tasks: 'tasks', donor: 'heart', donors: 'heart', fleet: 'ambulance', assistance: 'wallet', hr: 'users', track: 'send' },
   ROLE: { viewer: 'Viewer', staff: 'Staff', manager: 'Manager', admin: 'Admin', custom: 'Custom' },
   configError() {
@@ -4035,7 +4035,7 @@ const Auth = {
     matchMedia('(max-width: 900px)').addEventListener('change', () => LoginStyle.apply());
     if (Live.on) {   // real ERP accounts: username or work e-mail, no demo note
       $('#lg-email').type = 'text';
-      $('#lg-email').placeholder = CFG.emailDomain ? 'your.name' : 'name@alkhidmat.org';
+      $('#lg-email').placeholder = CFG && CFG.emailDomain ? 'your.name' : 'name@alkhidmat.org';
       $('label[for="lg-email"]').textContent = 'Work e-mail or username';
       $('#lg-remember').parentElement.lastChild.textContent = ' Remember my username';
       $('.lc-note').hidden = true;
