@@ -1397,6 +1397,8 @@ body.nav-collapsed #sidebar-toggle .i { transform: scaleX(-1); }
 .live-tabs button[aria-selected="true"] { background: var(--color-surface); color: var(--color-text); box-shadow: var(--premium-glow); }
 .live-chart { max-width: 560px; }
 .sign-btn { font-size: 17px; }
+/* the sign-in rows use display:flex, which would override the hidden attribute: the authenticator box must stay hidden until a Super Admin needs it */
+.lf[hidden], .lc-row[hidden], .sign-btn[hidden] { display: none !important; }
 .brief-head { flex-wrap: wrap; }
 .lg-preview .btn-secondary { color: var(--color-text); }
 
