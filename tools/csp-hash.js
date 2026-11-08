@@ -6,6 +6,8 @@
 const fs = require("fs"), crypto = require("crypto");
 const file = process.argv[2] || "index.html";
 let html = fs.readFileSync(file, "utf8");
+// a page that declares its own rules (the public Career page: plain text only, inline handlers, data only to our database) is left as it is
+if (/<meta name="akf-csp" content="keep-inline">/.test(html)) { console.log("CSP kept (the page's own rules): " + file); process.exit(0); }
 const hashes = [];
 for (const m of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {
   hashes.push("'sha256-" + crypto.createHash("sha256").update(m[1], "utf8").digest("base64") + "'");

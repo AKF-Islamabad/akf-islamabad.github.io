@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-/6LqEWsHOxtAgPPUcAJ7WOY7Q0s9nBHu/fDyicelVIY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-miNrhOp93NyBZTrrnjq10UThFa3ZvMItZ0Z1pq47A2U='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1110,7 +1110,7 @@ function el(tag, attrs, ...kids) {
   e.append(...kids.flat(9).filter(x => x != null && x !== false));
   return e;
 }
-const P = { home: '<path d="M3 11l9-8 9 8M5 10v10h14V10"/>', plus: '<path d="M12 5v14M5 12h14"/>', inbox: '<path d="M4 4h16v12h-5l-2 3h-2l-2-3H4z"/>',
+const P = { brief: '<path d="M3 8h18v12H3zM9 8V5h6v3M3 13h18"/>', home: '<path d="M3 11l9-8 9 8M5 10v10h14V10"/>', plus: '<path d="M12 5v14M5 12h14"/>', inbox: '<path d="M4 4h16v12h-5l-2 3h-2l-2-3H4z"/>',
   cal: '<path d="M4 6h16v14H4zM4 10h16M8 3v5M16 3v5"/>', users: '<path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21c0-4 3-6 7-6s7 2 7 6M17 11a3 3 0 1 0 0-6M22 21c0-3-2-5-5-5"/>',
   book: '<path d="M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4zM20 4h-6M20 4v14h-6"/>', chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>', menu: '<path d="M4 6h16M4 12h16M4 18h16"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>',
@@ -1136,7 +1136,10 @@ async function rpc(name, args, what) { const { data, error } = await SB.rpc(name
 const fmtD = s => { if (!s) return ""; const d = new Date(String(s).length <= 10 ? s + "T00:00:00" : s); return isNaN(d) ? String(s) : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
 const fmtDT = s => { const d = new Date(s); return isNaN(d) ? "" : d.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); };
 const KIND = { Leave: "Leave", Attendance: "Attendance correction", Shift: "Shift change", Profile: "Profile correction", Document: "HR letter", Policy: "Policy change", Exit: "Exit",
-  Medical: "Medical claim", Expense: "Expense claim", Loan: "Loan", Advance: "Salary advance", Phone: "Phone scheme", Overtime: "Overtime", Outstation: "TA/DA (out-station)", Encashment: "Leave encashment", Payroll: "Payroll" };
+  Medical: "Medical claim", Expense: "Expense claim", Loan: "Loan", Advance: "Salary advance", Phone: "Phone scheme", Overtime: "Overtime", Outstation: "TA/DA (out-station)", Encashment: "Leave encashment", Payroll: "Payroll", Recruitment: "Staff request (recruitment)" };
+const CAREERS = new URL("../careers/", location.href).href, STAGES = ["Received", "Under Review", "Shortlisted", "Interview Done", "Selected", "Regret"];
+const isHead = () => !!ME && (["hod", "finance_hod"].includes(ME.role) || (ME.extraDepts || []).length > 0);
+const mayRecruit = () => !!ME && (ME.super || isHead() || can("recruit", "edit"));
 const MONEY = ["Medical", "Expense", "Overtime", "Outstation", "Loan", "Advance", "Phone", "Encashment"];
 const rs = n => "Rs " + Math.round(+n || 0).toLocaleString("en-PK");
 const monthName = m => new Date(m + "-01T00:00:00").toLocaleDateString("en-GB", { month: "long", year: "numeric" });
@@ -1148,6 +1151,7 @@ const what = r => r.kind === "Leave" ? (r.data.leaveType || "Leave") + " · " + 
   : r.kind === "Shift" ? "Shift · " + (r.data.shift || "") + " from " + fmtD(r.data.from) : r.kind === "Profile" ? "Correct: " + (r.data.item || "")
   : r.kind === "Exit" ? (r.data.exitKind || "Exit") + " · last day " + fmtD(r.data.lastDay)
   : r.kind === "Payroll" ? "Payroll " + monthName(r.data.month) + " · " + ((r.result.totals || {}).staff || 0) + " staff · net " + rs((r.result.totals || {}).net)
+  : r.kind === "Recruitment" ? "Staff request · " + (r.data.vacancies || "") + " × " + (r.data.post || "")
   : r.kind === "Overtime" ? "Overtime · " + fmtD(r.data.date) + " until " + (r.data.until || "")
   : r.kind === "Loan" ? "Loan " + rs(r.result.amount) + " over " + (r.result.months || "") + " months"
   : r.kind === "Encashment" ? "Encash " + (r.result.days || r.data.days) + " days · " + rs(r.result.amount)
@@ -1163,6 +1167,7 @@ const NAVX = [
   { v: "notices", l: "Announcements", ic: "bell", ok: () => can("notices"), count: () => NOTES.filter(n => n.needs_ack && !n.acked).length },
   { v: "calendar", l: "Leave calendar", ic: "cal", ok: () => can("calendar") },
   { v: "people", l: "People", ic: "users", ok: () => can("people") },
+  { v: "recruit", l: "Recruitment", ic: "brief", ok: () => can("recruit") || isHead() || !!(ME && ME.super) },
   { v: "exits", l: "Onboarding & exits", ic: "door", ok: () => can("exits") },
   { v: "org", l: "Org chart", ic: "org", ok: () => can("org") },
   { v: "library", l: "Policies & forms", ic: "folder", ok: () => can("library") },
@@ -1213,7 +1218,7 @@ const VIEWS = {
       card("My recent requests", ...(mine.length ? mine.slice(0, 8).map(reqRow) : [empty("No requests yet.")]))));
   },
   apply(box) {
-    const pol = ME.policy || {}, kinds = ["Leave", "Attendance", "Shift", "Profile", "Document", "Exit"];
+    const pol = ME.policy || {}, kinds = ["Leave", "Attendance", "Shift", "Profile", "Document", "Exit"].concat(mayRecruit() ? ["Recruitment"] : []);
     const kbtn = k => el("button", { type: "button", class: "btn btn-outline" + (V.kind === k ? " active" : ""), text: KIND[k], onclick: () => { V.kind = k; render(); } });
     box.append(el("div", { class: "hr-kinds" }, kinds.map(kbtn)), el("div", { class: "hr-kinds" }, el("span", { class: "small muted", text: "Claims & loans:" }), MONEY.map(kbtn)));
     const f = {}, field = (label, node, full) => el("label", { class: full ? "full" : null }, label, node);
@@ -1246,6 +1251,15 @@ const VIEWS = {
     } else if (V.kind === "Exit") {
       form.append(field("Kind", select("exitKind", ["Resignation"])), field("Last working day", input("lastDay", "date")), field("Reason", area("reason"), true),
         el("div", { class: "small muted full", text: "Notice period: " + ((pol.exit || {}).noticeDays || 30) + " days. After approval HR goes through the clearance list with you (equipment, ID card, handover, dues)." }));
+    } else if (V.kind === "Recruitment") {   // a Director may also ask for a department they oversee
+      const deps = [{ code: ME.dept, name: ME.deptName || ME.dept }].concat(ME.extraDepts || []).filter(d => d.code);
+      form.append(field("Department", (f.dept = el("select", { class: "select" }, deps.map(d => el("option", { value: d.code, text: d.name }))))),
+        field("Post title", input("post", "text", { maxlength: 80, placeholder: "e.g. Staff Nurse" })), field("Number of people", input("vacancies", "number", { min: 1, max: 50, step: 1, value: "1" })),
+        field("New post or replacement", select("type", ["New post", "Replacement"])), field("Replacing (name, for a replacement)", input("replacing", "text", { maxlength: 80 })),
+        field("Qualification needed", input("qualification", "text", { maxlength: 120, placeholder: "e.g. BSc Nursing" })), field("Experience needed", input("experience", "text", { maxlength: 60, placeholder: "e.g. 2-5 years" })),
+        field("Salary range (PKR a month)", input("salary", "text", { maxlength: 60 })), field("Location", input("location", "text", { maxlength: 60, value: "Islamabad" })),
+        field("Needed by", input("neededBy", "date")), field("Main duties", area("duties"), true), field("Why the post is needed", area("reason"), true),
+        el("div", { class: "small muted full", text: "After approval HR publishes the job on the Career page; applications come into HR360 → Recruitment." }));
     } else if (MONEY.includes(V.kind)) {
       const files = () => field("Bills (PDF or photo, under 5 MB each)", (f._files = el("input", { class: "input", type: "file", multiple: true, accept: ".pdf,.png,.jpg,.jpeg" })), true);
       const pp = pol.payroll || {}, money = (k, l) => field(l || "Amount (Rs)", input(k || "amount", "number", { min: 0, step: 1 }));
@@ -1358,6 +1372,25 @@ const VIEWS = {
         n.read != null ? el("span", { class: "small muted", text: n.read + " confirmed" + (n.missing && n.missing.length ? " · not yet: " + n.missing.slice(0, 30).join(", ") + (n.missing.length > 30 ? " +" + (n.missing.length - 30) + " more" : "") : "") }) : null,
         can("notices", "edit") ? el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Archive", onclick: async () => { try { await rpc("hr_notice_archive", { p_id: n.id }, "Not archived"); await reload(); render(); } catch (e) { toast(e.message, true); } } }) : null)))
       : [card("Announcements", empty("No announcements."))]));
+  },
+  async recruit(box) {
+    const b = (await rpc("hr_recruit_board", {}, "Recruitment could not load")) || { jobs: [], waiting: [] };
+    if (V.id) return recruitJob(box, b.jobs.find(j => j.id === V.id), b.editor);
+    const all = {}; b.jobs.forEach(j => Object.entries(j.stages || {}).forEach(([k, n]) => { all[k] = (all[k] || 0) + n; }));
+    box.append(el("div", { class: "hr-actions" }, mayRecruit() ? el("button", { class: "btn btn-primary", type: "button", text: "Request new staff", onclick: () => { V.kind = "Recruitment"; go("apply"); } }) : null,
+      b.depts ? el("button", { class: "btn btn-outline", type: "button", text: "Post a job directly", onclick: () => jobForm(null, null, b.depts) }) : null,
+      el("a", { class: "btn btn-outline", href: CAREERS, target: "_blank", rel: "noopener", text: "Open the Career page" })));
+    box.append(el("div", { class: "kpis" }, kpi("Jobs on the Career page", b.jobs.filter(j => j.live).length, "open now", "brief"),
+      kpi("Applicants", b.jobs.reduce((t, j) => t + (+j.total || 0), 0), "all jobs", "users"), kpi("New", all.Received || 0, "not reviewed yet", "inbox"), kpi("Selected", all.Selected || 0, "", "check")));
+    if (b.editor) box.append(card("Approved staff requests · publish on the Career page", ...(b.waiting.length ? b.waiting.map(w => el("div", { class: "hr-row" },
+      el("span", { class: "grow" }, el("b", { text: w.data.vacancies + " × " + w.data.post + " · " + (w.deptName || w.dept || "") }), el("small", { text: w.id + " · asked by " + (w.by || "") + " · approved " + fmtD(w.decided_at) })),
+      el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Publish", onclick: () => jobForm(w, null) }))) : [empty("Nothing waiting. Staff requests appear here once the President approves them.")])));
+    const ch = el("div"); if (window.AKF_CHARTS) ch.innerHTML = AKF_CHARTS.donut({ id: "hr-recruit", center: "applicants", items: STAGES.filter(x => all[x]).map(x => ({ key: x, label: x, value: all[x] })), empty: "No applicants yet" });
+    box.append(el("div", { class: "hr-grid" }, card("Applicants by stage", ch),
+      card("Jobs", ...(b.jobs.length ? b.jobs.map(j => el("button", { class: "hr-row", type: "button", onclick: () => go("recruit", j.id) },
+        el("span", { class: "grow" }, el("b", { text: j.job.t + " · " + (j.deptName || j.job.dp || "") }),
+          el("small", { text: j.id + " · " + j.job.vac + (j.job.vac == 1 ? " vacancy" : " vacancies") + " · deadline " + fmtDT(j.job.dl) + " · " + j.total + (j.total == 1 ? " applicant" : " applicants") + ((j.stages || {}).Received ? " · " + j.stages.Received + " new" : "") })),
+        el("span", { class: "badge " + (j.live ? "b-ok" : "b-info"), text: j.live ? "On the Career page" : j.open ? "Deadline passed" : "Closed" }))) : [empty("No jobs yet.")]))));
   },
   async exits(box) {
     let L = []; try { L = await rpc("hr_checklists", {}, "Checklists could not load") || []; } catch (e) { box.append(empty(e.message)); return; }
@@ -1613,6 +1646,8 @@ async function openReq(id) {
   const kv = el("dl", { class: "hr-kv" }); const add = (k, v) => { if (v != null && v !== "") kv.append(el("dt", { text: k }), el("dd", { text: String(v) })); };
   add("Name", r.name + (r.designation ? " · " + r.designation : "")); add("Department", r.deptName || r.dept); add("Request", what(r)); add("Status", (STATUS[r.status] || [r.status])[0] + (overdue(r) ? " (overdue)" : ""));
   const d = r.data || {};
+  if (r.kind === "Recruitment") [["Post", "post"], ["Number of people", "vacancies"], ["Type", "type"], ["Replacing", "replacing"], ["Qualification", "qualification"], ["Experience", "experience"],
+    ["Salary range", "salary"], ["Location", "location"], ["Needed by", "neededBy"], ["Main duties", "duties"]].forEach(([l, k]) => add(l, k === "neededBy" ? fmtD(d[k]) : d[k]));
   if (d.reason) add("Reason", d.reason); if (d.in) add("Time in / out", d.in + (d.out ? " – " + d.out : "")); if (d.correct) add("Correct information", d.correct);
   if (d.fields) Object.entries(d.fields).forEach(([k, v]) => add(k, v)); if (r.result && r.result.long) add("Note", "Long medical leave: also needs the Secretary General or President (outside HR360)");
   if (r.result && r.result.overWallet) add("Note", "Beyond this month's allowance: counts as a late");
@@ -1719,6 +1754,83 @@ function slipModal(s) {
     el("dl", { class: "hr-kv" }, el("dt", {}, el("b", { text: "Net pay" })), el("dd", {}, el("b", { text: rs(s.net) }))),
     el("p", { class: "small muted", text: "Alkhidmat also pays EOBI " + rs(s.eobiEmployer) + " and sets aside gratuity " + rs(s.gratuity) + " for you this month." }),
     el("div", { class: "hr-actions no-print" }, el("button", { class: "btn btn-primary", type: "button", text: "Print", onclick: () => print() })));
+}
+function jobForm(w, j, depts) {   // w: an approved staff request to publish; j: a published job to edit; depts: Super Admin posting without a request
+  const d = (w && w.data) || {}, o = (j && j.job) || {}, x = (String(d.experience || "").match(/\d+/g) || []).map(Number);
+  const dl = String(o.dl || new Date(Date.now() + 14 * 864e5).toLocaleDateString("en-CA") + "T17:00");
+  const inp = (v, a) => el("input", Object.assign({ class: "input", value: v == null ? "" : String(v) }, a || {})), txt = v => el("textarea", { class: "textarea", rows: 4, maxlength: 3000, value: v || "" });
+  const f = { t: inp(o.t || d.post, { maxlength: 80 }), q: inp(o.q || d.qualification, { maxlength: 120 }), x0: inp(o.x ? o.x[0] : x[0] ?? 0, { type: "number", min: 0, max: 40 }),
+    x1: inp(o.x ? (o.x[1] === 99 ? "" : o.x[1]) : x[1] ?? "", { type: "number", min: 0, max: 40, placeholder: "no limit" }), fr: el("input", { type: "checkbox", checked: !!o.fr }),
+    a0: inp(o.a ? o.a[0] : 18, { type: "number", min: 16, max: 70 }), a1: inp(o.a ? o.a[1] : 45, { type: "number", min: 17, max: 70 }), sal: inp(o.sal || d.salary, { maxlength: 60 }),
+    loc: inp(o.loc || d.location || "Islamabad", { maxlength: 60 }), vac: inp(o.vac || d.vacancies || 1, { type: "number", min: 1, max: d.vacancies || 50 }),
+    g: el("select", { class: "select" }, [["B", "Open to all"], ["M", "Male only"], ["F", "Female only"]].map(([v, l]) => el("option", { value: v, text: l }))),
+    dd: inp(dl.slice(0, 10), { type: "date" }), dt: inp(dl.slice(11, 16), { type: "time" }), sk: inp(o.sk, { maxlength: 120, placeholder: "e.g. patient care, MS Office" }),
+    js: txt(o.js || [d.qualification ? "Qualification: " + d.qualification : "", d.experience ? "Experience: " + d.experience : ""].filter(Boolean).join("\n")), jd: txt(o.jd || d.duties) };
+  f.g.value = o.g || "B";
+  const dsel = depts ? el("select", { class: "select" }, depts.map(x => el("option", { value: x.code, text: x.name }))) : null;
+  const save = el("button", { class: "btn btn-primary", type: "button", text: j ? "Save changes" : "Publish on the Career page" });
+  save.addEventListener("click", async () => { save.disabled = true;
+    const job = { t: f.t.value, q: f.q.value, x: [+f.x0.value || 0, +f.x1.value || 99], fr: f.fr.checked ? 1 : 0, a: [+f.a0.value, +f.a1.value], sal: f.sal.value, loc: f.loc.value, vac: +f.vac.value,
+      g: f.g.value, dl: f.dd.value + "T" + (f.dt.value || "17:00"), sk: f.sk.value, js: f.js.value, jd: f.jd.value, dept: dsel ? dsel.value : null };
+    try { const id = await rpc("hr_job_save", { p_id: j ? j.id : null, p_request: w ? w.id : null, p_job: job }, "Not saved"); toast(j ? "Saved ✓" : "Published ✓ " + id + " is on the Career page now"); closeModal(); render(); }
+    catch (e) { toast(e.message, true); save.disabled = false; } });
+  const L = (l, n, full) => el("label", { class: full ? "full" : null }, l, n);
+  modal(j ? "Edit job · " + j.id : "Publish on the Career page", el("div", { class: "hr-form" }, dsel ? L("Department", dsel) : null, L("Job title", f.t), L("Vacancies", f.vac), L("Qualification", f.q), L("Salary (shown to candidates)", f.sal),
+    L("Experience from (years)", f.x0), L("Experience up to (years)", f.x1), el("label", {}, el("span", {}, f.fr, " Fresh candidates may apply (no experience needed)")), L("Who may apply", f.g),
+    L("Age from", f.a0), L("Age up to", f.a1), L("Location", f.loc), L("Skills (used to rank candidates)", f.sk), L("Last date to apply", f.dd), L("Closing time (Pakistan)", f.dt),
+    L("Job specification (one point per line)", f.js, true), L("Key responsibilities (one point per line)", f.jd, true)),
+    el("p", { class: "small muted", text: "Candidates see exactly this on the Career page and can apply until the deadline. Their applications and CVs come into this tab." }), el("div", { class: "hr-actions" }, save));
+}
+async function recruitJob(box, j, editor) {
+  const back = el("button", { class: "btn btn-outline btn-sm", type: "button", text: "← All jobs", onclick: () => go("recruit") });
+  if (!j) return box.append(back, empty("This job is not one you can see."));
+  const list = (await rpc("hr_applicants", { p_job: j.id }, "The applicants could not load")) || [];
+  const by = {}; list.forEach(a => { by[a.stage] = (by[a.stage] || 0) + 1; });
+  const link = CAREERS + "#" + j.id;
+  box.append(el("div", { class: "hr-actions" }, back,
+    el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Copy job link", onclick: async () => { try { await navigator.clipboard.writeText(link); toast("Link copied: share it on WhatsApp, Facebook or by e-mail"); } catch (e) { prompt("Copy this link", link); } } }),
+    el("a", { class: "btn btn-outline btn-sm", href: link, target: "_blank", rel: "noopener", text: "Open on the Career page" }),
+    editor && list.length ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Download list (Excel)", onclick: () => csv("applicants-" + j.id, ["Application ID", "Name", "Father", "CNIC", "E-mail", "Phone", "City", "Experience (years)", "Expected salary", "Earliest joining", "Applied", "Stage", "Marks", "Note"],
+      list.map(a => [a.id, a.name, a.app.father, a.cnic.replace(/^(\d{5})(\d{7})(\d)$/, "$1-$2-$3"), a.email, a.app.ph, a.app.city, a.app.xy, a.app.es, a.app.avail, String(a.created_at).slice(0, 10), a.stage, a.marks ?? "", a.note])) }) : null, editor ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Edit job", onclick: () => jobForm(null, j) }) : null,
+    editor ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: j.open ? "Close job" : "Reopen job", onclick: async () => {
+      try { await rpc("hr_job_open", { p_id: j.id, p_open: !j.open }, "Not saved"); toast(j.open ? "Closed: it left the Career page" : "Reopened"); render(); } catch (e) { toast(e.message, true); } } }) : null));
+  const ch = el("div"); if (window.AKF_CHARTS) ch.innerHTML = AKF_CHARTS.donut({ id: "hr-job", center: "applicants", items: STAGES.filter(x => by[x]).map(x => ({ key: x, label: x, value: by[x] })), empty: "No applicants yet" });
+  const sel = el("select", { class: "select", "aria-label": "Stage" }, el("option", { value: "", text: "All stages" }), STAGES.map(x => el("option", { value: x, text: x + (by[x] ? " (" + by[x] + ")" : "") })));
+  const rows = el("tbody");
+  const draw = () => rows.replaceChildren(...list.filter(a => !sel.value || a.stage === sel.value).map(a => el("tr", { style: "cursor:pointer", onclick: () => applicantModal(a, editor) },
+    [a.name, a.app.city || "", (a.app.xy || 0) + " y", a.app.es || "", fmtD(a.created_at), a.stage, a.marks ?? ""].map(t => el("td", { text: String(t) })))));
+  sel.addEventListener("change", draw); draw();
+  box.append(el("div", { class: "hr-grid" }, card(j.job.t + " · " + j.id, el("dl", { class: "hr-kv" }, ...[["Department", j.deptName || j.job.dp], ["Vacancies", j.job.vac], ["Deadline", fmtDT(j.job.dl)],
+      ["Status", j.live ? "On the Career page" : j.open ? "Deadline passed" : "Closed"], ["Staff request", j.request_id || ""]].flatMap(([k, v]) => [el("dt", { text: k }), el("dd", { text: String(v) })])), ch),
+    card("Applicants (" + list.length + ")", sel, list.length ? el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" },
+      el("thead", {}, el("tr", {}, ["Name", "City", "Experience", "Expected salary", "Applied", "Stage", "Marks"].map(t => el("th", { text: t })))), rows)) : empty("No applications yet."))));
+}
+function applicantModal(a, editor) {
+  const p = a.app || {}, kv = el("dl", { class: "hr-kv" }), add = (k, v) => { if (v != null && v !== "") kv.append(el("dt", { text: k }), el("dd", { text: String(v) })); };
+  add("Application ID", a.id); add("Father's name", p.father); add("CNIC", a.cnic.replace(/^(\d{5})(\d{7})(\d)$/, "$1-$2-$3")); add("E-mail", a.email); add("Phone", p.ph);
+  add("Gender", p.g === "F" ? "Female" : p.g === "M" ? "Male" : p.g); add("Date of birth", fmtD(p.dob)); add("City", p.city); add("Marital status", p.ms);
+  add("Current salary", p.cs); add("Expected salary", p.es); add("Earliest joining", fmtD(p.avail)); add("Experience", (p.xy || 0) + " years" + (p.et ? "\n" + p.et : ""));
+  add("Education", (p.edu || []).map(e => [e.d, e.u, e.b, e.y, e.c ? "CGPA " + e.c : e.om ? e.om + "/" + e.tm : ""].filter(Boolean).join(" · ")).join("\n")); add("Applied", fmtDT(a.created_at));
+  const cv = a.cv ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Open CV", onclick: async () => {
+    try { const c = await rpc("hr_applicant_cv", { p_id: a.id }, "The CV could not open"); const bin = atob(c.b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      const pdf = /\.pdf$/i.test(c.name), url = URL.createObjectURL(new Blob([u8], { type: pdf ? "application/pdf" : "application/octet-stream" }));
+      el("a", { href: url, download: c.name, target: pdf ? "_blank" : null, rel: "noopener" }).click(); setTimeout(() => URL.revokeObjectURL(url), 60000); }
+    catch (e) { toast(e.message, true); } } }) : null;
+  const st = el("select", { class: "select", disabled: !editor }, STAGES.map(x => el("option", { value: x, text: x }))); st.value = a.stage;
+  const iv = a.iv || {}, ivd = el("input", { class: "input", type: "date", value: iv.d || "", disabled: !editor }), ivt = el("input", { class: "input", type: "time", value: iv.t || "", disabled: !editor });
+  const ivv = el("input", { class: "input", maxlength: 150, value: iv.v || "", placeholder: "e.g. AKF Office, G-9/2, Islamabad", disabled: !editor });
+  const mk = el("input", { class: "input", type: "number", min: 0, max: 100, value: a.marks ?? "" }), nt = el("textarea", { class: "textarea", rows: 3, maxlength: 1000, value: a.note || "" });
+  const save = el("button", { class: "btn btn-primary", type: "button", text: "Save" });
+  save.addEventListener("click", async () => { save.disabled = true;
+    try { await rpc("hr_applicant_save", { p_id: a.id, p_stage: st.value, p_iv: editor ? { d: ivd.value, t: ivt.value, v: ivv.value } : null, p_marks: mk.value === "" ? null : +mk.value, p_note: nt.value }, "Not saved");
+      toast("Saved ✓"); closeModal(); render(); } catch (e) { toast(e.message, true); save.disabled = false; } });
+  const tl = el("ol", { class: "hr-tl" }, (a.history || []).map(h => el("li", {}, el("b", { text: h.action }), el("span", { text: " — " + (h.name || "") + " · " + fmtDT(h.at) }))));
+  kv.style.whiteSpace = "pre-line";
+  modal(a.name + " · " + a.stage, ...[kv, cv ? el("div", { class: "hr-actions" }, cv) : null,
+    el("div", { class: "hr-form" }, el("label", {}, "Stage", st), el("label", {}, "Marks (0-100)", mk), el("label", {}, "Interview date", ivd), el("label", {}, "Interview time", ivt),
+      el("label", { class: "full" }, "Interview place", ivv), el("label", { class: "full" }, "Note", nt)),
+    el("p", { class: "small muted", text: editor ? "Shortlisted candidates see the interview date, time and place when they track their application on the Career page." : "You can give marks and a note. HR moves candidates between stages." }),
+    el("div", { class: "hr-actions" }, save), (a.history || []).length ? el("h4", { text: "History" }) : null, tl].filter(Boolean));
 }
 function editPay(p) {
   const g = el("input", { class: "input", type: "number", min: 0, step: 1, value: p.gross ?? "" }), b = el("input", { class: "input", maxlength: 80, value: p.bank || "" });
