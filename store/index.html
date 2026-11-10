@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-KaW1m+9MWrkgDAg7ZTLpaG7nrG/aicPG9l8Xb37NSa8='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-lvvirvLyyzIcJtFWWoPwktaf/uA1ehABFatGzxmkHGA='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -3804,6 +3804,10 @@ const ROLE_TABS = {
   staff:         ["tasks"],
 };
 const READ_ONLY_ROLES = ["gen_sec"];
+/* the main page's "+" button opens a form directly: #new=procurement | store | task | event | engagement (read once) */
+let NEW_HASH=(/^#new=(procurement|store|task|event|engagement)$/.exec(location.hash||"")||[])[1]||null;
+if(NEW_HASH){ try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} }
+const takeNew=kinds=>{ const k=NEW_HASH; if(!k||!kinds.includes(k)) return null; NEW_HASH=null; return k; };
 
 /* ===== Workflow: the APPROVAL MATRIX =====
    The Super Admin sets it on the main page (Settings → Approval matrix, saved as settings.approvalMatrix, read through
@@ -5322,8 +5326,8 @@ function buildNotifications(state,user){
   reqs.filter(r=>canAct(user,r)).forEach(r=>{ const rc=nextStage(r).key==="closed"&&r.receiverId===user.id; n.push({tone:"info",icon:rc?"box":"stamp",t:rc?`Accept and sign for items issued to you · ${r.id}`:`${nextStage(r).label} needed · ${r.id}`,d:`${r.dept} · ${pkr(reqTotal(r))}`,at:r.timeline[r.timeline.length-1].at,id:r.id,receive:rc}); });
   reqs.filter(r=>isEscalated(r)).forEach(r=>n.push({tone:"bad",icon:"alert",t:`${escHours(r)}h escalation · ${r.id}`,d:`Waiting for ${nextStage(r).who} for ${Math.round(hoursSince(r.timeline[r.timeline.length-1].at))}h`,at:r.timeline[r.timeline.length-1].at,id:r.id}));
   if(user.role==="hod") reqs.filter(r=>r.requesterId===user.id&&r.status==="rejected").slice(0,2).forEach(r=>n.push({tone:"bad",icon:"x",t:`Rejected · ${r.id}`,d:(r.timeline[r.timeline.length-1]||{}).comment||"",at:r.timeline[r.timeline.length-1].at,id:r.id}));
-  if(["super","store_officer","gen_sec","president"].includes(user.role)){ const soon=state.stock.filter(s=>s.expiry&&(new Date(s.expiry)-Date.now())/864e5<30); if(soon.length) n.push({tone:"warn",icon:"clock",t:`${soon.length} item${soon.length>1?"s":""} expiring within 30 days`,d:soon.map(s=>s.name).join(", "),at:nowISO()});
-    const low=state.stock.filter(s=>s.qty<=s.min); if(low.length) n.push({tone:"warn",icon:"box",t:`${low.length} item${low.length>1?"s":""} below minimum stock`,d:low.map(s=>s.name).join(", "),at:nowISO()}); }
+  if(["super","store_officer","admin_officer","gen_sec","president"].includes(user.role)){ const soon=state.stock.filter(s=>s.expiry&&(new Date(s.expiry)-Date.now())/864e5<30); if(soon.length) n.push({tone:"warn",icon:"clock",t:`${soon.length} item${soon.length>1?"s":""} expiring within 30 days`,d:soon.map(s=>s.name).join(", "),at:nowISO()});
+    const low=state.stock.filter(isLowStock); if(low.length) n.push({tone:"warn",icon:"box",t:`${low.length} item${low.length>1?"s":""} below minimum stock`,d:low.map(s=>s.name).join(", "),at:nowISO()}); }
   (state.docs||[]).filter(x=>x.repId===user.id&&!x.accepted).forEach(x=>n.push({tone:"info",icon:"pen",t:x.type==="BEN"?`Confirm beneficiary receipt · ${x.id}`:`Accept and sign for items issued to you · ${x.id}`,d:`${x.lines.length} item${x.lines.length>1?"s":""} · ${pkr(x.amount)}`,at:x.at,doc:x.id,key:"ben|"+x.id,receive:true}));
   taskNotifications(state,user).forEach(x=>{ x.key=x.key||[x.icon,x.task,x.at].join("|"); n.push(x); });
   /* stable key per notification: a new event (new step, new day for stock alerts) makes it unread again */
@@ -5405,7 +5409,7 @@ function Dashboard({state,user,openReq,setTab}){
   const mine=reqs.filter(r=>canAct(user,r)); const esc=open.filter(isEscalated);
   const stockValue=state.stock.reduce((s,i)=>s+i.qty*i.price,0);
   const thisMonth=monthKey(nowISO()); const poMonth=state.pos.filter(p=>monthKey(p.at)===thisMonth);
-  const expiring=state.stock.filter(s=>s.expiry&&(new Date(s.expiry)-Date.now())/864e5<30); const low=state.stock.filter(s=>s.qty<=s.min);
+  const expiring=state.stock.filter(s=>s.expiry&&(new Date(s.expiry)-Date.now())/864e5<30); const low=state.stock.filter(isLowStock);
   const byStage={}; open.forEach(r=>{ const n=nextStage(r); const k=n?"Awaiting "+n.who:"—"; byStage[k]=(byStage[k]||0)+1; });
   const stageData=Object.entries(byStage).map(([label,value],i)=>({label,value,color:PALETTE[i%PALETTE.length]}));
   const catData=CATS.map((c,i)=>({label:c,value:state.stock.filter(s=>s.category===c).reduce((s,i)=>s+i.qty*i.price,0),color:PALETTE[i%PALETTE.length]})).filter(d=>d.value>0);
@@ -5603,7 +5607,7 @@ function Store({state,user,A,openReq,openDoc,readOnly,focusItem}){
   const [tab,setTab]=useState(isHod?"requests":"register"); const [q,setQ]=useState(""); const [sel,setSel]=useState(focusItem||null);
   const [form,setForm]=useState(null);
   const [itemModal,setItemModal]=useState(null);   // {item} to edit, {} to add
-  const manage=canManageItems(user)&&!readOnly;
+  const manage=canManageItems(user)&&!readOnly, mark=canMarkKeep(user);
   const mine=visibleRequests(user,state.requests).filter(r=>canAct(user,r)&&(r.type==="store"||["po","grn"].includes(r.stage)));
   const storeAct=!isHod&&!readOnly;   // same rule as the "Stock received" button
   const dq=useDonorQueue(true); const dqN=storeAct&&dq&&dq.items?dq.items.length:0;
@@ -5630,10 +5634,10 @@ function Store({state,user,A,openReq,openDoc,readOnly,focusItem}){
     ${(tab==="received"||tab==="issued")&&!isHod&&html`<${StockMovements} kind=${tab} state=${state} openDoc=${openDoc}/>`}
     ${tab==="register"&&!isHod&&!state.stock.length&&html`<div class="notice notice-info"><${Icon} name="upload"/><span>The stock register is empty. Load your register from <b>Excel Import → Stock register (AKF format)</b>, using the same workbook you keep today (Home, Received and Dispatched sheets).</span></div>`}
     ${!isHod&&mine.length+dqN>0&&html`<${Card} title=${`Action needed (${mine.length+dqN})`} desc="Stock checks, goods receipts and issues waiting on you"><div class="list">${dqN>0&&html`<button class="item" onClick=${()=>{ const el=document.getElementById("donor-goods"); if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); }}><div class="t"><${Icon} name="box"/><b>${dqN} in-kind donation${dqN===1?"":"s"} to receive</b><span class="grow"/><${Tag} tone="info" dot>Donor Management</${Tag}></div><div class="m">Count the goods and create the GDN-D</div></button>`}${mine.map(r=>html`<button class="item" onClick=${()=>openReq(r.id)}><div class="t"><b class="id">${r.id}</b><${Tag} tone=${statusTone(r)} dot>${nextStage(r).label}</${Tag}>${isEscalated(r)&&html`<${Tag} tone="bad">Late</${Tag}>`}<span class="grow"/><b class="num">${pkr(reqTotal(r))}</b></div><div class="m">${r.purpose} · ${r.dept}</div></button>`)}</div><//>`}
-    ${tab==="stock"&&!isHod&&(()=>{ const low=state.stock.filter(s=>s.qty<=s.min); if(!low.length) return ""; const already=state.requests.some(r=>r.status==="active"&&r.stage!=="closed"&&r.purpose.startsWith("Reorder")); return html`<div class="notice notice-warn" style="align-items:center"><${Icon} name="alert"/><span class="grow"><b>${low.length} item${low.length>1?"s":""} at or below minimum:</b> ${low.map(s=>`${s.name} (${s.qty}/${s.min})`).join(", ")}</span>${!readOnly&&!already&&html`<button class="btn btn-primary btn-sm" onClick=${()=>openReq(A.reorder(low.map(s=>({name:s.name,category:s.category,uom:s.uom,qty:Math.max(1,s.min*2-s.qty),price:s.price}))))}><${Icon} name="cart"/>Raise reorder request</button>`}${already&&html`<${Tag} tone="info">Reorder request open</${Tag}>`}</div>`; })()}
+    ${tab==="stock"&&!isHod&&(()=>{ const low=state.stock.filter(isLowStock); if(!low.length) return ""; const already=state.requests.some(r=>r.status==="active"&&r.stage!=="closed"&&r.purpose.startsWith("Reorder")); return html`<div class="notice notice-warn" style="align-items:center"><${Icon} name="alert"/><span class="grow"><b>${low.length} item${low.length>1?"s":""} at or below minimum:</b> ${low.map(s=>`${s.name} (${s.qty}/${s.min})`).join(", ")}</span>${!readOnly&&!already&&html`<button class="btn btn-primary btn-sm" onClick=${()=>openReq(A.reorder(low.map(s=>({name:s.name,category:s.category,uom:s.uom,qty:Math.max(1,s.min*2-s.qty),price:s.price}))))}><${Icon} name="cart"/>Raise reorder request</button>`}${already&&html`<${Tag} tone="info">Reorder request open</${Tag}>`}</div>`; })()}
     ${(tab==="stock"&&!isHod)&&html`<div class="split" style="grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr)">
       <${Card} title="Stock on hand" desc=${`${state.stock.length} items · ${pkr(state.stock.reduce((s,i)=>s+i.qty*i.price,0))} · live FIFO balances`} right=${html`<input class="input" placeholder="Search items…" value=${q} onInput=${e=>setQ(e.target.value)} style="max-width:200px"/>`}>
-        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Item</th><th>Store · location</th><th class="r">Balance</th><th class="r">Value</th><th>Alerts</th></tr></thead><tbody>${stock.map(s=>html`<tr class="click" style=${sel===s.id?"background:var(--ice)":""} onClick=${()=>setSel(s.id)}><td><b>${s.name}</b><div class="xs faint id">${s.id}</div></td><td class="sm">${s.store.split(" ")[0]} · Rack ${s.rack||"—"} Bin ${s.bin||"—"}</td><td class="r num bold">${s.qty} <span class="faint" style="font-weight:600">${s.uom}</span></td><td class="r num">${fmt(s.qty*s.price)}</td><td class="row wrap">${s.qty<=s.min&&html`<${Tag} tone="bad">Low</${Tag}>`}${soon(s)&&html`<${Tag} tone="warn">Exp ${fmtD(s.expiry)}</${Tag}>`}</td></tr>`)}</tbody></table></div><//>
+        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Item</th><th>Store · location</th><th class="r">Balance</th><th class="r">Value</th><th>Alerts</th>${mark&&html`<th>Needed</th>`}</tr></thead><tbody>${stock.map(s=>html`<tr class="click" style=${sel===s.id?"background:var(--ice)":""} onClick=${()=>setSel(s.id)}><td><b>${s.name}</b><div class="xs faint id">${s.id}</div></td><td class="sm">${s.store.split(" ")[0]} · Rack ${s.rack||"—"} Bin ${s.bin||"—"}</td><td class="r num bold">${s.qty} <span class="faint" style="font-weight:600">${s.uom}</span></td><td class="r num">${fmt(s.qty*s.price)}</td><td class="row wrap">${isLowStock(s)&&html`<${Tag} tone="bad">Low</${Tag}>`}${s.keep===false&&html`<${Tag}>Not needed</${Tag}>`}${soon(s)&&html`<${Tag} tone="warn">Exp ${fmtD(s.expiry)}</${Tag}>`}</td>${mark&&html`<td onClick=${e=>e.stopPropagation()}><label class="row" style="gap:6px" title="Needed — keep in stock"><input type="checkbox" checked=${keepOf(s)} disabled=${readOnly} onChange=${e=>A.stockItemKeep(s.id,e.target.checked)}/><span class="xs">Keep</span></label></td>`}</tr>`)}</tbody></table></div><//>
       ${selItem?html`<${Card} title=${selItem.name} desc=${selItem.id} right=${html`<span class="row" style="gap:6px">${manage&&html`<button class="btn btn-ghost btn-sm" onClick=${()=>setItemModal({item:selItem})}><${Icon} name="edit"/>Edit item</button>`}<button class="btn btn-ghost btn-sm" onClick=${()=>openDoc(selItem.id,"stock")}><${Icon} name="qr"/>Bin card</button></span>`}>
         <div class="kv"><dt>Condition</dt><dd><${CondTag} c=${condOf(selItem)}/></dd><dt>Unit</dt><dd>${selItem.uom} · ${selItem.category}</dd><dt>Balance</dt><dd class="num">${selItem.qty} ${selItem.uom} · ${pkr(selItem.qty*selItem.price)}</dd><dt>Location</dt><dd>${selItem.store} · Rack ${selItem.rack||"—"} Bin ${selItem.bin||"—"}</dd><dt>Unit price</dt><dd class="num">${pkr(selItem.price)}</dd><dt>Minimum</dt><dd class="num">${selItem.min} ${selItem.uom}</dd>${selItem.batch&&html`<dt>Batch</dt><dd>${selItem.batch}</dd>`}${selItem.expiry&&html`<dt>Expiry</dt><dd>${fmtD(selItem.expiry)}</dd>`}</div>
         <div style="margin-top:12px"><b class="sm">Ledger (in / out / balance)</b><${Ledger} itemId=${selItem.id} state=${state} openDoc=${openDoc}/></div><//>`
@@ -5647,6 +5651,11 @@ function Store({state,user,A,openReq,openDoc,readOnly,focusItem}){
 }
 /* ---------- Store items: add by hand, edit (name, condition, unit…), delete — Store Officer & Super Admin ---------- */
 const canManageItems=u=>!!u&&["super","store_officer"].includes(u.role);
+/* "Needed — keep in stock" (asked 2026-11-10): ticked = always keep some, alert when at or below the minimum (even 0);
+   unticked = not needed, never "low"; not set yet (older items) = alert only when a minimum is set */
+function isLowStock(s){ const min=Number(s.min)||0; return s.keep===false?false:s.keep===true?s.qty<=min:min>0&&s.qty<=min; }
+const keepOf=s=>s.keep===undefined?(Number(s.min)||0)>0:!!s.keep;
+const canMarkKeep=u=>!!u&&["super","store_officer","admin_officer"].includes(u.role);
 function makeStoreItemActions(commit,user,toast){
   const run=(fn,ok)=>{ let err=null,out; commit(d=>{ try{ out=fn(d); }catch(e){ err=e.message; } }); if(err){ toast(err,"bad"); return null; } if(ok) toast(typeof ok==="function"?ok(out):ok,"ok"); return out===undefined?true:out; };
   const fail=m=>{ throw new Error(m); };
@@ -5657,7 +5666,7 @@ function makeStoreItemActions(commit,user,toast){
     const clash=d.stock.find(x=>x.id!==id&&itemKey(x.name)===itemKey(name)&&x.store===store&&condOf(x)===condition);
     if(clash) fail(`“${name}” (${condition}) already exists in ${store.split(" ")[0]} as ${clash.id}. Use that line, or choose another name or condition.`);
     const num=(v,l)=>{ const n=Number(v||0); if(isNaN(n)||n<0) fail(`${l} must be zero or more.`); return n; };
-    return {name,uom,condition,store,category:String(f.category||"OTHER").toUpperCase().replace(/[^A-Z0-9]/g,"")||"OTHER",min:num(f.min,"Minimum level"),price:num(f.price,"Unit price"),rack:String(f.rack||"").trim(),bin:String(f.bin||"").trim(),expiry:f.expiry||""}; };
+    return {name,uom,condition,store,category:String(f.category||"OTHER").toUpperCase().replace(/[^A-Z0-9]/g,"")||"OTHER",min:num(f.min,"Minimum level"),price:num(f.price,"Unit price"),rack:String(f.rack||"").trim(),bin:String(f.bin||"").trim(),expiry:f.expiry||"",keep:f.keep!==false}; };
   return {
     stockItemAdd(f){
       return run(d=>{ if(!canManageItems(user)) fail("Only the Store Officer or the Super Admin can add items.");
@@ -5669,10 +5678,15 @@ function makeStoreItemActions(commit,user,toast){
     stockItemEdit(id,f){
       return run(d=>{ if(!canManageItems(user)) fail("Only the Store Officer or the Super Admin can edit items.");
         const s=d.stock.find(x=>x.id===id); if(!s) fail("This item no longer exists."); const c=clean(d,{...f,store:s.store},id);
-        const labels={name:"Name",condition:"Condition",uom:"Unit",category:"Category",min:"Minimum",price:"Unit price",rack:"Rack",bin:"Bin",expiry:"Expiry"};
+        const labels={name:"Name",condition:"Condition",uom:"Unit",category:"Category",min:"Minimum",price:"Unit price",rack:"Rack",bin:"Bin",expiry:"Expiry",keep:"Keep in stock"};
         const diffs=Object.keys(labels).filter(k=>String(s[k]??"")!==String(c[k]??"")).map(k=>`${labels[k]}: ${s[k]||"—"} → ${c[k]||"—"}`);
         if(!diffs.length) return 0; if(itemKey(c.name)!==itemKey(s.name)) s.aliases=dedupeCI([...(s.aliases||[]),s.name]).filter(a=>itemKey(a)!==itemKey(c.name));
         Object.keys(labels).forEach(k=>{ s[k]=c[k]; }); audit(d,s.id,"Item edited",diffs.join(" · ")); return diffs.length; },n=>n?"Item updated":"No changes");
+    },
+    stockItemKeep(id,on){
+      return run(d=>{ if(!canMarkKeep(user)) fail("Only the Store Officer, the Admin Officer or the Super Admin can mark items.");
+        const s=d.stock.find(x=>x.id===id); if(!s) fail("This item no longer exists."); if(keepOf(s)===!!on&&s.keep!==undefined) return 0;
+        s.keep=!!on; audit(d,s.id,on?"Marked: needed, keep in stock":"Marked: not needed",s.name); return 1; },()=>on?"Marked as needed — you will be told when it runs low":"Marked as not needed — no low-stock alerts");
     },
     stockItemDelete(id){
       return run(d=>{ if(!canManageItems(user)) fail("Only the Store Officer or the Super Admin can delete items.");
@@ -5684,8 +5698,8 @@ function makeStoreItemActions(commit,user,toast){
 }
 function StockItemModal({item,state,A,onClose,onSaved}){
   const isNew=!item;
-  const [f,setF]=useState(()=>isNew?{name:"",condition:"New",category:"OTHER",uom:"Pcs",store:STORES[0],opening:"",price:"",min:"",rack:"",bin:"",expiry:""}
-    :{name:item.name,condition:condOf(item),category:item.category,uom:item.uom,store:item.store,price:item.price,min:item.min,rack:item.rack||"",bin:item.bin||"",expiry:item.expiry||""});
+  const [f,setF]=useState(()=>isNew?{name:"",condition:"New",category:"OTHER",uom:"Pcs",store:STORES[0],opening:"",price:"",min:"",rack:"",bin:"",expiry:"",keep:true}
+    :{name:item.name,condition:condOf(item),category:item.category,uom:item.uom,store:item.store,price:item.price,min:item.min,rack:item.rack||"",bin:item.bin||"",expiry:item.expiry||"",keep:keepOf(item)});
   const set=(k,v)=>setF(x=>({...x,[k]:v}));
   const uoms=dedupeCI([...UOMS,"Unit","Dozen","Roll","Bottle","Bag","Pair","Litre","Meter","Ream",...state.stock.map(s=>s.uom)]);
   const cats=dedupeCI([...CATS,...state.stock.map(s=>s.category)]); const names=dedupeCI(state.stock.map(s=>s.name));
@@ -5707,6 +5721,7 @@ function StockItemModal({item,state,A,onClose,onSaved}){
       <${Field} label="Rack"><input class="input" value=${f.rack} onInput=${e=>set("rack",e.target.value)}/><//>
       <${Field} label="Bin"><input class="input" value=${f.bin} onInput=${e=>set("bin",e.target.value)}/><//>
       <${Field} label="Expiry (optional)"><input class="input" type="date" value=${f.expiry} onInput=${e=>set("expiry",e.target.value)}/><//>
+      <label class="field" style="grid-column:1/-1;flex-direction:row;align-items:center;gap:8px"><input type="checkbox" checked=${f.keep} onChange=${e=>set("keep",e.target.checked)}/><span><b>Needed — keep in stock.</b> You are told when it reaches the minimum level. Untick for items not needed again: they never show as low.</span></label>
     </div>
     ${!isNew&&html`<div class="notice notice-info"><${Icon} name="shield"/><span>Changes apply to the register, bin card and future documents. Documents already issued keep the name they were printed with. Every change is written to the Tracking log.</span></div>`}
   <//>`;
@@ -5806,7 +5821,7 @@ function registerRows(state,{from,to},store){
     if(to&&day>to) return;
     if((from&&day<from)||k==="opening"){ r.opening+=sign*l.qty; return; }
     if(k==="p") r.p+=l.qty; else if(k==="d") r.d+=l.qty; else if(k==="issued") r.issued+=l.qty; else r.adj+=sign*l.qty; });
-  return [...byItem.values()].map(r=>{ const balance=r.opening+r.p+r.d-r.issued+r.adj; const min=r.s.min||0; return {...r,balance,order:balance<=0?"Item needed":min>0&&balance<=min?"Reorder":"OK"}; });
+  return [...byItem.values()].map(r=>{ const balance=r.opening+r.p+r.d-r.issued+r.adj; const min=r.s.min||0; return {...r,balance,order:r.s.keep===false?"Not needed":balance<=0?"Item needed":min>0&&balance<=min?"Reorder":"OK"}; });
 }
 function periodPicker(state,period,setPeriod){ const fys=fiscalYears(state); return html`<select class="select" style="max-width:150px" value=${period} onChange=${e=>setPeriod(e.target.value)}>${fys.map(f=>html`<option value=${f.key}>${f.label}</option>`)}<option value="all">All dates</option></select>`; }
 const periodRange=(state,period)=>period==="all"?{from:"",to:"",label:"All dates"}:(fiscalYears(state).find(f=>f.key===period)||fiscalYears(state)[0]);
@@ -5885,9 +5900,9 @@ function StockDocModal({id,state,onClose}){
 /* Reports dashboard. Sections by role: Super Admin / management see all;
    Admin Officer sees Procurement + Vendors & RFQ; Store Officer sees Store.
    Every chart shows values on hover and filters the register below when clicked. */
-function Reports({state,user,openReq,openDoc}){
-  const r=user.role;
-  const sections=r==="admin_officer"?[["proc","Procurement"],["vend","Vendors & RFQ"]]:r==="store_officer"?[["store","Store"]]:[["proc","Procurement"],["vend","Vendors & RFQ"],["store","Store"]];
+function Reports({state,user,A,openReq,openDoc}){
+  const r=user.role, readOnly=READ_ONLY_ROLES.includes(r), mark=canMarkKeep(user)&&!!A;
+  const sections=r==="admin_officer"?[["proc","Procurement"],["vend","Vendors & RFQ"],["store","Store"]]:r==="store_officer"?[["store","Store"]]:[["proc","Procurement"],["vend","Vendors & RFQ"],["store","Store"]];
   const [sec,setSec]=useState(sections[0][0]);
   const blankF={from:"",to:"",dept:"all",status:"all",vendor:"all",cat:"all",store:"all",month:"",docType:"all"};
   const [f,setF]=useState(blankF); const set=(k,v)=>setF(x=>({...x,[k]:x[k]===v?blankF[k]:v}));
@@ -5930,7 +5945,7 @@ function Reports({state,user,openReq,openDoc}){
   const flowOut=months.map(k=>({key:k,label:mLabel(k),value:sum(state.docs.filter(d=>monthKey(d.at)===k&&isOut(d)&&(f.store==="all"||d.store===f.store)),d=>d.amount),color:"#C8322B"}));
   const docTypes=[...new Set(state.docs.map(d=>d.type))].map((t,i)=>({label:t,value:state.docs.filter(d=>d.type===t&&inRange(d.at)).length,color:color(i)}));
   const storeReqs=allReqs.filter(x=>x.type==="store"&&inRange(x.createdAt)&&(f.dept==="all"||x.dept===f.dept)&&(f.status==="all"||statusOf(x)===f.status));
-  const low=stock.filter(s=>s.qty<=s.min), expiring=stock.filter(s=>s.expiry&&(new Date(s.expiry)-Date.now())/864e5<30);
+  const low=stock.filter(isLowStock), expiring=stock.filter(s=>s.expiry&&(new Date(s.expiry)-Date.now())/864e5<30);
   /* ---- export ---- */
   const table=()=>{ if(sec==="proc") return {name:"procurement",head:["Request","Type","Department","Project","Purpose","Amount","Status","Waiting for","Submitted"],rows:reqs.map(x=>[x.id,x.type,x.dept,x.projectCode,x.purpose,reqTotal(x),statusLabel(x),(nextStage(x)||{}).who||"",fmtDT(x.createdAt)])};
     if(sec==="vend") return {name:"vendors",head:["Vendor","NTN","Filer","GST","RFQs invited","POs won","Win rate %","Spend incl. tax","WHT"],rows:vendorRows.map(x=>[x.v.name,x.v.ntn,x.v.filer?"Filer":"Non-filer",x.v.gstRegistered===false?"No":"Yes",x.inv,x.won,x.rate,x.spend,x.wht])};
@@ -5984,7 +5999,7 @@ function Reports({state,user,openReq,openDoc}){
         <${Card} title="Outward value by month" desc="GIN / dispatch / beneficiary"><${Columns} data=${flowOut} money active=${f.month||null} onPick=${d=>set("month",d.key)}/><//>
         <${Card} title="Store requests by status"><${Donut} data=${[["Completed","#0F8A5F"],["In progress","#0B51A7"],["Rejected / cancelled","#C8322B"]].map(([label,c])=>({label,value:storeReqs.filter(x=>statusOf(x)===label).length,color:c}))} center=${storeReqs.length}/><//>
       </div>
-      <${Card} title="Stock register" desc=${`${stock.length} items match`}><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Item</th><th>Store · location</th><th class="r">Balance</th><th class="r">Value</th><th>Alerts</th></tr></thead><tbody>${stock.map(s=>html`<tr class="click" onClick=${()=>openDoc(s.id,"stock")}><td><b>${s.name}</b><div class="xs faint id">${s.id}</div></td><td class="sm">${s.store} · ${s.rack||"—"}/${s.bin||"—"}</td><td class="r num bold">${s.qty} ${s.uom}</td><td class="r num">${fmt(s.qty*s.price)}</td><td>${s.qty<=s.min&&html`<${Tag} tone="bad">Low</${Tag}>`}${s.expiry&&(new Date(s.expiry)-Date.now())/864e5<30&&html`<${Tag} tone="warn">Exp ${fmtD(s.expiry)}</${Tag}>`}</td></tr>`)}</tbody></table></div><//>
+      <${Card} title="Stock register" desc=${`${stock.length} items match`}><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Item</th><th>Store · location</th><th class="r">Balance</th><th class="r">Value</th><th>Alerts</th>${mark&&html`<th>Needed</th>`}</tr></thead><tbody>${stock.map(s=>html`<tr class="click" onClick=${()=>openDoc(s.id,"stock")}><td><b>${s.name}</b><div class="xs faint id">${s.id}</div></td><td class="sm">${s.store} · ${s.rack||"—"}/${s.bin||"—"}</td><td class="r num bold">${s.qty} ${s.uom}</td><td class="r num">${fmt(s.qty*s.price)}</td><td>${isLowStock(s)&&html`<${Tag} tone="bad">Low</${Tag}>`}${s.keep===false&&html`<${Tag}>Not needed</${Tag}>`}${s.expiry&&(new Date(s.expiry)-Date.now())/864e5<30&&html`<${Tag} tone="warn">Exp ${fmtD(s.expiry)}</${Tag}>`}</td>${mark&&html`<td onClick=${e=>e.stopPropagation()}><label class="row" style="gap:6px" title="Needed — keep in stock"><input type="checkbox" checked=${keepOf(s)} disabled=${readOnly} onChange=${e=>A.stockItemKeep(s.id,e.target.checked)}/><span class="xs">Keep</span></label></td>`}</tr>`)}</tbody></table></div><//>
       <${Card} title="Store documents" desc=${`${docs.length} documents match`}><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Document</th><th>Type</th><th>Reference</th><th class="r">Amount</th><th>By</th><th class="r">Date</th></tr></thead><tbody>${docs.map(d=>html`<tr class="click" onClick=${()=>openDoc(d.id)}><td><b class="id">${d.id}</b></td><td><${Tag}>${d.type}</${Tag}></td><td class="sm">${d.ref}</td><td class="r num">${fmt(d.amount)}</td><td class="sm">${d.by}</td><td class="r sm nowrap">${fmtD(d.at)}</td></tr>`)}</tbody></table></div><//>`}
   </div>`;
 }
@@ -6404,7 +6419,7 @@ function BlankForm({form}){
     <div class="signs">${form.signs.map(s=>html`<div class="signbox"><div class="sigimg"/><b>Name: ____________________</b><span>Designation: ______________</span><span class="xs faint">${s} · Date ________</span></div>`)}</div></div>`;
 }
 function Forms({state,user,A,openReq,readOnly}){
-  const [open,setOpen]=useState(null); const [blank,setBlank]=useState(null);
+  const [open,setOpen]=useState(()=>readOnly?null:takeNew(["procurement","store"])); const [blank,setBlank]=useState(null);
   const vendorForms=!["hod","staff"].includes(user.role);   // vendors and quotations are the Admin Officer's work, not a department head's
   return html`<div class="stack page-body" style="gap:16px">
     <div class="notice notice-info"><${Icon} name="shield"/><span>Every request follows its approval matrix in order — it only appears to the next approver after the previous one has recommended it. No step can be skipped.</span></div>
@@ -6425,7 +6440,7 @@ function buildInsights(state,user){
   const esc=open.filter(isEscalated); if(esc.length){ const by={}; esc.forEach(r=>{ const w=nextStage(r).who; by[w]=(by[w]||0)+1; }); const [w,c]=Object.entries(by).sort((a,b)=>b[1]-a[1])[0]; out.push({tone:"bad",t:`Bottleneck: ${w} has ${c} request${c>1?"s":""} over the time limit`,d:"Send a reminder or name an acting approver in Settings.",id:esc[0].id}); }
   const hrs={}; reqs.forEach(r=>r.timeline.forEach((t,i)=>{ if(!i) return; const k=flowOf(r).find(s=>s.key===t.stage); if(!k) return; (hrs[k.who]=hrs[k.who]||[]).push((new Date(t.at)-new Date(r.timeline[i-1].at))/36e5); }));
   const slow=Object.entries(hrs).map(([w,a])=>[w,a.reduce((s,x)=>s+x,0)/a.length]).sort((a,b)=>b[1]-a[1])[0]; if(slow&&slow[1]>24) out.push({tone:"info",t:`Slowest step on average: ${slow[0]} (${Math.round(slow[1])}h)`,d:"Agreeing a 24-hour service level for this step would shorten the whole cycle.",tab:"reports"});
-  if(!["hod","admin_officer","finance"].includes(user.role)){ const low=state.stock.filter(s=>s.qty<=s.min); if(low.length) out.push({tone:"warn",t:`${low.length} stock item${low.length>1?"s":""} at or below minimum`,d:low.slice(0,4).map(s=>`${s.name} (${s.qty}/${s.min})`).join(", ")+" — raise a reorder from the Store page.",tab:"store"});
+  if(!["hod","admin_officer","finance"].includes(user.role)){ const low=state.stock.filter(isLowStock); if(low.length) out.push({tone:"warn",t:`${low.length} stock item${low.length>1?"s":""} at or below minimum`,d:low.slice(0,4).map(s=>`${s.name} (${s.qty}/${s.min})`).join(", ")+" — raise a reorder from the Store page.",tab:"store"});
     const exp=state.stock.filter(s=>s.expiry&&(new Date(s.expiry)-Date.now())/864e5<30&&s.qty>0); if(exp.length) out.push({tone:"warn",t:`${exp.length} item${exp.length>1?"s":""} expiring within 30 days`,d:exp.map(s=>s.name).join(", ")+" — issue first (FEFO) or plan disposal.",tab:"store"}); }
   if(["super","finance","president","regional_manager","manager_hr","gen_sec"].includes(user.role)) state.budgets.forEach(b=>{ const u=budgetUse(state,b.code); if(u.allocated&&u.remaining<0) out.push({tone:"bad",t:`Budget ${b.code} is over by ${pkr(-u.remaining)}`,d:"Finance should revise the line or hold new requests.",tab:"finance"}); else if(u.allocated&&(u.spent+u.committed)/u.allocated>0.85) out.push({tone:"info",t:`Budget ${b.code} is ${Math.round((u.spent+u.committed)/u.allocated*100)}% used`,d:`${pkr(u.remaining)} left.`,tab:"finance"}); });
   const openRfq=state.rfqs.filter(r=>r.status==="Open"&&new Date(r.deadline)<new Date()); if(openRfq.length&&["super","admin_officer"].includes(user.role)) out.push({tone:"warn",t:`${openRfq.length} RFQ${openRfq.length>1?"s":""} past deadline still open`,d:"Close them and send the comparative statement to the committee.",id:openRfq[0].requestId});
@@ -6447,7 +6462,7 @@ function builtinAnswer(q,state,user){
   if(/pending|waiting|my action|to do|todo/.test(s)){ const mine=reqs.filter(r=>canAct(user,r)); const tw=tWaitingCount(state,user);
     return (mine.length?`You have **${mine.length}** request(s) waiting:\n`+mine.map(r=>`• ${r.id} — ${nextStage(r).label} · ${r.purpose} · ${pkr(reqTotal(r))}`).join("\n"):"No request is waiting for you. 👍")+(tw?`\n\nTasks & Events: **${tw}** item(s) need you (approvals, sign-offs or your overdue tasks) — ask **"tasks waiting for my approval"** or **"overdue tasks"**.`:""); }
   if(/delay|late|escalat|bottleneck|slow/.test(s)){ const e=reqs.filter(isEscalated); return e.length?`**${e.length}** request(s) are past their time limit:\n`+e.map(r=>`• ${r.id} (limit ${escHours(r)}h) waiting for ${nextStage(r).who} for ${Math.round(hoursSince(r.timeline[r.timeline.length-1].at))}h`).join("\n"):"No request is past the escalation limit."; }
-  if(/stock|store|inventory|expir|minimum|reorder/.test(s)){ const low=state.stock.filter(x=>x.qty<=x.min), exp=state.stock.filter(x=>x.expiry&&(new Date(x.expiry)-Date.now())/864e5<30); return `Stock: **${state.stock.length}** items worth **${pkr(state.stock.reduce((a,x)=>a+x.qty*x.price,0))}**.\n`+(low.length?`Below minimum: ${low.map(x=>`${x.name} (${x.qty}/${x.min} ${x.uom})`).join(", ")}.\n`:"No item is below minimum.\n")+(exp.length?`Expiring within 30 days: ${exp.map(x=>`${x.name} (${fmtD(x.expiry)})`).join(", ")}.`:"Nothing expires within 30 days."); }
+  if(/stock|store|inventory|expir|minimum|reorder/.test(s)){ const low=state.stock.filter(isLowStock), exp=state.stock.filter(x=>x.expiry&&(new Date(x.expiry)-Date.now())/864e5<30); return `Stock: **${state.stock.length}** items worth **${pkr(state.stock.reduce((a,x)=>a+x.qty*x.price,0))}**.\n`+(low.length?`Below minimum: ${low.map(x=>`${x.name} (${x.qty}/${x.min} ${x.uom})`).join(", ")}.\n`:"No item is below minimum.\n")+(exp.length?`Expiring within 30 days: ${exp.map(x=>`${x.name} (${fmtD(x.expiry)})`).join(", ")}.`:"Nothing expires within 30 days."); }
   if(/budget|fund|allocat|spend|spent/.test(s)) return "Budget lines:\n"+state.budgets.map(b=>{ const u=budgetUse(state,b.code); return `• ${b.code}: ${pkr(u.allocated)} allocated, ${pkr(u.spent)} spent, ${pkr(u.committed)} committed → **${pkr(u.remaining)}** left`; }).join("\n");
   if(/vendor|supplier|quotation|rfq/.test(s)){ const top=state.vendors.map(v=>({v,n:state.pos.filter(p=>p.vendorId===v.id).length})).sort((a,b)=>b.n-a.n).slice(0,3); return `**${state.vendors.length}** vendors (${state.vendors.filter(v=>v.filer).length} filers). Open RFQs: ${state.rfqs.filter(r=>r.status==="Open").length}.\nMost POs: ${top.map(x=>`${x.v.name} (${x.n})`).join(", ")}.\nTip: always compare totals **including tax** — the portal adds GST automatically when a vendor's price excludes it.`; }
   if(/tax|gst|wht|filer/.test(s)) return `GST ${Math.round(SETTINGS.gst*100)}% is added to quotations that exclude tax (only for GST-registered vendors). WHT at payment: goods ${SETTINGS.whtGoodsFiler*100}% filer / ${SETTINGS.whtGoodsNonFiler*100}% non-filer; services ${SETTINGS.whtServicesFiler*100}% / ${SETTINGS.whtServicesNonFiler*100}%.`;
@@ -6521,7 +6536,7 @@ function App(){
     let t=null; off=DB.subscribe(()=>{ clearTimeout(t); t=setTimeout(async()=>{ try{ await saving.current; const fresh=await DB.load(); if(JSON.stringify(fresh)!==JSON.stringify(stateRef.current)) setState(fresh); }catch(e){} },700); });
     return ()=>{ off(); offAuth(); };
   },[]);
-  const [tab,setTabRaw]=useState(null);
+  const [tab,setTabRaw]=useState(()=>NEW_HASH==='procurement'||NEW_HASH==='store'?'forms':NEW_HASH?'tasks':null);
   const [modal,setModal]=useState(null); // {kind:'req'|'doc'|'stock', id}
   const [taskOpen,setTaskOpen]=useState(()=>{ const m=/#task=([^&]+)/.exec(location.hash||""); if(m){ try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} } return m?decodeURIComponent(m[1]):null; }); // key of the task open on the Tasks page; the sticky note links here with #task=KEY
   useEffect(()=>{ const f=()=>{ const m=/#task=([^&]+)/.exec(location.hash||""); if(!m) return; try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} setTab("tasks"); setTaskOpen(decodeURIComponent(m[1])); }; addEventListener("hashchange",f); return ()=>removeEventListener("hashchange",f); },[]); // a click on the sticky note while already in this portal
@@ -7411,6 +7426,7 @@ function Tasks({state,user,A,taskOpen,setTaskOpen,onView}){
   const openNew=(preset={},returnEvent=null)=>{ if(!TR.canCreate(user)){ tToast("Your role can view tasks but not create them.","bad"); return; } setModal({kind:"new",preset,returnEvent}); };
   const openEvent=(key,tab)=>{ const e=(state.events||[]).find(x=>x.key===key); if(!e||!TR.canSeeEvent(e,user,state)){ tToast("You don't have access to this event.","bad"); return; } setModal({kind:"event",key,tab:tab||"details"}); };
   const newEvent=()=>{ if(!TR.canCreateEvent(user)){ tToast("Your role cannot create events.","bad"); return; } setModal({kind:"event",key:null,tab:"details"}); };
+useEffect(()=>{ const k=takeNew(["task","event","engagement"]); if(k==="task") openNew(); else if(k==="event") newEvent(); else if(k==="engagement"){ if(tCanEngage(user)) setEng(true); else tToast("Your role cannot raise engagement requests.","bad"); } },[]);
   const go=(v,patch)=>{ setView(v); if(patch) setF(x=>({...x,...patch})); };
   /* notifications can ask to open an event ("ev:KEY") or a view ("view:tracking") */
   useEffect(()=>{ if(!taskOpen) return; if(taskOpen.startsWith("ev:")){ const k=taskOpen.slice(3); setTaskOpen(null); openEvent(k); } else if(taskOpen.startsWith("view:")){ setView(taskOpen.slice(5)); setTaskOpen(null); } },[taskOpen]);
@@ -8315,7 +8331,7 @@ function VendorQuote({token}){
 }
 
 /* Any unexpected error is shown as a red message, so a failure is never silent ("button does nothing"). */
-const BUILD="2026-11-07 store";
+const BUILD="2026-11-10 store";
 (()=>{ let last=0; const show=m=>{ const msg=errRef(m,"Unexpected error"); if(Date.now()-last<1500) return; last=Date.now(); if(window.__toast) window.__toast(msg+" (build "+BUILD+")","bad"); };   /* no raw error text on screen: details stay in the console under the reference */
   window.addEventListener("error",e=>show(e.message||e.error)); window.addEventListener("unhandledrejection",e=>show((e.reason&&e.reason.message)||e.reason)); })();
 const vendorToken=(/#rfq=([0-9a-f]{16,})/i.exec(location.hash||"")||[])[1];

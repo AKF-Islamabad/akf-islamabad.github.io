@@ -221,8 +221,15 @@
     const has = k => !myPortals || myPortals.some(p => p.key === k), keys = new Set(), all = [];
     (Array.isArray(saved.data) ? saved.data : []).forEach(b => (b.items || []).forEach(n => { if (n && n.key && !keys.has(n.key)) { keys.add(n.key); all.push({ ...n, portal: b.portal, at: n.at || b.at }); } }));
     (Array.isArray(live.data) ? live.data : []).forEach(n => { if (n && n.key && !keys.has(n.key)) { keys.add(n.key); all.push(n); } });
-    const rd = store.get("akf-inread-" + me.id, {});
-    inbox = all.filter(n => has(n.portal)).map(n => ({ ...n, read: !!(n.read || rd[n.key]) }));
+    const rd = store.get("akf-inread-" + me.id, {}), seen = new Map(), lowLive = all.some(n => /^low\|/.test(n.key));
+    inbox = [];
+    all.filter(n => has(n.portal)).forEach(n => {
+      if (lowLive && /below minimum stock/.test(n.title || "")) return;          // the live "need restocking" item replaces the portal's copy
+      const rec = /^#(track|task|req)=/.test(n.open || "") ? n.portal + n.open + "|" + kindOf(n) : "";
+      const x = { ...n, read: !!(n.read || rd[n.key]) };
+      if (rec && seen.has(rec)) { const y = seen.get(rec); y.read = y.read && x.read; y.keys.push(n.key); return; }
+      x.keys = [n.key]; if (rec) seen.set(rec, x); inbox.push(x);
+    });
     const cur = here();
     ring(inbox.filter(n => n.portal !== cur && !n.read).map(n => ({ key: n.key, title: n.title, body: n.body, url: linkOf(n) })));
     document.dispatchEvent(new CustomEvent("akf-inbox", { detail: { count: inbox.filter(n => !n.read).length } }));
@@ -234,9 +241,15 @@
     try { const u = new URL(p ? p.url : n.portal + "/", BASE); if (u.origin !== location.origin) return BASE;
       const h = String(n.open || ""); return u.href.split("#")[0] + (/^#[\w=:%.\-]*$/.test(h) ? h : ""); } catch (_) { return BASE; }
   }
+  // news about my own work vs things only I can move forward
+  function kindOf(n) { if (/^Sent back/i.test(n.title || "")) return "act";   // back with me to correct
+    return /^(my|tout|tcm|trq|tdn|x)\||^hr\|(done|grant|notice|off|slip)\|/.test(n.key || "") ? "news" : "act"; }
+  function markRead(list) {
+    const rd = store.get("akf-inread-" + me.id, {}), t = Date.now(); list.forEach(n => (n.keys || [n.key]).forEach(k => { rd[k] = t; }));
+    store.set("akf-inread-" + me.id, Object.fromEntries(Object.entries(rd).sort((a, b) => b[1] - a[1]).slice(0, 600)));
+  }
   function go(n) {
-    const rd = store.get("akf-inread-" + me.id, {}); rd[n.key] = Date.now();
-    store.set("akf-inread-" + me.id, Object.fromEntries(Object.entries(rd).sort((a, b) => b[1] - a[1]).slice(0, 400)));
+    markRead([n]);
     const url = linkOf(n), same = url.split("#")[0] === location.href.split("#")[0];
     closePanel();
     // Tasks opens #task= on the spot; the other portals read the link when the page loads
@@ -250,22 +263,20 @@
     const nameOf = k => { const p = myPortals && myPortals.find(x => x.key === k); return p ? p.name : k; };
     const list = el("div", "akd-in-list"), unread = inbox.filter(n => !n.read).length;
     if (!inbox.length) list.append(el("p", "akd-in-empty", "All clear. Nothing new in any of your portals."));
-    // one block per portal, in the order of the person's portals; unread first, then the rest (greyed)
-    const order = (myPortals || []).map(p => p.key); [...new Set(inbox.map(n => n.portal))].forEach(k => { if (!order.includes(k)) order.push(k); });
-    order.forEach(k => {
-      const L = inbox.filter(n => n.portal === k).sort((a, b) => (a.read - b.read) || String(b.at || "").localeCompare(String(a.at || "")));
+    [["act", "Needs your action", "Only you can move these forward"], ["news", "Updates", "What happened to your requests and tasks"]].forEach(([k, t, sub]) => {
+      const L = inbox.filter(n => kindOf(n) === k).sort((x, y) => (x.read - y.read) || String(y.at || "").localeCompare(String(x.at || "")));
       if (!L.length) return;
-      const u = L.filter(n => !n.read).length, g = el("button", "akd-in-g"); g.type = "button";
-      g.append(el("b", "", nameOf(k)), el("span", u ? "akd-in-n" : "akd-in-n0", u ? u + " new" : "seen")); g.title = "Open " + nameOf(k);
-      g.onclick = () => go({ key: "portal|" + k, portal: k, open: "" }); list.append(g);
-      L.slice(0, 15).forEach(n => {
-        const b = el("button", "akd-in-row" + (n.read ? " read" : "")); b.type = "button";
-        b.append(el("b", "", n.title || "Notification"), n.body ? el("span", "akd-in-b", n.body) : "", n.at ? el("small", "", ago(n.at)) : "");
-        b.onclick = () => go(n); list.append(b);
+      const u = L.filter(n => !n.read).length, h = el("div", "akd-in-g");
+      h.append(el("b", "", t), el("span", u ? "akd-in-n" : "akd-in-n0", u ? u + " new" : "seen")); h.title = sub; list.append(h);
+      L.slice(0, 25).forEach(n => {
+        const r = el("button", "akd-in-row" + (n.read ? " read" : "")); r.type = "button";
+        r.append(el("span", "akd-in-p", nameOf(n.portal) + (n.at ? " · " + (ago(n.at) === "now" ? "just now" : ago(n.at) + " ago") : "")), el("b", "", n.title || "Notification"), n.body ? el("span", "akd-in-b", n.body) : "");
+        r.onclick = () => go(n); list.append(r);
       });
-      if (L.length > 15) list.append(el("p", "akd-in-more", `+${L.length - 15} more in ${nameOf(k)}`));
+      if (L.length > 25) list.append(el("p", "akd-in-more", `+${L.length - 25} more — open the portal to see them all`));
     });
-    const head = el("div", "akd-in-h"); head.append(el("b", "", unread ? `${unread} new in your portals` : "All notifications"));
+    const head = el("div", "akd-in-h"); head.append(el("b", "", unread ? `${unread} new` : "Notifications"));
+    if (unread) { const m = el("button", "akd-in-on", "Mark all read"); m.type = "button"; m.onclick = () => { markRead(inbox); inbox.forEach(n => { n.read = true; }); document.dispatchEvent(new CustomEvent("akf-inbox", { detail: { count: 0 } })); drawPanel(); }; head.append(m); }
     if (!("Notification" in window) || Notification.permission !== "granted") { const t = el("button", "akd-in-on", "🔕 Turn on alerts"); t.type = "button"; t.onclick = () => turnOn(); head.append(t); }
     panel.replaceChildren(head, list);
   }
@@ -288,10 +299,10 @@
 .akd-in-list{overflow:auto;padding:6px}
 .akd-in-row{display:grid;gap:2px;width:100%;text-align:left;border:0;background:none;padding:10px;border-radius:10px;cursor:pointer;font:inherit;color:inherit}
 .akd-in-row:hover,.akd-in-row:focus-visible{background:#EEF4FC;outline:none}.akd-in-row:focus-visible{box-shadow:inset 0 0 0 2px #0B51A7}
-.akd-in-p{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#0B51A7}
+.akd-in-p{font-size:11.5px;font-weight:700;color:#0B51A7}
 .akd-in-b{color:#4a5568;font-size:13px}.akd-in-row small{color:#5b6475;font-size:11.5px}
 .akd-in-empty{padding:18px;color:#4a5568;text-align:center}
-.akd-in-g{display:flex;align-items:center;gap:8px;width:100%;border:0;background:#F1F5FA;border-radius:8px;padding:8px 10px;margin:8px 0 2px;cursor:pointer;font:inherit;color:#0B3D75;text-align:left}.akd-in-g b{flex:1}
+.akd-in-g{display:flex;align-items:center;gap:8px;width:100%;border:0;background:#F1F5FA;border-radius:8px;padding:8px 10px;margin:8px 0 2px;font:inherit;color:#0B3D75;text-align:left}.akd-in-g b{flex:1}
 .akd-in-n{background:#D23B3B;color:#fff;border-radius:99px;padding:1px 8px;font-size:12px;font-weight:700}.akd-in-n0{color:#5b6475;font-size:12px}
 .akd-in-row.read b{font-weight:600;color:#5b6475}.akd-in-more{margin:2px 10px 6px;font-size:12px;color:#5b6475}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .akd-in{background:#162033;color:#E8EDF5}:root:not([data-theme="light"]) .akd-in-h{border-color:#2A3650}:root:not([data-theme="light"]) .akd-in-row:hover{background:#20304A}:root:not([data-theme="light"]) .akd-in-b,:root:not([data-theme="light"]) .akd-in-row small,:root:not([data-theme="light"]) .akd-in-empty{color:#B7C2D3}:root:not([data-theme="light"]) .akd-in-p{color:#7FB2F0}:root:not([data-theme="light"]) .akd-in-g{background:#20304A;color:#CFE0F7}}

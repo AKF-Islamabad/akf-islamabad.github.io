@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-assistance.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-F6PUQXN8Gpmx74/i2Y2l9hSOkNlMU/mZZ4OjWpb4jAw='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-3gqdTFretYnoXHQWypTAsK6Ap16+R070AK3uWJOOKOw='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -2387,7 +2387,8 @@ async function boot() {
   $("side-portal").textContent = NAME; $("crumb").textContent = "Alkhidmat Foundation Islamabad · " + NAME;
   $("me-name").textContent = ME.name; $("me-role").textContent = ME.label + (ME.deptName ? " · " + ME.deptName : "");
   $("me-av").textContent = String(ME.name).split(/\s+/).map(x => x[0]).slice(0, 2).join("").toUpperCase();
-  V.view = "dashboard";
+  V.view = location.hash === "#new" && can("applications", "add") ? "new" : "dashboard";   // #new: the main page's "+" button
+  if (location.hash === "#new") try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { }
   try { history.replaceState({ akf: 1, view: "dashboard", id: null, from: "" }, "", location.pathname + location.search); } catch (e) { }
   hideLoader();
   render();

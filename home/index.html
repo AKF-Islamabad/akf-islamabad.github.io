@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by tools/csp-hash.js (inline scripts by hash). Fonts, the background library and images are all served from this site. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-W3VTHft2c3cH1KQa77VwIl4pdugaZlNMMWoYpPhV8OU='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1389,6 +1389,21 @@ body.nav-collapsed #sidebar-toggle .i { transform: scaleX(-1); }
 .lg-preview[hidden] { display: none; }
 :root:not(.su) [data-su] { display: none !important; } /* appearance controls: super admin only */
 :root.live .fab, :root.live .lg-preview [data-action="login-use"] { display: none !important; } /* sample-only controls are not shown on the live page */
+:root.live .fab.has-new { display: flex !important; }   /* live "+": the forms this person may send */
+.fab-card { width: min(340px, calc(100vw - 32px)); max-height: min(68vh, 560px); overflow: auto; padding: 8px; border-radius: 16px; background: var(--color-surface); border: 1px solid var(--glow-border, var(--color-border)); box-shadow: 0 24px 60px -20px rgba(15, 23, 42, .45); }
+.fab-card-h { display: grid; gap: 2px; padding: 8px 10px 10px; border-bottom: 1px solid var(--color-border); }
+.fab-card-h small, .fab-card a small { color: var(--color-text-subtle); font-size: 12px; }
+.fab-grp { padding: 6px 0 2px; }
+.fab-grp-h { display: flex; align-items: center; gap: 8px; padding: 6px 10px 4px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--mc); }
+.fab-grp-h .i { width: 15px; height: 15px; }
+.fab-card .fab-grp-h { border: 0; background: none; box-shadow: none; border-radius: 0; }   /* not the sample menu's pill labels */
+.fab-card a { display: grid; gap: 1px; padding: 8px 10px; border-radius: 10px; color: var(--color-text); text-decoration: none; font-size: 14px; }
+.fab-card a:hover, .fab-card a:focus-visible { background: var(--color-surface-2); outline: none; }
+.fab-card a:focus-visible { box-shadow: inset 0 0 0 2px var(--focus); }
+.fab .fab-menu { max-width: calc(100vw - 32px); }
+.live-help { display: flex; gap: 8px; align-items: flex-start; margin: -4px 0 16px; padding: 10px 14px; border-radius: 12px; font-size: 13px; color: var(--color-text-muted); background: var(--color-surface-2); }
+.live-help .i { width: 16px; height: 16px; flex: none; margin-top: 2px; }
+.brief-item[data-href] { cursor: pointer; }
 /* live home: old "Today" panels in the new design */
 .live-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 .live-grid > .brief { margin: 0; }
@@ -1921,12 +1936,14 @@ const Live = {
     }
     // Decision 2026-11-08: only the sign-in screen is new. Once signed in, everyone goes to the main page, as before.
     if (this.SIGN_IN_ONLY) { location.replace(this.HOME); return 'away'; }
-    const [p, i] = await Promise.all([this.sb.rpc('core_my_portals'), this.sb.rpc('core_my_inbox')]);
+    const [p, i, nw] = await Promise.all([this.sb.rpc('core_my_portals'), this.sb.rpc('core_my_inbox'), this.sb.rpc('core_my_new')]);
     if (p.error) throw p.error;
     this.me = me;
     try { sessionStorage.removeItem('akf-hops'); } catch (e) {}   // arrived safely: reset the main page's loop counter
     this.portals = p.data || [];
     this.inbox = i.error ? [] : (i.data || []);   // empty if this database has not got the all-portals inbox yet
+    this.newItems = nw.error || !Array.isArray(nw.data) ? [] : nw.data;   // the "+" button: forms this person may send (046)
+    Fab.live();
     this.paintUser();
     Role.apply();
     Notifs.render();
@@ -1957,7 +1974,8 @@ const Live = {
     this.timer = setTimeout(() => this.loadToday(), 120000);
   },
   // The one bell for every portal (akf-desk.js), as on the old main page.
-  bellCount() { return window.AKF_DESK && AKF_DESK.inbox ? AKF_DESK.inbox().length : this.inbox.length; },
+  bellCount() { return window.AKF_DESK && AKF_DESK.inbox ? AKF_DESK.inbox().filter(n => !n.read).length : this.inbox.length; },   // unread only
+  waiting(k) { const A = (this.today && this.today.actions) || []; return k ? A.filter(a => a.portal === k).length : ((this.today && this.today.counts && this.today.counts.actions) || 0); },
   // Alkhidmat AI, as on the main page: it knows which portals this person has, nothing personal.
   assistant() {
     if (this.aiOn || !window.AKF_ASSISTANT) return;
@@ -1979,7 +1997,7 @@ const Live = {
   // Portals as sidebar / top-tab / palette items, in the order the Super Admin set.
   nav() {
     return this.portals.map(p => ({ id: p.key, short: p.name, name: p.name, desc: p.description || '', icon: this.ICON[p.key] || 'shield', color: /^#[0-9a-f]{6}$/i.test(p.color || '') ? p.color : '#0060AE',
-      tone: 'accent', role: this.ROLE[p.role] || p.role || '', href: this.href(p.url), badge: () => this.inbox.filter(x => x.portal === p.key).length || 0 }));
+      tone: 'accent', role: this.ROLE[p.role] || p.role || '', href: this.href(p.url), badge: () => this.waiting(p.key) || 0 }));
   },
   // Link for an inbox item: the portal's page plus the item's own anchor (e.g. #track=PO-…).
   open(x) { const p = this.portals.find(q => q.key === x.portal); const base = p ? this.href(p.url) : this.HOME; return base === '#' ? '#' : base + (x.open && /^#[\w=:|.-]*$/.test(x.open) ? x.open : ''); },
@@ -2873,22 +2891,27 @@ class HomeView {
     const dateStr = `${TODAY.toLocaleDateString('en-GB', { weekday: 'long' })} ${pad(TODAY.getDate())}-${TODAY.toLocaleDateString('en-GB', { month: 'short' })}`;
     const words = String(me.full_name || me.email).trim().split(/\s+/), w = T ? (C.actions || 0) : null;
     const h = I.avg_approval_hours, avg = h == null ? '—' : h >= 24 ? (h / 24).toFixed(1) : String(Math.round(h)), avgUnit = h == null ? '' : h >= 24 ? 'days' : 'h';
-    const quick = ['procurement', 'tasks'].map(k => nav.find(p => p.id === k)).filter(Boolean);
+    const tasksQ = nav.find(p => p.id === 'tasks'), canNew = (Live.newItems || []).length > 0;
     const portalOf = k => nav.find(p => p.id === k);
     const days = s => { const d = Math.floor((Date.now() - new Date(s).getTime()) / 864e5); return isFinite(d) ? d : 0; };
-    const link = a => { const p = portalOf(a.portal); if (!p || p.href === '#') return ''; return p.href + (['procurement', 'store'].includes(a.portal) && /^[\w.-]+$/.test(a.ref || '') ? '#track=' + a.ref : a.portal === 'fleet' ? '#track' : ''); };
+    const isLate = s => Date.now() - new Date(s).getTime() > 2 * 864e5;   // the same rule as the "waiting more than 2 days" count (013_today.sql)
+    const ref = a => /^[\w.-]+$/.test(a.ref || '') ? a.ref : '';
+    const link = a => { const p = portalOf(a.portal); if (!p || p.href === '#') return ''; const r = ref(a);
+      return p.href + (r && ['procurement', 'store', 'fleet'].includes(a.portal) ? '#track=' + r : r && a.portal === 'hr' ? '#req=' + r : ''); };
     const tab = Live.tab || 'all', show = A.filter(a => tab === 'all' || (tab === 'approve' ? a.kind !== 'do' : a.kind === 'do'));
-    const items = show.slice(0, 20).map(a => { const p = portalOf(a.portal), late = days(a.since) > 2, url = link(a);
+    const items = show.slice(0, 20).map(a => { const p = portalOf(a.portal), late = isLate(a.since), url = link(a);
       return { sev: late ? 3 : a.kind === 'do' ? 1 : 2, icon: Live.ICON[a.portal] || 'inbox', title: a.title || a.ref,
-        meta: [p ? p.name : a.portal, a.sub, late ? `waiting ${days(a.since)} days` : '', a.amount ? 'Rs ' + Number(a.amount).toLocaleString('en-PK') : ''].filter(Boolean).join(' · '),
+        meta: [p ? p.name : a.portal, a.sub, late ? `waiting ${plural(Math.max(days(a.since), 2), 'day', 'days')}` : '', a.amount ? 'Rs ' + Number(a.amount).toLocaleString('en-PK') : ''].filter(Boolean).join(' · '),
         actions: url ? [['Open', `href="${esc(url)}"`, 1]] : [] }; });
     const rest = {}; show.slice(20).forEach(a => { const n = portalOf(a.portal)?.name || a.portal; rest[n] = (rest[n] || 0) + 1; });
+    const restN = Math.max(0, (tab === 'all' ? (C.actions || 0) : show.length) - Math.min(show.length, 20)) - Object.values(rest).reduce((x, y) => x + y, 0);   // beyond the 50 per portal the list carries
+    if (restN > 0) rest['your portals'] = restN;
     const tasksP = portalOf('tasks'), day = d => { const x = new Date(d); return isNaN(x) ? d : x.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); };
     const byPortal = {}; A.forEach(a => { byPortal[a.portal] = (byPortal[a.portal] || 0) + 1; });
     const chart = T && A.length && window.AKF_CHARTS ? AKF_CHARTS.donut({ id: 'today-portals', center: 'waiting',
       items: Object.keys(byPortal).map(k => { const p = portalOf(k); return { key: k, label: p ? p.name : k, value: byPortal[k], color: p ? p.color : '' }; }) }) : '';
     const card = (tone, ic, n, label, foot, target) => `
-      <a class="status-card spot tilt tone-${tone}" href="#${target}" data-action="scroll-to" data-target="${target}">
+      <a class="status-card spot tilt tone-${tone}" href="#${target}" data-action="${target === 'bell' ? 'toggle-notifs' : 'scroll-to'}" data-target="${target}">
         <div class="sc-head"><span>${label}</span><span class="sc-icon">${icon(ic)}</span></div>
         <div class="sc-value"><span data-count="${n || 0}">${n || 0}</span><small>${n === 1 ? 'item' : 'items'}</small></div>
         <div class="sc-foot"><span style="display:flex;align-items:center;gap:8px">${foot}</span><span class="go">View ${icon('arrowRight')}</span></div>
@@ -2905,7 +2928,7 @@ class HomeView {
           <div class="hero-top"><p class="eyebrow">${icon('shield')} Islamabad Region · ${esc(me.dept || 'Jazba')}</p><span class="hero-clock" id="hero-clock">${Clock.now()}</span><button type="button" class="hero-bg-btn" data-su data-action="toggle-appear">${icon('palette')}Background</button></div>
           <h1 id="page-h1" tabindex="-1"><span class="nowrap"><span class="w" style="--i:0">Assalam&#8209;o&#8209;Alaikum,</span></span> <span class="grad-name">${words.map((t, i) => `<span class="w" style="--i:${i + 1}">${esc(t)}${i === words.length - 1 ? '.' : ''}</span>`).join(' ')}</span></h1>
           <p class="welcome-sub">${greet} · ${dateStr}${w == null ? '' : ` · ${w ? `You have <strong>${plural(w, 'thing', 'things')}</strong> waiting on you.` : 'Nothing is waiting on you.'}`}</p>
-          ${quick.length ? `<div class="welcome-actions">${quick.map((p, i) => `<a class="btn ${i ? 'btn-secondary' : 'btn-primary'}" href="${esc(p.href)}">${icon(p.id === 'procurement' ? 'filePlus' : 'plus')}${p.id === 'procurement' ? 'Raise a request' : 'Open Tasks'}</a>`).join('')}</div>` : ''}
+          ${canNew || tasksQ ? `<div class="welcome-actions">${canNew ? `<button type="button" class="btn btn-primary" data-action="fab" aria-controls="fab-menu">${icon('plus')}New request</button>` : ''}${tasksQ ? `<a class="btn btn-secondary" href="${esc(tasksQ.href)}">${icon('tasks')}Open Tasks</a>` : ''}</div>` : ''}
           ${Daily.heroLine()}
         </div>
         ${T ? `<dl class="impact" aria-label="Team impact this month">
@@ -2917,10 +2940,11 @@ class HomeView {
 
       ${!T ? `<div class="brief-empty">${icon(Live.todayErr ? 'alert' : 'clock')}${Live.todayErr ? 'Live numbers unavailable right now. Your portals below still work.' : 'Loading your day…'}</div>` : `
       <section class="status-row" aria-label="Your day">
-        ${card('accent', 'inbox', C.actions, 'Waiting on you', C.late ? `<span class="pulse"></span>${C.late} waiting more than 2 days` : C.actions ? '<span class="pulse"></span>Needs your action' : 'All clear', 'brief-h')}
+        ${card('accent', 'inbox', C.actions, 'Waiting on you', C.late ? `<span class="pulse"></span>${C.late} waiting more than 2 days` : C.actions ? '<span class="pulse"></span>Approve, check or sign' : 'All clear', 'brief-h')}
         ${card('secondary', 'tasks', C.tasks_week, 'My tasks this week', 'Due in the next 7 days', 'tasks-h')}
-        ${card('neutral', 'send', C.my_open_requests, 'Requests I started', 'Still in progress', 'brief-h')}
+        ${card('neutral', 'send', C.my_open_requests, 'Requests I started', 'Still in approval · news comes in the bell', 'bell')}
       </section>
+      <p class="live-help">${icon('bell')}<span><b>Waiting on you</b> = steps only you can take (approve, check, sign or receive). <b>The bell</b> = news, such as your request moving forward, sent back or approved. <b>+ New request</b> = start any form you are allowed to send.</span></p>
 
       ${chart ? `<section class="brief" aria-labelledby="chart-h"><div class="brief-head"><div><h2 id="chart-h">${icon('bolt')}Waiting on you, by portal</h2><p>Click a portal to open it.</p></div></div><div class="live-chart">${chart}</div></section>` : ''}
 
@@ -2934,7 +2958,7 @@ class HomeView {
         </section>
         <section class="brief" aria-labelledby="tasks-h">
           <div class="brief-head"><div><h2 id="tasks-h">${icon('tasks')}My tasks</h2><p>Due this week</p></div>${tasksP ? `<a class="btn btn-xs btn-secondary" href="${esc(tasksP.href)}">Tasks &amp; Events</a>` : ''}</div>
-          ${(T.tasks || []).length ? `<ol class="brief-list">${T.tasks.slice(0, 8).map(t => `<li class="brief-item sev-${t.late ? 3 : 1}">
+          ${(T.tasks || []).length ? `<ol class="brief-list">${T.tasks.slice(0, 8).map(t => `<li class="brief-item sev-${t.late ? 3 : 1}${tasksP && t.kind === 'task' && /^[\w.-]+$/.test(t.id || '') ? '" data-action="open-href" data-href="' + esc(tasksP.href.split('#')[0] + '#task=' + t.id) : ''}">
               <span class="bi-ic">${icon('tasks')}</span>
               <div class="bi-body"><div class="bi-title">${esc(t.title || t.id)}</div><div class="bi-meta">${t.late ? '<span class="sev-tag">Late</span>' : ''}<span>${t.kind === 'todo' ? 'To-do' : 'Task'} · due ${esc(day(t.due))}</span></div></div></li>`).join('')}</ol>`
             : `<div class="brief-empty">${icon('checkCircle')}Nothing due this week. ${tasksP ? 'Enjoy the calm.' : 'No tasks in Tasks &amp; Events.'}</div>`}
@@ -3257,7 +3281,7 @@ const Sidebar = {
       <a class="nav-item" href="${href}" ${active === id ? 'aria-current="page"' : ''} title="${label}${keyOf(id) ? ` (Alt+${keyOf(id)})` : ''}"${keyOf(id) ? ` aria-keyshortcuts="Alt+${keyOf(id)}"` : ''}>
         <span class="nav-ic"${color ? ` style="--mc:${color}"` : ''}>${icon(ic)}</span><span class="nav-label">${label}</span>${badge ? `<span class="nav-badge tone-${tone}">${badge}<span class="sr-only"> waiting</span></span>` : ''}
       </a>`;
-    const q = Live.on ? null : Metrics.queue(), n = Live.on ? Live.inbox.length : 0;
+    const q = Live.on ? null : Metrics.queue(), n = Live.on ? Live.waiting() : 0;
     $('#sidebar').innerHTML = `<a class="side-brand" href="#/" aria-label="Alkhidmat Islamabad home">
         <img src="../icon.jpg" alt="" width="40" height="40">
         <span><b>Alkhidmat</b><small>Islamabad · ${Live.on ? 'Jazba' : 'Internal Portal'}</small></span></a>`
@@ -3267,7 +3291,7 @@ const Sidebar = {
       + (Live.on
         ? (Live.me?.is_super ? `<div class="nav-section">Admin</div>` + Object.entries(ADMIN_TABS).map(([k, [t, ic]]) => item(`#/admin/${k}`, `admin/${k}`, ic, t)).join('') : '')
           + `<div class="side-card"><div class="side-card-top"><span>Waiting on you</span><b>${n}</b></div>
-          <small>${n ? `${plural(n, 'item', 'items')} across your portals` : 'Nothing is waiting on you.'}</small></div>`
+          <small>${n ? `${plural(n, 'step', 'steps')} only you can take` : 'Nothing is waiting on you.'}</small></div>`
         : `<div class="side-card"><div class="side-card-top"><span>Your approval queue</span><b>${q.decided}/${q.total}</b></div>
           <div class="side-card-bar"><i style="width:${q.pct}%"></i></div><small>${q.total - q.decided ? `${q.total - q.decided} still waiting on you` : 'All decided. Nice work.'}</small></div>`);
     // Stagger index for the label fade / mobile slide-in.
@@ -3567,12 +3591,24 @@ const Duty = {
 };
 
 const Fab = {
+  // live: every request this person may send, grouped by portal (core_my_new); each opens that form in its portal
+  live() {
+    const items = Live.newItems || [], nav = Live.nav(), fab = $('#fab');
+    fab.classList.toggle('has-new', items.length > 0);
+    if (!items.length) return;
+    const groups = [...new Set(items.map(x => x.portal))];
+    $('#fab-menu').innerHTML = `<div class="fab-card"><div class="fab-card-h"><b>Start a new request</b><small>Only the forms you are allowed to send</small></div>${groups.map(k => {
+      const p = nav.find(x => x.id === k); if (!p || p.href === '#') return '';
+      return `<div class="fab-grp"><span class="fab-grp-h" style="--mc:${p.color}">${icon(p.icon)}${esc(p.name)}</span>${items.filter(x => x.portal === k && /^#[\w=\/.-]*$/.test(x.open || '')).map(x => `
+        <a role="menuitem" href="${esc(p.href.split('#')[0] + x.open)}"><b>${esc(x.label)}</b>${x.hint ? `<small>${esc(x.hint)}</small>` : ''}</a>`).join('')}</div>`; }).join('')}</div>`;
+    $('#fab-btn').setAttribute('aria-label', 'New request');
+  },
   isOpen() { return $('#fab').classList.contains('open'); },
   toggle(force) {
     const open = force ?? !this.isOpen();
     $('#fab').classList.toggle('open', open);
     $('#fab-btn').setAttribute('aria-expanded', open);
-    if (open) setTimeout(() => $('#fab-menu button')?.focus(), 60);
+    if (open) setTimeout(() => $('#fab-menu button, #fab-menu a')?.focus(), 60);
   },
 };
 
@@ -4249,6 +4285,7 @@ const App = {
     'palette-run': el => Palette.run(+el.dataset.idx),
     'toggle-notifs': () => { if (Live.on && window.AKF_DESK && AKF_DESK.openInbox) AKF_DESK.openInbox($('#bell-btn')); else Notifs.toggle(); },
     'live-tab': el => { Live.tab = el.dataset.value; Router.render(false); $(`[data-action="live-tab"][data-value="${Live.tab}"]`)?.focus(); },
+    'open-href': el => { if (/^(https:\/\/|\/(?!\/))/.test(el.dataset.href || '')) location.href = el.dataset.href; },   // same rule as Live.href
     'scroll-to': (el, e) => { e.preventDefault(); document.getElementById(el.dataset.target)?.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'start' }); },
     'my-signature': () => { if (window.AKF_SIGN) AKF_SIGN.open(); else toast('Still loading. Try again in a moment.'); },
     'notifs-read-all': () => { state.notifs.forEach(n => { n.unread = false; }); Notifs.render(); },
@@ -4317,7 +4354,7 @@ const App = {
       const el = e.target.closest('[data-action]');
       if (Notifs.isOpen() && !e.target.closest('.notif-wrap')) Notifs.toggle(false);
       if (Appear.isOpen() && !e.target.closest('.appear-wrap, [data-action="toggle-appear"]')) Appear.toggle(false);
-      if (Fab.isOpen() && !e.target.closest('[data-action="fab"]')) Fab.toggle(false);
+      if (Fab.isOpen() && !e.target.closest('[data-action="fab"], .fab-card')) Fab.toggle(false);
       if (!el) return;
       const fn = this.actions[el.dataset.action];
       if (fn) { if (el.tagName === 'BUTTON' && el.type !== 'submit') e.preventDefault(); fn(el, e); }

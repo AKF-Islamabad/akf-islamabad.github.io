@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-zgtdjrz60mhPJ9oyBBO2F+n0iNxRLiRmGnoSuf/Qi0k='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-AWR8qrGSY3pCi/Nwe1SCld5TRWuvYuMPnB85aG4aiWQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -2190,6 +2190,8 @@ async function refresh() { if (busy || document.hidden) return; busy = true; try
 function hashOpen() {
   const m = /^#req=(HR-\d{4}-\d{5,})$/.exec(location.hash || "");
   if (m) { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { } openReq(m[1]); }
+  else if (/^#apply=[A-Za-z]+$/.test(location.hash) && KIND[location.hash.slice(7)] && can("apply", "add")) {   // the main page's "+" button
+    V.kind = location.hash.slice(7); try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { } go("apply"); }
   else if (["#leave", "#notices", "#exits", "#pay"].includes(location.hash)) { const v = { "#leave": "dashboard", "#notices": "notices", "#exits": "exits", "#pay": "pay" }[location.hash]; try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { } go(v); }
 }
 async function render() {
