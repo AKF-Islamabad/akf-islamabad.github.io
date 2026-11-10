@@ -132,12 +132,20 @@ jobs:
           for f in $(find . -name index.html -not -path './.git/*' -not -path './tools/*'); do
             page="${f#./}"; url="$base${page%index.html}"
             html=$(curl -sfL "$url") || { echo "::warning::$url did not load"; continue; }
-            csp=$(printf '%s' "$html" | grep -oi '<meta http-equiv="Content-Security-Policy" content="[^"]*"' | head -1)
+            # here-strings, not pipes: "grep -q" stops reading early and printf then prints "Broken pipe"
+            csp=$(grep -oi '<meta http-equiv="Content-Security-Policy" content="[^"]*"' <<<"$html" | head -1)
             if [ -z "$csp" ]; then echo "::error::$url has no Content-Security-Policy"; fail=1; continue; fi
-            src=$(printf '%s' "$csp" | grep -o "script-src [^;\"]*")
-            if printf '%s' "$src" | grep -q "'unsafe-inline'\|'unsafe-eval'"; then echo "::error::$url script-src allows unsafe-inline/unsafe-eval"; fail=1; fi
-            printf '%s' "$csp" | grep -q "object-src 'none'" || { echo "::error::$url CSP lacks object-src 'none'"; fail=1; }
-            printf '%s' "$html" | grep -q 'window.top\|top !== self\|top.location' || echo "::warning::$url has no frame-buster (GitHub Pages cannot send X-Frame-Options)"
+            src=$(grep -o "script-src [^;\"]*" <<<"$csp")
+            if grep -q "'unsafe-eval'" <<<"$src"; then echo "::error::$url script-src allows unsafe-eval"; fail=1; fi
+            if grep -q "'unsafe-inline'" <<<"$src"; then
+              # the one documented exception (SECURITY-PROTOCOL.md, Career page): a public page with no sign-in, default-src 'none',
+              # data only to our database, no forms posted anywhere. It is reported on every run so it is never forgotten.
+              if grep -q '<meta name="akf-csp" content="keep-inline">' <<<"$html" && grep -q "default-src 'none'" <<<"$csp" && grep -q "form-action 'none'" <<<"$csp"; then
+                echo "::warning::$url allows inline scripts (documented Career page exception)"
+              else echo "::error::$url script-src allows unsafe-inline"; fail=1; fi
+            fi
+            grep -q "object-src 'none'" <<<"$csp" || { echo "::error::$url CSP lacks object-src 'none'"; fail=1; }
+            grep -q 'window.top\|top !== self\|top.location' <<<"$html" || echo "::warning::$url has no frame-buster (GitHub Pages cannot send X-Frame-Options)"
             echo "OK  CSP on $url"
           done
           exit $fail
