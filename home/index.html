@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by tools/csp-hash.js (inline scripts by hash). Fonts, the background library and images are all served from this site. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-W3VTHft2c3cH1KQa77VwIl4pdugaZlNMMWoYpPhV8OU='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-0Q0pNhWfEXrp7zLNMPVLIIg22DQFTVsrToUkHMZYrjA='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -3600,7 +3600,7 @@ const Fab = {
     $('#fab-menu').innerHTML = `<div class="fab-card"><div class="fab-card-h"><b>Start a new request</b><small>Only the forms you are allowed to send</small></div>${groups.map(k => {
       const p = nav.find(x => x.id === k); if (!p || p.href === '#') return '';
       return `<div class="fab-grp"><span class="fab-grp-h" style="--mc:${p.color}">${icon(p.icon)}${esc(p.name)}</span>${items.filter(x => x.portal === k && /^#[\w=\/.-]*$/.test(x.open || '')).map(x => `
-        <a role="menuitem" href="${esc(p.href.split('#')[0] + x.open)}"><b>${esc(x.label)}</b>${x.hint ? `<small>${esc(x.hint)}</small>` : ''}</a>`).join('')}</div>`; }).join('')}</div>`;
+        <a role="menuitem" href="${esc(p.href.split('#')[0].split('?')[0] + '?form=1' + x.open)}"><b>${esc(x.label)}</b>${x.hint ? `<small>${esc(x.hint)}</small>` : ''}</a>`).join('')}</div>`; }).join('')}</div>`;
     $('#fab-btn').setAttribute('aria-label', 'New request');
   },
   isOpen() { return $('#fab').classList.contains('open'); },

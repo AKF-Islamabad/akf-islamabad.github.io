@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-B8kX/C06sCEEyg2aBxaGmJTYgaDt8iPCNrX7BAsNdUQ='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-bDQXdamwNt+7bLysyp+5Fs5OtzoDpz+oS/UIJvp5Tik='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -1407,6 +1407,12 @@ button.item:hover{transform:translateX(3px);border-color:var(--brand-300);border
   .main::before,.hero::before,.tk-hero::before{animation:none!important}
 }
 @media print{.ak-loader{display:none!important}.main::before,.hero::before,.hero::after,.tk-hero::before,.tk-hero::after{display:none!important}}
+/* "+" on the main page: the form alone (FORM_ONLY) */
+.fo-page{max-width:900px;margin:0 auto;padding:16px 16px 40px}
+.fo-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}.fo-head b{font-size:18px}
+.fo-tasks>:not(.overlay){display:none!important}
+html.akf-form-only .jz-shell-rail,html.akf-form-only .jz-topstrip{display:none!important}
+html.akf-form-only body{padding-top:0!important;padding-left:0!important}
 </style>
 </head>
 <body>
@@ -3807,6 +3813,10 @@ const READ_ONLY_ROLES = ["gen_sec"];
 /* the main page's "+" button opens a form directly: #new=procurement | store | task | event | engagement (read once) */
 let NEW_HASH=(/^#new=(procurement|store|task|event|engagement)$/.exec(location.hash||"")||[])[1]||null;
 if(NEW_HASH){ try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} }
+const FORM_ONLY=NEW_HASH;   // opened from "+": show only that form, then go back to the main page
+if(FORM_ONLY){ document.documentElement.classList.add("akf-form-only"); document.documentElement.dataset.desk="off"; document.documentElement.dataset.formOwn="1"; }   // no portal menu, frame or sticky note
+const FORM_TITLE={procurement:"Purchase requisition",store:"Store requisition",task:"New task",event:"Event request",engagement:"Engagement request"};
+const goHome=()=>{ location.href=new URL("../home/",location.href).href; };
 const takeNew=kinds=>{ const k=NEW_HASH; if(!k||!kinds.includes(k)) return null; NEW_HASH=null; return k; };
 
 /* ===== Workflow: the APPROVAL MATRIX =====
@@ -4227,6 +4237,27 @@ const DB = {
     const poll=setInterval(()=>{ if(!document.hidden&&!live){ off(); on(); onChange(); } },30000);
     document.addEventListener("visibilitychange",vis); if(!document.hidden) on();
     return ()=>{ clearInterval(poll); document.removeEventListener("visibilitychange",vis); off(); };
+  },
+  /* apply live changes to the state without a full download (as Fleet, Donor and Assistance already do).
+     null = cannot tell what changed (e.g. a row too big for the live message): the caller downloads everything once */
+  patch(st,batch){
+    const next={...st}, touched=new Set();
+    for(const p of batch){
+      const del=p&&p.eventType==="DELETE", row=p&&(del?p.old:p.new);
+      if(!row||!row.collection||!row.id) return null;
+      const c=row.collection;
+      if(c==="settings"){ if(del||!row.data) return null; next.settings={...DEFAULT_SETTINGS,...row.data}; continue; }
+      if(!Array.isArray(next[c])) continue;                     // a collection this app does not keep
+      if(!del&&(!row.data||typeof row.data!=="object")) return null;
+      if(!touched.has(c)){ next[c]=next[c].slice(); touched.add(c); }
+      const i=next[c].findIndex(x=>rowKey(c,x)===row.id);
+      if(del){ if(i>=0) next[c].splice(i,1); continue; }
+      const d=row.data; if(c==="requests") migrateRequest(d);
+      if(i>=0) next[c][i]=d; else next[c].push(d);
+    }
+    touched.forEach(c=>{ const f=NEWEST_FIRST[c]; if(f) next[c].sort((a,b)=>(a[f]||"")<(b[f]||"")?1:-1); });
+    if(touched.has("rfqs")||touched.has("vendors")) normalizeVendorQuotes(next);
+    return next;
   },
   /* ---- auth ---- */
   async signIn(username,password){
@@ -6530,10 +6561,14 @@ function App(){
   const saving=useRef(Promise.resolve());
   /* Supabase: initial load, session, live updates */
   useEffect(()=>{ if(!SB_MODE) return; if(!SB_READY){ setBoot("config"); return; }
-    let off=()=>{}; (async()=>{ try{ const s=await DB.load(); setState(s); const au=await DB.session(); setAuthUser(au); setBoot("ready"); }catch(e){ setBootErr(errRef(e,"The database did not answer")); setBoot("error"); } })();
+    /* one download per signed-in person: the sign-in events that fire on opening (and the hourly token refresh) reuse it */
+    let cur=null; const loadFor=u=>{ const id=u?u.id:""; if(cur&&cur.id===id) return cur.p; const p=DB.load().then(s=>{ setState(s); }); cur={id,p}; p.catch(()=>{ if(cur&&cur.p===p) cur=null; }); return p; };
+    let off=()=>{}; (async()=>{ try{ const au=await DB.session(); await loadFor(au); setAuthUser(au); setBoot("ready"); }catch(e){ setBootErr(errRef(e,"The database did not answer")); setBoot("error"); } })();
     /* data is readable only when signed in (RLS), so reload it whenever the signed-in user changes */
-    const offAuth=DB.onAuth(u=>{ if(!u){ setAuthUser(null); return; } setTimeout(async()=>{ try{ const s=await DB.load(); setState(s); }catch(e){} setAuthUser(u); },0); });
-    let t=null; off=DB.subscribe(()=>{ clearTimeout(t); t=setTimeout(async()=>{ try{ await saving.current; const fresh=await DB.load(); if(JSON.stringify(fresh)!==JSON.stringify(stateRef.current)) setState(fresh); }catch(e){} },700); });
+    const offAuth=DB.onAuth(u=>{ if(!u){ cur=null; setAuthUser(null); return; } setTimeout(async()=>{ try{ await loadFor(u); }catch(e){} setAuthUser(x=>x&&x.id===u.id?x:u); },0); });
+    let t=null, q=[]; off=DB.subscribe(p=>{ q.push(p); clearTimeout(t); t=setTimeout(async()=>{ const batch=q; q=[]; try{ await saving.current;
+      const next=DB.patch(stateRef.current,batch); if(next){ setState(next); return; }
+      const fresh=await DB.load(); if(JSON.stringify(fresh)!==JSON.stringify(stateRef.current)) setState(fresh); }catch(e){} },400); });
     return ()=>{ off(); offAuth(); };
   },[]);
   const [tab,setTabRaw]=useState(()=>NEW_HASH==='procurement'||NEW_HASH==='store'?'forms':NEW_HASH?'tasks':null);
@@ -6630,6 +6665,17 @@ function App(){
   const tvLabel=tp&&activeTab==="tasks"&&(TASK_VIEWS().find(v=>v[0]===taskView)||[])[1];
   const pageTitle=tvLabel||titles[activeTab][0];
 
+  if(FORM_ONLY){
+    const req=FORM_ONLY==="procurement"||FORM_ONLY==="store", may=req?!readOnly&&tabs.some(t=>t.id==="forms"):tabs.some(t=>t.id==="tasks");
+    return html`<div class="fo-page">
+      <div class="fo-head"><button class="btn btn-ghost btn-sm" onClick=${goHome}><${Icon} name="back"/>Back to home</button><b>${FORM_TITLE[FORM_ONLY]}</b><span class="grow"/><a class="btn btn-ghost btn-sm" href=${location.pathname}>Open the full portal</a></div>
+      ${!may?html`<div class="notice notice-warn"><${Icon} name="alert"/><span>You cannot send this form here. Ask the Super Admin for access.</span></div>`
+        :req?html`<${NewRequest} type=${FORM_ONLY} user=${user} state=${state} A=${A} onDone=${id=>{ toast(`Sent for approval · ${id}`,"ok"); setTimeout(goHome,1400); }}/>`
+        :html`<div class="fo-tasks"><${Tasks} state=${state} user=${user} A=${A} taskOpen=${null} setTaskOpen=${()=>{}} onView=${()=>{}}/></div>`}
+      ${signOpen&&html`<${SignatureModal} user=${meRec} A=${A} onClose=${()=>setSignOpen(false)}/>`}
+      <${Toasts} items=${toasts}/>
+    </div>`;
+  }
   return html`<div class=${"shell"+(sideOpen?"":" collapsed")}>
     <aside class="side" aria-label="Main menu"><div class="side-brand">${SB_MODE?html`<a class="side-logo" href="../" title="All portals (main page)" aria-label="All portals (main page)"><img src=${LOGO} alt=""/></a>`:html`<img src=${LOGO} alt=""/>`}<div class="lbl"><b>Alkhidmat Foundation Islamabad</b><span>${PORTAL_NAME}</span><a class="side-home" href=${PORTAL_HOME}>← All portals</a></div><button class="side-pin lbl" title=${sideOpen?"Collapse sidebar (opens on hover)":"Keep sidebar open"} aria-label="Toggle sidebar" onClick=${()=>setSideOpen(o=>!o)}><${Icon} name=${sideOpen?"back":"pin"}/></button></div>
       <nav class="nav" ref=${navRef}><i class="nav-ind" aria-hidden="true"/>${navItems.map(t=>html`<button class=${t.on?"active":""} title=${t.label} onClick=${t.go}><${Icon} name=${t.icon}/><span class="lbl">${t.label}</span>${t.count?html`<span class="count">${t.count}</span>`:""}</button>`)}</nav>
@@ -7426,6 +7472,8 @@ function Tasks({state,user,A,taskOpen,setTaskOpen,onView}){
   const openNew=(preset={},returnEvent=null)=>{ if(!TR.canCreate(user)){ tToast("Your role can view tasks but not create them.","bad"); return; } setModal({kind:"new",preset,returnEvent}); };
   const openEvent=(key,tab)=>{ const e=(state.events||[]).find(x=>x.key===key); if(!e||!TR.canSeeEvent(e,user,state)){ tToast("You don't have access to this event.","bad"); return; } setModal({kind:"event",key,tab:tab||"details"}); };
   const newEvent=()=>{ if(!TR.canCreateEvent(user)){ tToast("Your role cannot create events.","bad"); return; } setModal({kind:"event",key:null,tab:"details"}); };
+const foOpened=useRef(false);
+useEffect(()=>{ if(!FORM_ONLY) return; if(modal||eng){ foOpened.current=true; return; } if(foOpened.current) setTimeout(goHome,900); },[modal,eng]);
 useEffect(()=>{ const k=takeNew(["task","event","engagement"]); if(k==="task") openNew(); else if(k==="event") newEvent(); else if(k==="engagement"){ if(tCanEngage(user)) setEng(true); else tToast("Your role cannot raise engagement requests.","bad"); } },[]);
   const go=(v,patch)=>{ setView(v); if(patch) setF(x=>({...x,...patch})); };
   /* notifications can ask to open an event ("ev:KEY") or a view ("view:tracking") */

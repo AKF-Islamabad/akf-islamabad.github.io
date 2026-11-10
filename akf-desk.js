@@ -14,6 +14,25 @@
   if (window.AKF_NOTIFY) return;
   const SCRIPT = document.currentScript && document.currentScript.src;
   const BASE = new URL(".", SCRIPT || location.href).href;          // the main site folder (/ live, /portal-staging/ staging)
+  // "+" on the main page opens a portal with ?form=1: only the form, no portal menu or note, and a way back (asked 2026-11-10)
+  if (/[?&]form=1(&|$)/.test(location.search)) {
+    const H = document.documentElement; H.classList.add("akf-form-only"); H.dataset.desk = "off";
+    const st = document.createElement("style");
+    st.textContent = "html.akf-form-only #sidebar,html.akf-form-only #side-overlay,html.akf-form-only #bnav,html.akf-form-only header.topbar,html.akf-form-only .crumb,html.akf-form-only aside.side,html.akf-form-only .jz-shell-rail,html.akf-form-only .jz-topstrip{display:none!important}"
+      + "html.akf-form-only .main{margin-left:0!important}html.akf-form-only .hr-kinds{display:none!important}html.akf-form-only body{padding-top:0!important;padding-left:0!important}"
+      + ".akf-fo-bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 16px;background:#fff;border-bottom:1px solid #E6EAF0;font:600 14px/1.3 Manrope,'Segoe UI',system-ui,sans-serif;color:#0B3D75}"
+      + ".akf-fo-bar a{color:#0B51A7;text-decoration:none;border:1px solid #C9D6EA;border-radius:99px;padding:5px 12px}.akf-fo-bar span{flex:1}";
+    document.head.append(st);
+    const bar = () => {   // Procurement / Store / Tasks draw their own heading (data-form-own)
+      if (H.dataset.formOwn || document.querySelector(".akf-fo-bar")) return;
+      const b = document.createElement("div"); b.className = "akf-fo-bar";
+      const back = document.createElement("a"); back.href = BASE + "home/"; back.textContent = "← Back to home";
+      const full = document.createElement("a"); full.href = location.pathname; full.textContent = "Open the full portal";
+      const gap = document.createElement("span"); gap.textContent = "New request";
+      b.append(back, gap, full); document.body.prepend(b);
+    };
+    if (document.body) bar(); else document.addEventListener("DOMContentLoaded", bar);
+  }
   // Jazba UI (the official design system) on every page, existing and future, even before sign-in
   if (!document.querySelector('link[href*="jazba.css"]')) { const jz = document.createElement("link"); jz.rel = "stylesheet"; jz.href = BASE + "jazba.css?v=6"; document.head.append(jz); }
   // Jazba charts (3D, animated, clickable) on every page, existing and future portals: akf-charts.js
@@ -178,7 +197,7 @@
   // portals call this with their bell list: [{ key, title, body?, url?, pushed? }] — pushed: the server already sends it
   // for the main page's bell button (My desk's note is hidden there)
   window.AKF_DESK = { turnOn: () => turnOn(), isOn: () => "Notification" in window && Notification.permission === "granted",
-    portals: () => sb.rpc("core_my_portals").then(r => r.data || []),   // for the Jazba rail on portals
+    portals: () => portalsOnce().then(d => d || []),   // for the Jazba rail on portals
     /* one signature per person for every portal (027_one_signature.sql): e-mail → picture, read once per page */
     signatures: () => sigP || (sigP = sb.rpc("core_signatures_all").then(r => { const m = {}; (r.data || []).forEach(x => { m[String(x.email).toLowerCase()] = x.image; }); return m; }).catch(() => { sigP = null; return {}; })),
     saveSignature: img => sb.rpc("core_signature_save", { p_image: img || "" }).then(r => { sigP = null; if (r.error) throw r.error; }) };
@@ -211,9 +230,12 @@
      Items of the portal on screen ring through that portal's own AKF_NOTIFY (same keys), so nothing rings twice. */
   let inbox = [], inboxP = null, myPortals = null, panel = null;
   const here = () => { const p = location.href.startsWith(BASE) ? location.href.slice(BASE.length).split(/[/?#]/)[0] : ""; return p; };
+  // the person's portals, asked once per page (the rail, the bell and the assistant all need them)
+  let portalsP = null;
+  function portalsOnce() { return portalsP || (portalsP = sb.rpc("core_my_portals").then(r => { if (r.error) throw r.error; return r.data || null; }).catch(() => { portalsP = null; return null; })); }
   async function loadInbox() {
     if (!me) return;
-    if (!myPortals) myPortals = await sb.rpc("core_my_portals").then(r => r.data || null).catch(() => null);
+    if (!myPortals) myPortals = await portalsOnce();
     // each portal's own bell list (saved by that portal, 036) plus the live list of steps waiting for me (035)
     const [live, saved, hr] = await Promise.all([sb.rpc("core_my_inbox"), sb.rpc("core_bell_all"), sb.rpc("hr_inbox")]);   // HR keeps its own list (portals/hr.sql)
     if (live.error && saved.error) return;
