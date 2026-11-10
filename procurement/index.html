@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-bDQXdamwNt+7bLysyp+5Fs5OtzoDpz+oS/UIJvp5Tik='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-EQPrDVNSKPYdJYixmAmr0ZqlNzVdgrdkI2T/qaQNzUs='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -4169,14 +4169,20 @@ function emailFor(username){ return username.includes("@")?username:`${username}
 
 const DB = {
   /* read everything and rebuild the in-memory state object */
-  async load(){
+  /* full=false: only what is in use (open items + the last 90 days, 047_fast_loading.sql); full=true: everything.
+     A #track= link (QR code, bell) may point at an old record, so it loads everything. */
+  async load(full){
     const authLoaded=!!(await sb.auth.getSession()).data.session;
+    let part=!full&&authLoaded&&!/#track=/.test(location.hash||"");
+    const page=from=>(part?sb.rpc("portal_rows_part",{p_old:false}).select("collection,id,data,created_at"):sb.from("portal_rows").select("collection,id,data,created_at"))
+      .order("created_at",{ascending:true}).order("collection",{ascending:true}).order("id",{ascending:true}).range(from,from+999);
     /* Supabase returns at most 1,000 rows per request, so read page by page. A single request silently
        dropped the newest rows (new tasks, requests, stock moves) once the table passed 1,000 rows. */
     let data=[], error=null;
     const realDepts=authLoaded?loadRealDepts():null;
     for(let from=0;;from+=1000){
-      const res=await sb.from("portal_rows").select("collection,id,data,created_at").in("collection",PORTAL_COLLECTIONS.concat(["users","settings","audit"])).order("created_at",{ascending:true}).order("collection",{ascending:true}).order("id",{ascending:true}).range(from,from+999);
+      let res=await page(from);
+      if(res.error&&part&&from===0){ part=false; res=await page(0); }   // a database without 047 yet: everything, as before
       if(res.error){ error=res.error; break; }
       data=data.concat(res.data||[]);
       if(!res.data||res.data.length<1000) break;
@@ -4203,8 +4209,20 @@ const DB = {
         if(/^AKF-(MR|SR)-/.test(d)) return reqIds.has(d);
         return !taskIds.has(d)&&!/^JD-/.test(d)&&!(PORTAL==="procurement"&&/^(GIN|AKF-BEN|AKF-ISB)/.test(d)); }); }
     state.empty = data.length===0; state.authLoaded = authLoaded;
+    state.partial = part; state.oldCounts = null;
+    if(part){ const oc=await sb.rpc("portal_old_counts"); state.oldCounts=oc.error?null:oc.data; }
     state.seeded = state.requests.length>0;
     return state;
+  },
+  /* the old finished items that load() left out, page by page */
+  async loadOlder(){
+    let rows=[];
+    for(let from=0;;from+=1000){
+      const res=await sb.rpc("portal_rows_part",{p_old:true}).select("collection,id,data,created_at").in("collection",PORTAL_COLLECTIONS.concat(["users","settings","audit"])).order("created_at",{ascending:true}).order("collection",{ascending:true}).order("id",{ascending:true}).range(from,from+999);
+      if(res.error) throw res.error;
+      rows=rows.concat(res.data||[]); if(!res.data||res.data.length<1000) break;
+    }
+    return rows;
   },
   /* write only what changed between prev and next */
   async save(prev,next){
@@ -4222,7 +4240,7 @@ const DB = {
   },
   /* replace everything except user profiles (used by demo seed / restore) */
   async replaceAll(next,keepUsers=true){
-    const current=await DB.load();
+    const current=await DB.load(true);
     const blank={ settings:{...DEFAULT_SETTINGS} }; COLLECTIONS.forEach(c=>blank[c]=[]);
     if(keepUsers){ blank.users=current.users; next={...next,users:current.users}; }
     await DB.save(current,blank);
@@ -5347,7 +5365,7 @@ function TrackBox({state,user,openReq,openDoc,inline}){
     ${inline?html`<${Icon} name="search"/><input placeholder="Track any ID: AKF-MR-2026-0003, PO-2026-0044, GRN…" value=${q} onInput=${e=>setQ(e.target.value)} aria-label="Track a document"/>${scanBtn}`
             :html`<div class="row"><div class="search grow" style="max-width:none"><${Icon} name="search"/><input placeholder="Enter request, PO, GRN, GIN or item code…" value=${q} onInput=${e=>setQ(e.target.value)}/></div><button class="btn btn-primary" onClick=${()=>setScan(true)}><${Icon} name="scan"/>Scan</button></div>`}
     ${hits.length>0&&html`<div class=${inline?"card pop":"list"} style=${inline?"padding:6px":""}>${hits.map(hit=>html`<button class="item" style=${inline?"border:0;padding:8px 10px":""} onClick=${()=>{ setQ(""); hit.kind==="req"?openReq(hit.id):hit.kind==="doc"?openDoc(hit.id):openDoc(hit.id,"stock"); }}><div class="t"><b class="id">${hit.id}</b><${Tag}>${hit.sub}</${Tag}></div><div class="m ellipsis">${hit.label}</div></button>`)}</div>`}
-    ${!inline&&q.length>=2&&!hits.length&&html`<${Empty} title="No match">Check the ID and try again.<//>`}
+    ${!inline&&q.length>=2&&!hits.length&&html`<${Empty} title="No match">${state.partial?html`Not in the last 3 months. <button class="btn btn-ghost btn-sm" onClick=${()=>window.__akfLoadOlder&&window.__akfLoadOlder()}>Search older records</button>`:"Check the ID and try again."}<//>`}
   </div>`;
 }
 
@@ -5446,10 +5464,10 @@ function Dashboard({state,user,openReq,setTab}){
   const catData=CATS.map((c,i)=>({label:c,value:state.stock.filter(s=>s.category===c).reduce((s,i)=>s+i.qty*i.price,0),color:PALETTE[i%PALETTE.length]})).filter(d=>d.value>0);
   const r=user.role;
   const kpis=[];
-  if(APPROVER_ROLES.includes(r)&&r!=="president"){ kpis.push({label:"Waiting for your decision",value:mine.length,tone:mine.length?"warn":"ok",sub:pkr(mine.reduce((s,x)=>s+reqTotal(x),0)),go:"approvals"},{label:"Escalated (time limit)",value:esc.length,tone:esc.length?"bad":"ok",go:"approvals"},{label:"Decided by you",value:reqs.filter(x=>x.timeline.some(t=>t.uid===user.id&&t.stage!=="submitted")).length,go:"approvals"},{label:"Open requests (visible)",value:open.length,go:"log"}); }
+  if(APPROVER_ROLES.includes(r)&&r!=="president"){ kpis.push({label:"Waiting for your decision",value:mine.length,tone:mine.length?"warn":"ok",sub:pkr(mine.reduce((s,x)=>s+reqTotal(x),0)),go:"approvals"},{label:"Escalated (time limit)",value:esc.length,tone:esc.length?"bad":"ok",go:"approvals"},{label:"Decided by you",value:reqs.filter(x=>x.timeline.some(t=>t.uid===user.id&&t.stage!=="submitted")).length+((state.oldCounts||{}).decided_by_me||0),go:"approvals"},{label:"Open requests (visible)",value:open.length,go:"log"}); }
   else if(r==="admin_officer"){ kpis.push({label:"Approved · RFQ / direct",value:reqs.filter(x=>x.status==="active"&&x.type==="procurement"&&x.stage==="approved").length,tone:"warn",go:"procurement"},{label:"Committee decided · issue PO",value:reqs.filter(x=>x.status==="active"&&x.type==="procurement"&&x.stage==="committee").length,tone:"brand",go:"procurement"},{label:"Open RFQs",value:state.rfqs.filter(x=>x.status==="Open").length,go:"vendors"},{label:"POs this month",value:poMonth.length,sub:pkr(poMonth.reduce((s,p)=>s+p.net,0)),go:"vendors"}); }
   else if(r==="store_officer"){ kpis.push({label:"Awaiting stock check",value:reqs.filter(x=>x.status==="active"&&x.type==="store"&&x.stage==="submitted").length,tone:"warn",go:"store"},{label:"Approved · to issue",value:reqs.filter(x=>x.status==="active"&&((x.type==="store"&&x.stage==="approved")||(x.type==="procurement"&&x.stage==="grn"))).length,tone:"brand",go:"store"},{label:"POs awaiting GRN",value:state.pos.filter(p=>p.status==="Issued").length,go:"store"},{label:"Stock value",value:html`<small>PKR</small>${fmt(stockValue)}`,sub:`${low.length} low · ${expiring.length} expiring`,tone:low.length||expiring.length?"bad":"",go:"store"}); }
-  else { kpis.push({label:"Open requests",value:open.length,sub:`${reqs.filter(x=>x.stage==="closed").length} completed`,go:"log"},{label:"Awaiting final approval",value:open.filter(x=>(nextStage(x)||{}).key==="approved").length,tone:"warn",go:r==="gen_sec"?"log":"approvals"},{label:"Escalated (time limit)",value:esc.length,tone:esc.length?"bad":"ok",go:"log"},{label:"Stock value",value:html`<small>PKR</small>${fmt(stockValue)}`,sub:`${low.length} low stock · ${expiring.length} expiring`,go:r==="president"?"reports":"store"},{label:"POs this month",value:poMonth.length,sub:pkr(poMonth.reduce((s,p)=>s+p.net,0)),go:r==="president"?"reports":"vendors"},{label:"Vendors",value:state.vendors.length,sub:`${state.vendors.filter(v=>v.filer).length} filers`,go:r==="president"?"reports":"vendors"}); }
+  else { kpis.push({label:"Open requests",value:open.length,sub:`${reqs.filter(x=>x.stage==="closed").length+((state.oldCounts||{}).completed||0)} completed`,go:"log"},{label:"Awaiting final approval",value:open.filter(x=>(nextStage(x)||{}).key==="approved").length,tone:"warn",go:r==="gen_sec"?"log":"approvals"},{label:"Escalated (time limit)",value:esc.length,tone:esc.length?"bad":"ok",go:"log"},{label:"Stock value",value:html`<small>PKR</small>${fmt(stockValue)}`,sub:`${low.length} low stock · ${expiring.length} expiring`,go:r==="president"?"reports":"store"},{label:"POs this month",value:poMonth.length,sub:pkr(poMonth.reduce((s,p)=>s+p.net,0)),go:r==="president"?"reports":"vendors"},{label:"Vendors",value:state.vendors.length,sub:`${state.vendors.filter(v=>v.filer).length} filers`,go:r==="president"?"reports":"vendors"}); }
   const hr=new Date().getHours(); const greet=hr<12?"Good morning":hr<17?"Good afternoon":"Good evening";
   const [pickStage,setPickStage]=useState(null);
   return html`<div class="stack" style="gap:16px">
@@ -6568,7 +6586,7 @@ function App(){
     const offAuth=DB.onAuth(u=>{ if(!u){ cur=null; setAuthUser(null); return; } setTimeout(async()=>{ try{ await loadFor(u); }catch(e){} setAuthUser(x=>x&&x.id===u.id?x:u); },0); });
     let t=null, q=[]; off=DB.subscribe(p=>{ q.push(p); clearTimeout(t); t=setTimeout(async()=>{ const batch=q; q=[]; try{ await saving.current;
       const next=DB.patch(stateRef.current,batch); if(next){ setState(next); return; }
-      const fresh=await DB.load(); if(JSON.stringify(fresh)!==JSON.stringify(stateRef.current)) setState(fresh); }catch(e){} },400); });
+      const fresh=await DB.load(!stateRef.current.partial); if(JSON.stringify(fresh)!==JSON.stringify(stateRef.current)) setState(fresh); }catch(e){} },400); });
     return ()=>{ off(); offAuth(); };
   },[]);
   const [tab,setTabRaw]=useState(()=>NEW_HASH==='procurement'||NEW_HASH==='store'?'forms':NEW_HASH?'tasks':null);
@@ -6623,6 +6641,15 @@ function App(){
   const allowedTabs=!user?[]:PORTAL_TABS.filter(t=>SB_MODE?gridHas(t):(Array.isArray(user.tabs)&&user.tabs.length?user.tabs:(ROLE_TABS[user.role]||["tasks"])).concat(user.role==="super"?["tasksettings"]:[]).includes(t));
   const tabs=TABS.filter(t=>allowedTabs.includes(t.id));
   const activeTab=tab&&tabs.some(t=>t.id===tab)?tab:(tabs[0]||{}).id;
+  /* old finished items: fetched once, when a page needs history (or "Show older records" / a search finds nothing) */
+  const olderP=useRef(null);
+  const loadOlder=()=>{ if(!stateRef.current.partial) return Promise.resolve();
+    if(!olderP.current) olderP.current=(async()=>{ try{ await saving.current; const rows=await DB.loadOlder();
+      const next=DB.patch(stateRef.current,rows.map(r=>({eventType:"INSERT",new:r})))||await DB.load(true); next.partial=false; next.oldCounts=null; stateRef.current=next; setState(next); }
+      catch(e){ olderP.current=null; console.warn("[older records]",e&&e.message); window.__toast&&window.__toast("Older records could not load. Try again.","bad"); } })();
+    return olderP.current; };
+  window.__akfLoadOlder=loadOlder;
+  useEffect(()=>{ if(state.partial&&["reports","log","finance","imports","vendors"].includes(activeTab)) loadOlder(); },[activeTab,state.partial]);
   const setTab=id=>{ hideTip(); setTabRaw(id); window.scrollTo({top:0,behavior:"smooth"}); };
   const readOnly=user&&READ_ONLY_ROLES.includes(user.role);
   const A=useMemo(()=>user?{...makeActions(commit,user,toast),...makeTaskActions(commit,user,toast),...makeStoreItemActions(commit,user,toast)}:null,[user&&user.id]);
@@ -6689,7 +6716,7 @@ function App(){
         <button class="me" title="My signature & profile" onClick=${()=>setSignOpen(true)}><span class="avatar">${initials(user.name)}</span><span class="me-t"><b>${user.name}</b><span>${user.designation||ROLES[user.role].label}</span></span></button>
         <button class="iconbtn" aria-label="Sign out" title="Sign out" onClick=${logout} style="display:none" id="mobile-logout"><${Icon} name="logout"/></button>
       </header>
-      <main class="content"><div class="page-body"><div class="print-only"><${DocHeader} title=${titles[activeTab][0]} sub=${`${titles[activeTab][1]} · printed ${fmtDT(nowISO())} by ${user.name}`}/></div>${h(page,{key:activeTab,state,user,A,openReq,openDoc,setTab,readOnly,me:user,focusItem:modal&&modal.kind==="stock"?null:null,taskOpen,setTaskOpen,onView:setTaskView})}</div>
+      <main class="content"><div class="page-body"><div class="print-only"><${DocHeader} title=${titles[activeTab][0]} sub=${`${titles[activeTab][1]} · printed ${fmtDT(nowISO())} by ${user.name}`}/></div>${state.partial&&["dashboard","approvals","procurement","store","tasks"].includes(activeTab)&&html`<div class="xs muted" style="margin:0 0 10px">Showing open items and the last 3 months, so the portal opens fast. <button class="btn btn-ghost btn-sm" onClick=${loadOlder}>Show older records</button></div>`}${h(page,{key:activeTab,state,user,A,openReq,openDoc,setTab,readOnly,me:user,focusItem:modal&&modal.kind==="stock"?null:null,taskOpen,setTaskOpen,onView:setTaskView})}</div>
         <footer class="xs faint" style="text-align:center;padding-top:20px">Alkhidmat Foundation Islamabad Region · Procurement to Store · every step logged · signed in as ${user.username} · build ${BUILD} · <button class="xs" style="color:var(--brand-2);font-weight:700" onClick=${logout}>sign out</button></footer></main>
     </div>
     <nav class="mobilenav">${(tp?navItems.filter(t=>/^tv:(home|board|events|planner)$/.test(t.id)).concat(navItems.filter(t=>!/^tv:/.test(t.id))):navItems).map(t=>html`<button class=${t.on?"active":""} onClick=${t.go}><${Icon} name=${t.icon} cls="icon-lg icon"/>${t.id==="tasksettings"?"Settings":t.label.split(" ")[0]}${t.count?html`<span class="count">${t.count}</span>`:""}</button>`)}</nav>
