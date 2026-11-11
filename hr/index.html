@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-veelHyclRW3nTcUewS6gLYlKnev94dqWJjBKYofe1DA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-JhSAQvXd9y4tTipl2jb89MXqyihPOVDsgdGyHsvx1kg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1185,7 +1185,7 @@ const NAVX = [
   { v: "payroll", l: "Payroll", ic: "wallet", ok: () => can("payroll") },
   { v: "reports", l: "Reports", ic: "chart", ok: () => can("reports") }
 ];
-function go(view, id) { V.view = view; V.id = id || null; closeMenu(); render(); scrollTo(0, 0); }
+function go(view, id) { if (view !== "apply") V.fixDate = null; V.view = view; V.id = id || null; closeMenu(); render(); scrollTo(0, 0); }
 const closeMenu = () => { $("sidebar").classList.remove("open"); $("side-overlay").classList.remove("open"); };
 function chrome() {
   const nav = $("nav"); nav.replaceChildren();
@@ -1336,8 +1336,18 @@ const VIEWS = {
       }
     }
     const route = V.kind === "Document" ? null : ((pol.routes || {})[V.kind] || []);
+    /* dates start at today (the Attendance date at the day picked on the Attendance page); the bill date and "needed by" stay empty */
+    const td = new Date().toLocaleDateString("en-CA");
+    ["from", "to", "date"].forEach(k => { if (f[k] && f[k].type === "date" && !f[k].value) f[k].value = (V.kind === "Attendance" && V.fixDate) || td; });
+    /* fields the server always asks for: marked with * and checked together before sending */
+    const need = ["reason", "from", "to", "date", "in", "lastDay", "item", "correct", "billDate", "amount", "until", "place", "post", "qualification", "neededBy"].filter(k => f[k]);
+    const labelOf = n => n.parentNode.firstChild.textContent.replace(/ \*$/, "");
+    need.forEach(k => { f[k].parentNode.firstChild.textContent += " *"; f[k].setAttribute("aria-required", "true"); });
     const btn = el("button", { class: "btn btn-primary btn-lg", type: "button", text: "Submit request" });
     btn.addEventListener("click", async () => {
+      const miss = need.filter(k => !String(f[k].value).trim());
+      need.forEach(k => { f[k].style.borderColor = miss.includes(k) ? "#DC2626" : ""; });
+      if (miss.length) { toast("Please fill: " + miss.map(k => labelOf(f[k])).join(", "), true); f[miss[0]].focus(); return; }
       const d = {}; Object.entries(f).forEach(([k, n]) => { if (!k.startsWith("_")) d[k] = n.value; });
       if (f._fields) { d.fields = {}; Object.entries(f._fields).forEach(([k, n]) => { d.fields[k] = n.value; }); }
       if (V.kind === "Encashment") { d.leaveType = (pol.encashment || {}).leaveType || "Annual"; d.from = new Date().toLocaleDateString("en-CA"); }
@@ -1384,10 +1394,11 @@ const VIEWS = {
     const eng = leaveRules(days, ((ME.balance && ME.balance.types) || []).find(b => b.type === "Casual"));
     box.append(card((who === ME.id ? "My attendance" : mo.name) + " · " + new Date(m + "-01T00:00:00").toLocaleDateString("en-GB", { month: "long", year: "numeric" }) + " · shift " + (mo.shift || []).join("–"),
       el("div", { class: "hr-filters" }, pick, who !== ME.id ? el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Back to my attendance", onclick: () => { V.attWho = null; render(); } }) : null),
-      el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Date", "Status", "In", "Out", "Hours", "Note"].map(t => el("th", { text: t })))),
+      el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Date", "Status", "In", "Out", "Hours", "Note", ""].map(t => el("th", { text: t })))),
         el("tbody", {}, days.filter(d => d.status !== "Not yet").map(d => el("tr", {}, el("td", { text: fmtD(d.date) }), el("td", {}, el("span", { class: "badge " + ({ Present: "b-ok", "Checked in": "b-info", Late: "b-warn", Absent: "b-bad", "Half Day": "b-warn", Leave: "b-info", Duty: "b-info" }[d.status] || ""), text: d.status })),
           el("td", { text: d.in || "" }), el("td", { text: d.out || "" }), el("td", { text: d.hours ? String(d.hours) : "" }),
-          el("td", { text: [d.leave, d.note, d.wallet ? (d.wallet === "half" ? "Half day leave" : "Short leave") : "", d.late ? "late " + d.lateMin + " min" : "", d.early ? "left " + d.earlyMin + " min early" : ""].filter(Boolean).join(" · ") })))))),
+          el("td", { text: [d.leave, d.note, d.wallet ? (d.wallet === "half" ? "Half day leave" : "Short leave") : "", d.late ? "late " + d.lateMin + " min" : "", d.early ? "left " + d.earlyMin + " min early" : ""].filter(Boolean).join(" · ") }),
+          el("td", {}, who === ME.id && can("apply", "add") && ["Absent", "Late", "Half Day", "Checked in"].includes(d.status) ? el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Correct this day", onclick: () => { V.kind = "Attendance"; V.fixDate = d.date; go("apply"); } }) : null)))))),
       el("div", { class: "hr-grid" }, card("Leave rules this month (preview)", el("ul", {}, (eng.events.length ? eng.events : [{ text: "No lateness deductions this month." }]).map(x => el("li", { text: (x.date ? fmtD(x.date) + ": " : "") + x.text }))),
         el("p", { class: "small muted", text: "Regularity, Attendance and Leave Policy: every 3rd late under 2 h costs 1 Casual leave; 2–4 h late = half a day; over 4 h = absent; leaving early under 4 h = half a day. This preview is applied for real when payroll is added." })))));
     if (!team) return;
@@ -2251,7 +2262,9 @@ function notify() {
   AKF_NOTIFY(items);
 }
 let busy = false;
-async function refresh() { if (busy || document.hidden) return; busy = true; try { const before = JSON.stringify(REQ); await reload(); if (JSON.stringify(REQ) !== before && !$("layer").classList.contains("open")) render(); } catch (e) { } busy = false; }
+async function refresh() { if (busy || document.hidden) return; busy = true; try { const before = JSON.stringify(REQ); await reload(); if (JSON.stringify(REQ) !== before && !$("layer").classList.contains("open") && !V.typed) render(); } catch (e) { } busy = false; }
+/* a half-filled Apply form is never redrawn by the background refresh (it used to be wiped) */
+document.addEventListener("input", e => { if (V.view === "apply" && $("app").contains(e.target)) V.typed = true; });
 function hashOpen() {
   const m = /^#req=(HR-\d{4}-\d{5,})$/.exec(location.hash || "");
   if (m) { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { } openReq(m[1]); }
@@ -2260,7 +2273,7 @@ function hashOpen() {
   else if (["#leave", "#notices", "#exits", "#pay"].includes(location.hash)) { const v = { "#leave": "dashboard", "#notices": "notices", "#exits": "exits", "#pay": "pay" }[location.hash]; try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { } go(v); }
 }
 async function render() {
-  if (!ME) return; chrome();
+  if (!ME) return; V.typed = false; chrome();
   const n = NAVX.find(x => x.v === V.view); if (!n || !n.ok()) { const f = NAVX.find(x => x.ok()); if (!f) { $("app").replaceChildren(empty("No HR pages have been given to you. Ask the Super Admin.")); return; } V.view = f.v; chrome(); }
   const box = el("div"); $("app").replaceChildren(box);
   try { await VIEWS[V.view](box); } catch (e) { box.append(empty(e.shown ? e.message : errText(e, "This page could not load"))); }
