@@ -266,6 +266,8 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
       if (rec && seen.has(rec)) { const y = seen.get(rec); y.read = y.read && x.read; y.keys.push(n.key); return; }
       x.keys = [n.key]; if (rec) seen.set(rec, x); inbox.push(x);
     });
+    // newest first, whatever portal or kind it is (asked 2026-11-11); items without a time go last
+    const ts = n => Date.parse(n.at) || 0; inbox.sort((x, y) => ts(y) - ts(x));
     const cur = here();
     ring(inbox.filter(n => n.portal !== cur && !n.read).map(n => ({ key: n.key, title: n.title, body: n.body, url: linkOf(n) })));
     document.dispatchEvent(new CustomEvent("akf-inbox", { detail: { count: inbox.filter(n => !n.read).length } }));
@@ -299,18 +301,13 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
     const nameOf = k => { const p = myPortals && myPortals.find(x => x.key === k); return p ? p.name : k; };
     const list = el("div", "akd-in-list"), unread = inbox.filter(n => !n.read).length;
     if (!inbox.length) list.append(el("p", "akd-in-empty", "All clear. Nothing new in any of your portals."));
-    [["act", "Needs your action", "Only you can move these forward"], ["news", "Updates", "What happened to your requests and tasks"]].forEach(([k, t, sub]) => {
-      const L = inbox.filter(n => kindOf(n) === k).sort((x, y) => (x.read - y.read) || String(y.at || "").localeCompare(String(x.at || "")));
-      if (!L.length) return;
-      const u = L.filter(n => !n.read).length, h = el("div", "akd-in-g");
-      h.append(el("b", "", t), el("span", u ? "akd-in-n" : "akd-in-n0", u ? u + " new" : "seen")); h.title = sub; list.append(h);
-      L.slice(0, 25).forEach(n => {
-        const r = el("button", "akd-in-row" + (n.read ? " read" : "")); r.type = "button";
-        r.append(el("span", "akd-in-p", nameOf(n.portal) + (n.at ? " · " + (ago(n.at) === "now" ? "just now" : ago(n.at) + " ago") : "")), el("b", "", n.title || "Notification"), n.body ? el("span", "akd-in-b", n.body) : "");
-        r.onclick = () => go(n); list.append(r);
-      });
-      if (L.length > 25) list.append(el("p", "akd-in-more", `+${L.length - 25} more — open the portal to see them all`));
+    // one list, newest on top (the inbox is already in that order); "Needs your action" is a label on the row
+    inbox.slice(0, 50).forEach(n => {
+      const r = el("button", "akd-in-row" + (n.read ? " read" : "")); r.type = "button";
+      r.append(el("span", "akd-in-p", nameOf(n.portal) + (n.at ? " · " + (ago(n.at) === "now" ? "just now" : ago(n.at) + " ago") : "") + (kindOf(n) === "act" ? " · Needs your action" : "")), el("b", "", n.title || "Notification"), n.body ? el("span", "akd-in-b", n.body) : "");
+      r.onclick = () => go(n); list.append(r);
     });
+    if (inbox.length > 50) list.append(el("p", "akd-in-more", `+${inbox.length - 50} more — open the portal to see them all`));
     const head = el("div", "akd-in-h"); head.append(el("b", "", unread ? `${unread} new` : "Notifications"));
     if (unread) { const m = el("button", "akd-in-on", "Mark all read"); m.type = "button"; m.onclick = () => { markRead(inbox); inbox.forEach(n => { n.read = true; }); document.dispatchEvent(new CustomEvent("akf-inbox", { detail: { count: 0 } })); drawPanel(); }; head.append(m); }
     if (!("Notification" in window) || Notification.permission !== "granted") { const t = el("button", "akd-in-on", "🔕 Turn on alerts"); t.type = "button"; t.onclick = () => turnOn(); head.append(t); }
