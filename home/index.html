@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by tools/csp-hash.js (inline scripts by hash). Fonts, the background library and images are all served from this site. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-iJGqEGYYQQyLIfv04ORa2sFqpU0p6a7mmB+I4pDyAdA='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-BGYf6vO137s0NvEHX4vNuHieT9aD6zYipdf+eoK7SvA='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -2949,7 +2949,7 @@ class HomeView {
           <div class="hero-top"><p class="eyebrow">${icon('shield')} Islamabad Region · ${esc(me.dept || 'Jazba')}</p><span class="hero-clock" id="hero-clock">${Clock.now()}</span><button type="button" class="hero-bg-btn" data-su data-action="toggle-appear">${icon('palette')}Background</button></div>
           <h1 id="page-h1" tabindex="-1"><span class="nowrap"><span class="w" style="--i:0">Assalam&#8209;o&#8209;Alaikum,</span></span> <span class="grad-name">${words.map((t, i) => `<span class="w" style="--i:${i + 1}">${esc(t)}${i === words.length - 1 ? '.' : ''}</span>`).join(' ')}</span></h1>
           <p class="welcome-sub">${greet} · ${dateStr}${w == null ? '' : ` · ${w ? `You have <strong>${plural(w, 'thing', 'things')}</strong> waiting for you.` : 'Nothing is waiting for you.'}`}</p>
-          ${canNew || tasksQ ? `<div class="welcome-actions">${canNew ? `<button type="button" class="btn btn-primary" data-action="fab" aria-controls="fab-menu">${icon('plus')}New request</button>` : ''}${tasksQ ? `<a class="btn btn-secondary" href="${esc(tasksQ.href)}">${icon('tasks')}Open Tasks</a>` : ''}</div>` : ''}
+          <div class="welcome-actions">${canNew ? `<button type="button" class="btn btn-primary" data-action="fab" aria-controls="fab-menu">${icon('plus')}New request</button>` : ''}<a class="btn btn-secondary" href="#brief-h" data-action="scroll-to" data-target="brief-h">${icon('inbox')}Waiting for you${C.actions ? ` · ${C.actions}` : ''}</a><a class="btn btn-secondary" href="#/requests">${icon('send')}My requests</a></div>
           ${Daily.heroLine()}
         </div>
         ${T ? `<dl class="impact" aria-label="Team impact this month">
@@ -2965,7 +2965,7 @@ class HomeView {
         ${card('secondary', 'tasks', C.tasks_week, 'My tasks this week', 'Due in the next 7 days', 'tasks-h')}
         ${card('neutral', 'send', Math.max(C.my_open_requests || 0, mine.length), 'My requests', 'See where each one is', 'mine-h')}
       </section>
-      <p class="live-help">${icon('bell')}<span><b>Waiting for you</b> = steps only you can take (approve, check, sign or receive). <b>The bell</b> = news, such as your request moving forward, sent back or approved. <b>+ New request</b> = start any form you are allowed to send.</span></p>
+      <p class="live-help">${icon('bell')}<span>Three things do everything: <b>+ New request</b> = start any form you are allowed to send. <b>Waiting for you</b> = steps only you can take (approve, check, sign or receive). <b>My requests</b> = everything you sent and where it is now. <b>The bell</b> = news only.</span></p>
 
       ${chart ? `<section class="brief" aria-labelledby="chart-h"><div class="brief-head"><div><h2 id="chart-h">${icon('bolt')}Waiting for you, by portal</h2><p>Click a portal to open it.</p></div></div><div class="live-chart">${chart}</div></section>` : ''}
 
