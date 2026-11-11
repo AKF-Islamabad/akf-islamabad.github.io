@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-YUK4ZOotkeCkbh4RQjGCdKEKPbHqAe/5KV1x5jQOdpA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-WcMJNoLsg3ZDy979y/ewjTlUxb+I6FbIkksGyyeoZ94='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1404,6 +1404,7 @@ const VIEWS = {
         el("tbody", {}, rows.map(r => el("tr", {}, el("td", { text: r.name }), el("td", { text: r.dept || "" }), el("td", { text: r.status + (r.late ? " · late " + r.lateMin + " min" : "") }), el("td", { text: r.in || "" }), el("td", { text: r.out || "" }),
           el("td", {}, el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Month", onclick: () => { V.attWho = r.id; scrollTo(0, 0); render(); } }),
             can("attendance", "edit") ? el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Reset phone", onclick: async () => { if (!confirm("Let " + r.name + " register a new check-in phone?")) return; try { await rpc("hr_reset_phone", { p_uid: r.id }, "Not reset"); toast("Check-in phone reset for " + r.name); } catch (e) { toast(e.message, true); } } }) : null)))))) : empty("Nobody to show.")));
+    if (can("attendance", "edit")) box.append(await deviceCard());
   },
   async notices(box) {
     if (can("notices", "edit")) {
@@ -1622,9 +1623,37 @@ document.addEventListener("akf-chart-pick", e => {
   if (e.detail.chart === "hr-status") { V.f.status = e.detail.key; V.f.kind = ""; go("reports"); }
   else if (e.detail.chart === "hr-kind") { V.f.kind = e.detail.key; V.f.status = ""; go("reports"); }
   else if (e.detail.chart === "hr-myleave" && can("apply", "add")) { V.kind = "Leave"; go("apply"); }
+  else if (e.detail.chart === "hr-device") { V.attDay = e.detail.key; render(); }   // a day's bar opens that day's sheet
 });
 
 /* ---------- attendance helpers ---------- */
+// Attendance device (ZKTeco): the link program on the office PC sends the punches (hr_device_push); here HR sees that it works and says who each device ID is
+async function deviceCard() {
+  let d; try { d = await rpc("hr_device_status", {}, "The attendance device could not load"); } catch (e) { return card("Attendance device", empty(e.message)); }
+  const users = d.users || [], people = d.people || [], open = users.filter(u => !u.profile).length, kids = [];
+  kids.push(el("p", { class: "small muted", text: !d.key ? "Not connected yet. The Super Admin makes a link key here and types it into the link program on the office PC."
+    : !d.last ? "A link key is made. Waiting for the first data from the link program on the office PC."
+    : "Last data from the device: " + fmtDT(d.last) + " · " + users.length + " people on the device" + (open ? " · " + open + " not linked to a person yet" : " · all linked") }));
+  const ch = el("div"); if (window.AKF_CHARTS) ch.innerHTML = AKF_CHARTS.bars({ id: "hr-device", items: (d.days || []).map(x => ({ key: x.d, label: fmtD(x.d), value: x.n, note: "punches from the device" })), empty: "No punches from the device yet" });
+  kids.push(ch);
+  if (users.length) kids.push(el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Device ID", "Name on the device", "Person in HR360"].map(t => el("th", { text: t })))),
+    el("tbody", {}, users.map(u => { const sel = el("select", { class: "select", "aria-label": "Person for device ID " + u.uid }, el("option", { value: "", text: "— not linked —" }), people.map(p => el("option", { value: p.id, text: p.name })));
+      sel.value = u.profile || "";
+      sel.addEventListener("change", async () => {
+        if (u.profile && !confirm("Change who device ID " + u.uid + " is? The device punches stored for the person linked now are removed and read again from the device for the new person.")) { sel.value = u.profile; return; }
+        sel.disabled = true; try { await rpc("hr_device_match", { p_uid: u.uid, p_profile: sel.value || null }, "Not linked"); toast(sel.value ? "Device ID " + u.uid + " linked. Their punches arrive with the next run of the link program." : "Device ID " + u.uid + " is not linked any more"); render(); }
+        catch (e) { toast(e.message, true); sel.value = u.profile || ""; sel.disabled = false; } });
+      return el("tr", {}, el("td", { text: u.uid }), el("td", { text: u.name }), el("td", {}, sel)); })))));
+  if (ME.super) kids.push(el("div", { class: "hr-actions" }, el("button", { class: "btn btn-outline btn-sm", type: "button", text: d.key ? "Make a new link key" : "Make the link key", onclick: async e => {
+    if (!confirm(d.key ? "Make a new link key? The old key stops working at once and the link program on the office PC needs the new one." : "Make the link key for the link program on the office PC?")) return;
+    e.currentTarget.disabled = true;
+    try { const k = await rpc("hr_device_key_new", {}, "The key was not made"), box = el("input", { class: "input", readOnly: true, value: k, "aria-label": "Link key" });
+      modal("Attendance device · link key", el("p", { text: "Copy this key now and paste it into the link program on the office PC (Setup). It is shown only this once; HR360 keeps only a fingerprint of it." }), box,
+        el("div", { class: "hr-actions" }, el("button", { class: "btn btn-primary", type: "button", text: "Copy", onclick: async () => { try { await navigator.clipboard.writeText(k); toast("Key copied"); } catch (x) { box.select(); toast("Select the key and copy it", true); } } })));
+      render(); }
+    catch (x) { toast(x.message, true); e.currentTarget.disabled = false; } } })));
+  return card("Attendance device", ...kids);
+}
 // a random id for this phone, kept on the phone (no personal data); the server keeps only a fingerprint of it
 function deviceId() {
   let d = ""; try { d = localStorage.getItem("hr360-device") || ""; } catch (e) { }
