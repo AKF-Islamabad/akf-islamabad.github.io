@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-luY+F/GU7P4cWjp+WSdR1/5NcHgB4vwa2yF4qzMHPKA='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-4/s9PoQVyIyEC/dFAH+Q+HuL9waWQI/5CTuEq9ij22c='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -4711,7 +4711,7 @@ function makeActions(commit, user, toast){
         id=nextNumber(d,`RFQ-${YEAR}-`,3); const t=quoteCalc(amount,inclusive,v); const qid="Q"+uid();
         d.rfqs.unshift({ id, requestId:reqId, at:nowISO(), deadline:nowISO(), status:"Closed", direct:true, quotes:[{id:qid,vendorId,link:"Direct purchase",status:"Submitted",docs:docs||100,deliveryDays:deliveryDays||3,at:nowISO(),...t}], committee:{quoteId:qid,direct:true,at:nowISO(),by:user.name,byId:user.id,reason:`Direct purchase — value ≤ ${pkr(lim)}`,members:[]} });
         r.links.rfq=id; advance(d,r,"rfq",`Direct purchase quotation from ${v.name} (${id})`,`Total incl. tax ${pkr(t.gross)} · ${inclusive?"vendor price included taxes":"GST added from vendor profile"}`);
-        r.stage="committee"; r.timeline.push({at:nowISO(),stage:"committee",action:"Purchase committee not required",comment:`Request value ≤ ${pkr(lim)} (direct purchase policy)`,by:"System policy",role:"super"}); log(d,r.id,"Committee not required — direct purchase",pkr(t.gross),r.dept);
+        r.stage="committee"; r.timeline.push({at:nowISO(),stage:"committee",action:"Purchase committee not required",comment:`Request value ≤ ${pkr(lim)} (direct purchase policy)`,...who()}); log(d,r.id,"Committee not required — direct purchase",pkr(t.gross),r.dept);
       }); toast(`${id} recorded — issue the PO next`,"ok");
     },
     /* Purchase committee picks one vendor; a comparative statement (CS) document is generated. */
@@ -8406,7 +8406,7 @@ function VendorQuote({token}){
 }
 
 /* Any unexpected error is shown as a red message, so a failure is never silent ("button does nothing"). */
-const BUILD="2026-11-10 tasks";
+const BUILD="2026-11-11 tasks";
 (()=>{ let last=0; const show=m=>{ const msg=errRef(m,"Unexpected error"); if(Date.now()-last<1500) return; last=Date.now(); if(window.__toast) window.__toast(msg+" (build "+BUILD+")","bad"); };   /* no raw error text on screen: details stay in the console under the reference */
   window.addEventListener("error",e=>show(e.message||e.error)); window.addEventListener("unhandledrejection",e=>show((e.reason&&e.reason.message)||e.reason)); })();
 const vendorToken=(/#rfq=([0-9a-f]{16,})/i.exec(location.hash||"")||[])[1];
