@@ -304,12 +304,12 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
     // one list, newest on top (the inbox is already in that order); "Needs your action" is a label on the row
     inbox.slice(0, 50).forEach(n => {
       const r = el("button", "akd-in-row" + (n.read ? " read" : "")); r.type = "button";
-      r.append(el("span", "akd-in-p", nameOf(n.portal) + (n.at ? " · " + (ago(n.at) === "now" ? "just now" : ago(n.at) + " ago") : "") + (kindOf(n) === "act" ? " · Needs your action" : "")), el("b", "", n.title || "Notification"), n.body ? el("span", "akd-in-b", n.body) : "");
+      r.append(el("span", "akd-in-p", nameOf(n.portal) + (n.at ? " · " + (ago(n.at) === "now" ? "just now" : ago(n.at) + " ago") : "") + (kindOf(n) === "act" ? " · Waiting for you" : "")), el("b", "", n.title || "Notification"), n.body ? el("span", "akd-in-b", n.body) : "");
       r.onclick = () => go(n); list.append(r);
     });
     if (inbox.length > 50) list.append(el("p", "akd-in-more", `+${inbox.length - 50} more — open the portal to see them all`));
     const head = el("div", "akd-in-h"); head.append(el("b", "", unread ? `${unread} new` : "Notifications"));
-    if (unread) { const m = el("button", "akd-in-on", "Mark all read"); m.type = "button"; m.onclick = () => { markRead(inbox); inbox.forEach(n => { n.read = true; }); document.dispatchEvent(new CustomEvent("akf-inbox", { detail: { count: 0 } })); drawPanel(); }; head.append(m); }
+    if (unread) { const m = el("button", "akd-in-on", "Mark all as read"); m.type = "button"; m.onclick = () => { markRead(inbox); inbox.forEach(n => { n.read = true; }); document.dispatchEvent(new CustomEvent("akf-inbox", { detail: { count: 0 } })); drawPanel(); }; head.append(m); }
     if (!("Notification" in window) || Notification.permission !== "granted") { const t = el("button", "akd-in-on", "🔕 Turn on alerts"); t.type = "button"; t.onclick = () => turnOn(); head.append(t); }
     panel.replaceChildren(head, list);
   }

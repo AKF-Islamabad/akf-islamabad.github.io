@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by tools/csp-hash.js (inline scripts by hash). Fonts, the background library and images are all served from this site. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-UHe7yggkOX6JuNLdRCCMOTOtckOjmjfn/3RUkAXxM4Q='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-iJGqEGYYQQyLIfv04ORa2sFqpU0p6a7mmB+I4pDyAdA='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1957,6 +1957,8 @@ const Live = {
   },
   // "My requests" page: every request I raised, any status, all portals (052_my_requests.sql). Loaded when the page is opened.
   ref: a => /^[\w.-]+$/.test(a.ref || '') ? a.ref : '',
+  // Fleet stores "Pending X"; show it in the same words as every other portal
+  words: s => String(s || '').replace(/^Pending Correction$/, 'Sent back for correction').replace(/^Pending /, 'Waiting for '),
   link(a) { const p = this.nav().find(x => x.id === a.portal); if (!p || p.href === '#') return ''; const r = this.ref(a);
     return p.href + (r && ['procurement', 'store', 'fleet'].includes(a.portal) ? '#track=' + r : r && a.portal === 'hr' ? '#req=' + r : ''); },
   async loadReqs() {
@@ -2279,7 +2281,7 @@ const PORTALS = [
     rows: () => state.po, key: r => r.id, status: r => r.status,
     statuses: ['pending', 'approved', 'delivered', 'rejected'],
     primary: { label: 'Create Requisition', icon: 'filePlus', mode: 'requisition' },
-    filters: { waiting: ['Waiting on you', r => r.status === 'pending' && r.approver === ME], mine: ['Requests I started', r => r.requester === ME] },
+    filters: { waiting: ['Waiting for you', r => r.status === 'pending' && r.approver === ME], mine: ['My requests', r => r.requester === ME] },
     badge: () => Metrics.waitingPO(),
     headline: () => { const n = Metrics.waitingPO(); return n ? `${n} awaiting your approval` : 'Approval queue clear'; },
     kpis: rows => [
@@ -2419,12 +2421,12 @@ const PORTALS = [
     modules: ['Leave', 'Requests', 'Approvals', 'HR letters', 'Staff records', 'Celebrations'],
     rows: () => state.hr, key: r => r.id, status: r => r.status, statuses: ['pending', 'approved', 'hr_issued', 'rejected'],
     primary: { label: 'New HR request', icon: 'plus', mode: 'hr' },
-    filters: { waiting: ['Waiting on you', r => r.status === 'pending' && r.approver === ME] },
+    filters: { waiting: ['Waiting for you', r => r.status === 'pending' && r.approver === ME] },
     badge: () => Metrics.waitingHR(),
     headline: () => `${HR.offOn(d(0), false).length} on leave today · ${plural(Metrics.waitingHR(), 'request', 'requests')} for you`,
     kpis: rows => [
       ['Headcount', state.staff.length], ['On leave today', HR.offOn(d(0), false).length, 'accent'],
-      ['Waiting on you', Metrics.waitingHR(), 'rose'], ['Letters issued', rows.filter(r => r.status === 'hr_issued').length, 'secondary'],
+      ['Waiting for you', Metrics.waitingHR(), 'rose'], ['Letters issued', rows.filter(r => r.status === 'hr_issued').length, 'secondary'],
     ],
     board: () => HR.board(),
     columns: [
@@ -2915,13 +2917,13 @@ class HomeView {
     const tab = Live.tab || 'all', show = A.filter(a => tab === 'all' || (tab === 'approve' ? a.kind !== 'do' : a.kind === 'do'));
     const items = show.slice(0, 20).map(a => { const p = portalOf(a.portal), late = isLate(a.since), url = link(a);
       return { sev: late ? 3 : a.kind === 'do' ? 1 : 2, icon: Live.ICON[a.portal] || 'inbox', title: a.title || a.ref,
-        meta: [p ? p.name : a.portal, a.sub, late ? `waiting ${plural(Math.max(days(a.since), 2), 'day', 'days')}` : '', a.amount ? 'Rs ' + Number(a.amount).toLocaleString('en-PK') : ''].filter(Boolean).join(' · '),
+        meta: [p ? p.name : a.portal, Live.words(a.sub), late ? `waiting ${plural(Math.max(days(a.since), 2), 'day', 'days')}` : '', a.amount ? 'Rs ' + Number(a.amount).toLocaleString('en-PK') : ''].filter(Boolean).join(' · '),
         actions: url ? [['Open', `href="${esc(url)}"`, 1]] : [] }; });
     // My requests: everything I raised that is still on its way, with the step it waits at (one list for all portals)
     const mine = ((T && T.mine) || []).slice(0, 30).map(a => { const p = portalOf(a.portal), url = link(a), d = days(a.since);
       return { sev: a.back ? 3 : 1, icon: Live.ICON[a.portal] || 'send', title: [ref(a), a.title && a.title !== a.ref ? a.title : ''].filter(Boolean).join(' · ') || a.ref,
-        meta: [p ? p.name : a.portal, a.sub, d > 0 ? `for ${plural(d, 'day', 'days')}` : 'today'].filter(Boolean).join(' · '),
-        actions: url ? [[a.back ? 'Correct it' : 'Track', `href="${esc(url)}"`, a.back ? 1 : 0]] : [] }; });
+        meta: [p ? p.name : a.portal, Live.words(a.sub), d > 0 ? `for ${plural(d, 'day', 'days')}` : 'today'].filter(Boolean).join(' · '),
+        actions: url ? [[a.back ? 'Correct and resubmit' : 'Track', `href="${esc(url)}"`, a.back ? 1 : 0]] : [] }; });
     const rest = {}; show.slice(20).forEach(a => { const n = portalOf(a.portal)?.name || a.portal; rest[n] = (rest[n] || 0) + 1; });
     const restN = Math.max(0, (tab === 'all' ? (C.actions || 0) : show.length) - Math.min(show.length, 20)) - Object.values(rest).reduce((x, y) => x + y, 0);   // beyond the 50 per portal the list carries
     if (restN > 0) rest['your portals'] = restN;
@@ -2946,7 +2948,7 @@ class HomeView {
         <div>
           <div class="hero-top"><p class="eyebrow">${icon('shield')} Islamabad Region · ${esc(me.dept || 'Jazba')}</p><span class="hero-clock" id="hero-clock">${Clock.now()}</span><button type="button" class="hero-bg-btn" data-su data-action="toggle-appear">${icon('palette')}Background</button></div>
           <h1 id="page-h1" tabindex="-1"><span class="nowrap"><span class="w" style="--i:0">Assalam&#8209;o&#8209;Alaikum,</span></span> <span class="grad-name">${words.map((t, i) => `<span class="w" style="--i:${i + 1}">${esc(t)}${i === words.length - 1 ? '.' : ''}</span>`).join(' ')}</span></h1>
-          <p class="welcome-sub">${greet} · ${dateStr}${w == null ? '' : ` · ${w ? `You have <strong>${plural(w, 'thing', 'things')}</strong> waiting on you.` : 'Nothing is waiting on you.'}`}</p>
+          <p class="welcome-sub">${greet} · ${dateStr}${w == null ? '' : ` · ${w ? `You have <strong>${plural(w, 'thing', 'things')}</strong> waiting for you.` : 'Nothing is waiting for you.'}`}</p>
           ${canNew || tasksQ ? `<div class="welcome-actions">${canNew ? `<button type="button" class="btn btn-primary" data-action="fab" aria-controls="fab-menu">${icon('plus')}New request</button>` : ''}${tasksQ ? `<a class="btn btn-secondary" href="${esc(tasksQ.href)}">${icon('tasks')}Open Tasks</a>` : ''}</div>` : ''}
           ${Daily.heroLine()}
         </div>
@@ -2959,18 +2961,18 @@ class HomeView {
 
       ${!T ? `<div class="brief-empty">${icon(Live.todayErr ? 'alert' : 'clock')}${Live.todayErr ? 'Live numbers unavailable right now. Your portals below still work.' : 'Loading your day…'}</div>` : `
       <section class="status-row" aria-label="Your day">
-        ${card('accent', 'inbox', C.actions, 'Waiting on you', C.late ? `<span class="pulse"></span>${C.late} waiting more than 2 days` : C.actions ? '<span class="pulse"></span>Approve, check or sign' : 'All clear', 'brief-h')}
+        ${card('accent', 'inbox', C.actions, 'Waiting for you', C.late ? `<span class="pulse"></span>${C.late} waiting more than 2 days` : C.actions ? '<span class="pulse"></span>Approve, check or sign' : 'All clear', 'brief-h')}
         ${card('secondary', 'tasks', C.tasks_week, 'My tasks this week', 'Due in the next 7 days', 'tasks-h')}
-        ${card('neutral', 'send', Math.max(C.my_open_requests || 0, mine.length), 'Requests I started', 'See where each one is', 'mine-h')}
+        ${card('neutral', 'send', Math.max(C.my_open_requests || 0, mine.length), 'My requests', 'See where each one is', 'mine-h')}
       </section>
-      <p class="live-help">${icon('bell')}<span><b>Waiting on you</b> = steps only you can take (approve, check, sign or receive). <b>The bell</b> = news, such as your request moving forward, sent back or approved. <b>+ New request</b> = start any form you are allowed to send.</span></p>
+      <p class="live-help">${icon('bell')}<span><b>Waiting for you</b> = steps only you can take (approve, check, sign or receive). <b>The bell</b> = news, such as your request moving forward, sent back or approved. <b>+ New request</b> = start any form you are allowed to send.</span></p>
 
-      ${chart ? `<section class="brief" aria-labelledby="chart-h"><div class="brief-head"><div><h2 id="chart-h">${icon('bolt')}Waiting on you, by portal</h2><p>Click a portal to open it.</p></div></div><div class="live-chart">${chart}</div></section>` : ''}
+      ${chart ? `<section class="brief" aria-labelledby="chart-h"><div class="brief-head"><div><h2 id="chart-h">${icon('bolt')}Waiting for you, by portal</h2><p>Click a portal to open it.</p></div></div><div class="live-chart">${chart}</div></section>` : ''}
 
       <div class="live-grid">
         <section class="brief" aria-labelledby="brief-h">
-          <div class="brief-head"><div><h2 id="brief-h">${icon('bolt')}Needs your action</h2>
-            <p>${show.length ? `${plural(show.length, 'item', 'items')}, longest waiting first` : 'Nothing is waiting on you right now.'}</p></div>
+          <div class="brief-head"><div><h2 id="brief-h">${icon('bolt')}Waiting for you</h2>
+            <p>${show.length ? `${plural(show.length, 'item', 'items')}, longest waiting first` : 'Nothing is waiting for you right now.'}</p></div>
             <div class="seg live-tabs" role="tablist">${[['all', 'All'], ['approve', 'Approvals'], ['do', 'To do']].map(([k, t]) => `<button type="button" role="tab" aria-selected="${tab === k}" data-action="live-tab" data-value="${k}">${t}</button>`).join('')}</div></div>
           ${items.length ? Smart.list(items) : `<div class="brief-empty">${icon('checkCircle')}All clear. JazakAllah khair!</div>`}
           ${Object.keys(rest).length ? `<p class="brief-more" style="margin:10px 0 0">${Object.entries(rest).map(([n, c]) => `+${c} more in ${esc(n)}`).join(' · ')}</p>` : ''}
@@ -3003,7 +3005,7 @@ class HomeView {
             <h3>${esc(p.name)}</h3>
             <p>${esc(p.desc)}</p>
             <div class="pc-foot">
-              <span class="pc-stat"><i></i>${n ? `${plural(n, 'item', 'items')} waiting on you` : 'Nothing waiting'}</span>
+              <span class="pc-stat"><i></i>${n ? `${plural(n, 'item', 'items')} waiting for you` : 'Nothing waiting'}</span>
               <span class="btn btn-xs pc-open" aria-hidden="true">Open ${icon('arrowUpRight')}</span>
             </div>
           </a>`; }).join('')}
@@ -3015,11 +3017,11 @@ class HomeView {
     const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
     const dateStr = `${TODAY.toLocaleDateString('en-GB', { weekday: 'long' })} ${pad(TODAY.getDate())}-${TODAY.toLocaleDateString('en-GB', { month: 'short' })}`;
     const status = [
-      { label: 'Waiting on you', n: w, unit: w === 1 ? 'item' : 'items', tone: 'accent', icon: 'inbox', pulse: w > 0,
+      { label: 'Waiting for you', n: w, unit: w === 1 ? 'item' : 'items', tone: 'accent', icon: 'inbox', pulse: w > 0,
         href: Metrics.waitingPO() || !Metrics.waitingHR() ? '#/procurement?filter=waiting' : '#/hr?filter=waiting',
         foot: w ? `${Metrics.waitingPO()} purchase · ${Metrics.waitingHR()} HR` : 'All clear' },
       { label: 'My tasks this week', n: Metrics.myTasks(), unit: Metrics.myTasks() === 1 ? 'item' : 'items', tone: 'secondary', icon: 'tasks', href: '#/tasks?filter=mine', foot: 'Due in the next 7 days' },
-      { label: 'Requests I started', n: Metrics.started(), unit: Metrics.started() === 1 ? 'item' : 'items', tone: 'neutral', icon: 'send', href: '#/procurement?filter=mine', foot: 'Requisitions in flight' },
+      { label: 'My requests', n: Metrics.started(), unit: Metrics.started() === 1 ? 'item' : 'items', tone: 'neutral', icon: 'send', href: '#/procurement?filter=mine', foot: 'Requisitions in flight' },
     ];
     return `
       <section class="welcome" aria-labelledby="page-h1">
@@ -3032,7 +3034,7 @@ class HomeView {
         <div>
           <div class="hero-top"><p class="eyebrow">${icon('shield')} Islamabad Region · Manager workspace</p><span class="hero-clock" id="hero-clock">${Clock.now()}</span><button type="button" class="hero-bg-btn" data-su data-action="toggle-appear">${icon('palette')}Background</button></div>
           <h1 id="page-h1" tabindex="-1"><span class="nowrap"><span class="w" style="--i:0">Assalam&#8209;o&#8209;Alaikum,</span></span> <span class="grad-name nowrap"><span class="w" style="--i:1">Anwar</span> <span class="w" style="--i:2">Ullah.</span></span></h1>
-          <p class="welcome-sub">${greet} · ${dateStr} · ${w ? `You have <strong>${plural(w, 'thing', 'things')}</strong> waiting on you.` : 'Nothing is waiting on you.'}</p>
+          <p class="welcome-sub">${greet} · ${dateStr} · ${w ? `You have <strong>${plural(w, 'thing', 'things')}</strong> waiting for you.` : 'Nothing is waiting for you.'}</p>
           <div class="welcome-actions">
             <button class="btn btn-primary" data-action="drawer-open" data-mode="requisition">${icon('filePlus')}Create Requisition</button>
             <button class="btn btn-secondary" data-action="drawer-open" data-mode="task">${icon('plus')}New Task</button>
@@ -3206,7 +3208,7 @@ class PortalView {
    what a Super Admin may do; the frame only shows it. */
 const ADMIN_TABS = { people: ['People & access', 'users'], setup: ['Portals & departments', 'grid'], settings: ['Settings', 'settings'], activity: ['Activity & usage', 'chart'] };
 /* My requests: every request the person raised across the ERP, in any status (asked 2026-11-11) */
-const REQ_STATES = { open: ['On its way', '#0A74C9', 1], back: ['Sent back to you', '#F59323', 2], done: ['Approved / completed', '#16A34A', 0], no: ['Rejected / cancelled', '#DC2626', 3] };
+const REQ_STATES = { open: ['Waiting for approval', '#0A74C9', 1], back: ['Sent back for correction', '#F59323', 2], done: ['Approved / completed', '#16A34A', 0], no: ['Rejected / cancelled', '#DC2626', 3] };
 class RequestsView {
   mount() {
     if (Date.now() - (Live.reqsAt || 0) > 30000) Live.loadReqs();   // not on every repaint
@@ -3224,8 +3226,8 @@ class RequestsView {
       return `<li class="brief-item sev-${st[2] || 1}"${st[2] ? '' : ' style="--sev:#16A34A;--sev-fg:#15803D"'}>
         <span class="bi-ic">${icon(Live.ICON[a.portal] || 'send')}</span>
         <div class="bi-body"><div class="bi-title">${esc([r, a.title].filter(Boolean).join(' · ') || 'Request')}</div>
-          <div class="bi-meta"><span class="sev-tag">${esc(st[0])}</span><span>${esc([p ? p.name : a.portal, a.status, when].filter(Boolean).join(' · '))}</span></div></div>
-        <div class="bi-actions">${url ? `<a class="btn btn-xs ${a.state === 'back' ? 'btn-primary' : 'btn-secondary'}" href="${esc(url)}">${a.state === 'back' ? 'Correct it' : a.state === 'open' ? 'Track' : 'Open'}</a>` : ''}</div></li>`; };
+          <div class="bi-meta"><span class="sev-tag">${esc(st[0])}</span><span>${esc([p ? p.name : a.portal, Live.words(a.status), when].filter(Boolean).join(' · '))}</span></div></div>
+        <div class="bi-actions">${url ? `<a class="btn btn-xs ${a.state === 'back' ? 'btn-primary' : 'btn-secondary'}" href="${esc(url)}">${a.state === 'back' ? 'Correct and resubmit' : a.state === 'open' ? 'Track' : 'Open'}</a>` : ''}</div></li>`; };
     return `<header class="admin-head"><span class="admin-ic">${icon('send')}</span><div><p class="eyebrow">Across the ERP</p><h1 id="page-h1" tabindex="-1">My requests</h1></div></header>
       ${!R ? `<div class="brief-empty">${icon(Live.reqsErr ? 'alert' : 'clock')}${Live.reqsErr ? 'Your requests could not be loaded right now. Please try again in a minute.' : 'Loading your requests…'}</div>` : `
       ${chart ? `<section class="brief" aria-labelledby="rq-chart-h"><div class="brief-head"><div><h2 id="rq-chart-h">${icon('bolt')}By status</h2><p>Click a status to see only those requests.</p></div></div><div class="live-chart">${chart}</div></section>` : ''}
@@ -3349,10 +3351,10 @@ const Sidebar = {
         : '<div class="nav-section">Portals</div>' + NAV().map(p => item(p.href || `#/${p.id}`, p.id, p.icon, p.short, p.badge?.(), p.tone, p.color)).join(''))
       + (Live.on
         ? (Live.me?.is_super ? `<div class="nav-section">Admin</div>` + Object.entries(ADMIN_TABS).map(([k, [t, ic]]) => item(`#/admin/${k}`, `admin/${k}`, ic, t)).join('') : '')
-          + `<div class="side-card"><div class="side-card-top"><span>Waiting on you</span><b>${n}</b></div>
-          <small>${n ? `${plural(n, 'step', 'steps')} only you can take` : 'Nothing is waiting on you.'}</small></div>`
+          + `<div class="side-card"><div class="side-card-top"><span>Waiting for you</span><b>${n}</b></div>
+          <small>${n ? `${plural(n, 'step', 'steps')} only you can take` : 'Nothing is waiting for you.'}</small></div>`
         : `<div class="side-card"><div class="side-card-top"><span>Your approval queue</span><b>${q.decided}/${q.total}</b></div>
-          <div class="side-card-bar"><i style="width:${q.pct}%"></i></div><small>${q.total - q.decided ? `${q.total - q.decided} still waiting on you` : 'All decided. Nice work.'}</small></div>`);
+          <div class="side-card-bar"><i style="width:${q.pct}%"></i></div><small>${q.total - q.decided ? `${q.total - q.decided} still waiting for you` : 'All decided. Nice work.'}</small></div>`);
     // Stagger index for the label fade / mobile slide-in.
     document.querySelectorAll('#sidebar > *').forEach((el, i) => el.style.setProperty('--i', i));
     this.syncToggle();
@@ -3927,7 +3929,7 @@ const Palette = {
       { group: 'Actions', label: 'My signature', icon: 'checkCircle', hint: 'Add or change it', run: () => App.actions['my-signature']() },
       { group: 'Actions', label: 'Toggle light / dark mode', icon: 'moon', hint: 'Appearance', run: () => Theme.toggle() },
       ...(Role.isSuper() ? [{ group: 'Actions', label: 'Change background or colour style', icon: 'palette', hint: 'Super admin', run: () => Appear.toggle(true) }] : []),
-      ...Live.inbox.map(x => ({ group: 'Waiting on you', record: true, label: x.title, icon: Live.ICON[x.portal] || 'inbox', hint: x.body, run: () => location.assign(Live.open(x)) })),
+      ...Live.inbox.map(x => ({ group: 'Waiting for you', record: true, label: x.title, icon: Live.ICON[x.portal] || 'inbox', hint: x.body, run: () => location.assign(Live.open(x)) })),
     ];
     return [
       { group: 'Navigate', label: 'Home', icon: 'home', hint: 'Overview', run: () => Router.go('#/') },

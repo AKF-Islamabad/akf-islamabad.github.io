@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-assistance.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-2IhQJAJAvBLHOXK3CrOtWIvt3pqJlcyaq4jT2oIs2f4='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-k/sE7p2YyOtK1Gpy5it/g53qYZ15GtGNtejzMCAtQII='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1342,7 +1342,7 @@ const BUCKET = "assistance-docs", MAX_FILE = 5 * 1024 * 1024, FILE_TYPES = { "ap
 const DAY = 864e5;
 const SKIP_REASONS = ["Director is unavailable", "Director review not needed for this case", "Urgent case", "Other (explain in remarks)"];
 const MARITAL = ["Single", "Married", "Widowed", "Divorced"], EDUCATION = ["None", "Primary", "Middle", "Matric", "Intermediate", "Graduate", "Postgraduate"];
-const NOTIFY_EVENTS = { submitted: "Application registered", assigned: "Case arrives in an inbox", returned: "Returned for correction", approved: "Approved by President",
+const NOTIFY_EVENTS = { submitted: "Application registered", assigned: "Case arrives in an inbox", returned: "Sent back for correction", approved: "Approved by President",
   rejected: "Rejected", completed: "Assistance delivered", overdue: "Past the time limit" };
 const WIDGETS = {
   banner: { t: "Action banner", d: "New application or inbox shortcut", full: true }, kpis: { t: "Key figures", d: "Inbox, in progress, completed, disbursed", full: true },
@@ -1406,7 +1406,7 @@ const flowIdx = (a, key) => (a.flow || []).findIndex(s => s.key === key);
 function stageLabel(a, key) {
   const st = key || a.status;
   return ({ dept: "Department review", director: "Director review", rm: "RM recommendation", president: "President approval",
-    exec: a.type === "inkind" ? "Store – issue items" : "Finance – disbursement", returned: "Returned for correction", rejected: "Rejected", closed: "Completed", submitted: "Registered" })[st]
+    exec: a.type === "inkind" ? "Store – issue items" : "Finance – disbursement", returned: "Sent back for correction", rejected: "Rejected", closed: "Completed", submitted: "Registered" })[st]
     || (stepOf(a, st) ? stepOf(a, st).label + " (" + stepOf(a, st).who + ")" : st);
 }
 const STATUS_KEYS = ["dept", "director", "rm", "president", "exec", "returned", "rejected", "closed"];
@@ -1550,7 +1550,7 @@ function widgetBody(id) {
   if (id === "banner") {
     if (can("applications", "add") && (ME.role === "front_desk" || ME.isSuper)) return `<div class="as-hero"><div><h2>Register a new application</h2><p>Enter the applicant's details, attach the signed form and send it to the department.</p></div><button class="btn btn-lg" type="button" data-nav="new">${ic("plus")}New application</button></div>`;
     if (can("applications", "approve")) return `<div class="as-hero"><div><h2>${mine.length ? plural(mine.length, "application") + " waiting for you" : "Your inbox is clear"}</h2><p>${mine.length ? "Review and take action to keep families from waiting." : "New cases will appear here and in your notifications."}</p></div><button class="btn btn-lg" type="button" data-nav="inbox">${ic("inbox")}Open inbox</button></div>`;
-    return `<div class="as-hero"><div><h2>${plural(late.length, "case")} past the time limit</h2><p>Use smart tracking to see where applications are slowing down.</p></div>${can("tracking") ? `<button class="btn btn-lg" type="button" data-nav="track">${ic("target")}Smart tracking</button>` : ""}</div>`;
+    return `<div class="as-hero"><div><h2>${plural(late.length, "case")} past the time limit</h2><p>Use smart tracking to see where applications are slowing down.</p></div>${can("tracking") ? `<button class="btn btn-lg" type="button" data-nav="track">${ic("target")}Track</button>` : ""}</div>`;
   }
   if (id === "kpis") {
     const mon = todayPK().slice(0, 7);
@@ -1627,7 +1627,7 @@ function appTable(list, emptyMsg) {
 }
 function viewInbox() {
   const front = ME.role === "front_desk", list = inbox();
-  const t = front ? ["Returned to me", "Applications sent back for correction."] : ME.isSuper ? ["Waiting for action", "Every open case (you may stand in for an approver)."] : ["My inbox", "Applications waiting for your step."];
+  const t = front ? ["Sent back to me", "Applications sent back for correction."] : ME.isSuper ? ["Waiting for action", "Every open case (you may stand in for an approver)."] : ["My inbox", "Applications waiting for your step."];
   return head(t[0], t[1] + " Oldest first.") + `<div class="card">${appTable(list, "Your inbox is clear")}</div>`;
 }
 function filtered() {
@@ -1742,7 +1742,7 @@ function viewNew() {
     <div class="as-sec"><h3>Paper form</h3><p class="sub">Keep the signed original on file. Upload a photo or scan for the approvers.</p>
       <div style="display:grid;gap:12px">${slots.map(s => slotHtml(s, d.docs.filter(f => f.slot === s.k))).join("")}</div>
     </div>
-    <div class="as-foot"><button class="btn btn-primary btn-lg" type="submit" ${V.busy ? "disabled" : ""}>${ic("send", "i-sm")}${editing ? "Resubmit to department" : "Submit to department"}</button></div>
+    <div class="as-foot"><button class="btn btn-primary btn-lg" type="submit" ${V.busy ? "disabled" : ""}>${ic("send", "i-sm")}${editing ? "Correct and resubmit" : "Send for approval"}</button></div>
   </form>`;
 }
 const dupHtml = () => V.dup.length ? `<div class="as-note n-warn" style="margin-top:16px">${ic("alert")}<span><b>This CNIC already has ${plural(V.dup.length, "application")}:</b> ${V.dup.map(x => `${esc(x.id)} (${esc(x.stage)}, ${esc(x.category)})`).join(", ")}. Check before registering again.${lastCase() ? ` <button type="button" class="btn btn-outline btn-sm" data-act="fill-last" style="margin-left:6px">Fill this person's details from ${esc(lastCase().id)}</button>` : ""}</span></div>` : "";
@@ -1832,7 +1832,7 @@ function trackCard(a, full) {
   });
   if (a.directorSkipped) rows.splice(1, 0, `<li class="skip"><span class="n">${ic("skip", "i-sm")}</span><span><b>Director review</b><small>Skipped · ${esc(a.skipReason || SKIP_REASONS[0])}</small></span><span></span></li>`);
   future.forEach(s => rows.push(`<li><span class="n">·</span><span><b class="muted">${esc(stageLabel(a, s))}</b><small>Not started</small></span><span class="as-dur"><small class="muted">limit ${slaFor(s)}d</small></span></li>`));
-  return `<div class="card as-flush"><div class="as-tk-head ${cls}"><small>${full ? `${esc(a.id)} · ${esc(a.name)}` : "Smart tracking"}</small><h3>${esc(title)}</h3><p>${esc(sub)}</p>
+  return `<div class="card as-flush"><div class="as-tk-head ${cls}"><small>${full ? `${esc(a.id)} · ${esc(a.name)}` : "Track"}</small><h3>${esc(title)}</h3><p>${esc(sub)}</p>
       ${isOpen(a) ? `<div class="as-meter"><div class="as-meter-t" role="progressbar" aria-label="Time used at this stage" aria-valuemin="0" aria-valuemax="${lim}" aria-valuenow="${w}"><i style="width:${Math.min(100, (w / Math.max(lim, 1)) * 100)}%"></i></div>
       <div class="as-meter-m"><span>${w} of ${plural(lim, "day")} allowed</span><span>${late ? plural(w - lim, "day") + " overdue" : plural(lim - w, "day") + " left"}</span></div></div>` : ""}</div>
     <div class="as-facts"><div><small>Submitted</small><b>${esc(fmtDate(a.createdAt))}</b></div><div><small>${isOpen(a) ? "Expected completion" : "Total time"}</small><b>${esc(isOpen(a) ? fmtDate(exp) : fmtDays(total))}</b></div>
@@ -1859,7 +1859,7 @@ function viewCase(id) {
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-outline" type="button" data-act="print-slip" data-id="${esc(a.id)}">${ic("print", "i-sm")}Print slip</button>${ME.isSuper && !a.erased ? `<button class="btn btn-danger-o" type="button" data-act="erase" data-id="${esc(a.id)}">${ic("x", "i-sm")}Erase personal data</button>` : ""}</div></div>
   ${trackerHtml(a)}
   <div class="as-case-grid"><div class="as-stack">
-    ${a.status === "returned" ? `<div class="as-note n-warn">${ic("undo")}<span><b>Returned for correction${a.returnedBy ? " by the " + esc(a.returnedBy) : ""}:</b> ${esc(a.returnNote || "")}</span></div>` : ""}
+    ${a.status === "returned" ? `<div class="as-note n-warn">${ic("undo")}<span><b>Sent back for correction${a.returnedBy ? " by the " + esc(a.returnedBy) : ""}:</b> ${esc(a.returnNote || "")}</span></div>` : ""}
     ${a.status === "rejected" ? `<div class="as-note n-err">${ic("x")}<span><b>Rejected${a.rejectedBy ? " by the " + esc(a.rejectedBy) : ""}:</b> ${esc(a.rejectNote || "")}</span></div>` : ""}
     ${a.erased ? `<div class="as-note n-info">${ic("shield")}<span>The personal data of this application was erased. The number, amounts and history are kept for the accounts.</span></div>` : ""}
     ${card("Request", `<div class="as-cb">${kv([["Request for", a.category], [a.type === "inkind" ? "Items requested" : "Amount requested", a.type === "inkind" ? r.items : rs(r.amount)], ...(a.type === "inkind" && r.value ? [["Estimated value", rs(r.value)]] : []), ["Fund", r.fund], ["Department", a.department], ["Reason", r.description, 1]])}</div>
@@ -1887,7 +1887,7 @@ function actionPanel(a) {
   const mc = mcBlock(a); if (mc) return `<div class="as-note n-warn">${ic("shield")}<span>${esc(mc)}</span></div>`;
   const st = stepOf(a), i = flowIdx(a, a.status), nx = (a.flow || [])[i + 1];
   const remarks = (req, ph) => `<div class="as-f"><label for="remarks"><span>Remarks${req ? '<span class="req">*</span>' : ""}</span></label><textarea class="textarea" id="remarks" maxlength="1000" placeholder="${esc(ph || "Add your remarks")}" style="min-height:84px"></textarea><span class="msg">Remarks are required for this action</span></div>`;
-  const retRej = (rej = true) => `<div class="${rej ? "as-row2" : ""}"><button class="btn btn-outline" type="button" data-act="do" data-do="return">${ic("undo", "i-sm")}Send back${rej ? "" : " to Front Desk"}</button><span class="small muted" style="font-size:13px">After the correction it continues at this step.</span>${rej ? `<button class="btn btn-danger-o" type="button" data-act="do" data-do="reject">${ic("x", "i-sm")}Reject</button>` : ""}</div>`;
+  const retRej = (rej = true) => `<div class="${rej ? "as-row2" : ""}"><button class="btn btn-outline" type="button" data-act="do" data-do="return">${ic("undo", "i-sm")}Send back</button><span class="small muted" style="font-size:13px">After the correction it continues at this step.</span>${rej ? `<button class="btn btn-danger-o" type="button" data-act="do" data-do="reject">${ic("x", "i-sm")}Reject</button>` : ""}</div>`;
   const amountBox = (label, v) => `<div class="as-f"><label for="amt">${label}<span class="req">*</span></label><div class="as-prefix"><span>Rs</span><input class="input" id="amt" type="number" min="1" max="${esc(a.request.amount)}" step="1" value="${esc(v)}"></div><span class="help">At most the ${esc(rs(a.request.amount))} requested.</span><span class="msg">Enter an amount from 1 to ${esc(rs(a.request.amount))}</span></div>`;
   if (a.status === "dept" && nx && nx.key === "director") {
     const dir = directorOn(a.department);
@@ -1987,7 +1987,7 @@ async function doAction(kind) {
   try {
     const d = await rpc("assistance_act", { p_id: a.id, p_action: action, p_data: data }, "Not saved");
     applyRow("applications", d.id, d); V.proof = null; V.busy = false;
-    toast({ return: "Returned to Front Desk", reject: "Application rejected", forward: "Sent to the " + holder(d), skip_director: "Director skipped · sent to the " + holder(d), recommend: "Sent to the " + holder(d), approve: "Approved · sent to the " + holder(d), execute: "Case completed" }[action], "success");
+    toast({ return: "Sent back for correction", reject: "Application rejected", forward: "Sent to the " + holder(d), skip_director: "Director skipped · sent to the " + holder(d), recommend: "Sent to the " + holder(d), approve: "Approved · sent to the " + holder(d), execute: "Case completed" }[action], "success");
     inbox().length ? go("inbox") : go("case", d.id);
   } catch (e) { V.busy = false; form.querySelectorAll("button").forEach(b => { b.disabled = false; }); toast(e.shown ? e.message : erpErr(e, "Not saved"), "error"); }
 }
@@ -2005,7 +2005,7 @@ function trackMatches(list, sel) {
 function viewTrack(id) {
   if (!can("tracking")) return noAccess("Smart tracking needs the Smart tracking tick.");
   const sel = id ? getApp(id) : null, late = A.apps.filter(isLate).sort((a, b) => (daysWaiting(b) - slaFor(b.status)) - (daysWaiting(a) - slaFor(a.status)));
-  return head("Smart tracking", "Find an application by tracking ID or name" + (can("applicant") ? ", CNIC or mobile number" : "") + ".")
+  return head("Track", "Find an application by tracking ID or name" + (can("applicant") ? ", CNIC or mobile number" : "") + ".")
     + `<div class="as-search">${ic("search")}<label class="sr-only" for="tq">Search applications</label><input class="input" id="tq" value="${esc(V.trackQ)}" placeholder="e.g. AF-ISB-2026-0001${can("applicant") ? ", 34101-2345678-2 or 0301-5550101" : ""}" autocomplete="off"></div>
     <div class="as-matches" id="tqResults">${trackMatches(trackList(), sel)}</div>
     ${sel ? `<div class="as-tk"><div>${trackCard(sel, true)}</div><div class="as-stack">${can("messages") ? messagesCard(sel) : ""}${card("Latest activity", `<ol class="as-hist">${(sel.history || []).slice(-5).reverse().map(histItem).join("")}</ol>`)}</div></div>`
@@ -2145,9 +2145,9 @@ const NAVX = [
   { sec: "Applications" },
   { v: "dashboard", l: "Dashboard", ic: "home", ok: () => can("dashboard") },
   { v: "new", l: () => V.editId ? "Correct application" : "New application", ic: "plus", ok: () => can("applications", "add") && (ME.role === "front_desk" || ME.isSuper) },
-  { v: "inbox", l: () => ME.role === "front_desk" ? "Returned to me" : "My inbox", ic: "inbox", ok: () => can("applications") && (can("applications", "approve") || (can("applications", "add") && ME.role === "front_desk")), count: () => inbox().length },
+  { v: "inbox", l: () => ME.role === "front_desk" ? "Sent back to me" : "My inbox", ic: "inbox", ok: () => can("applications") && (can("applications", "approve") || (can("applications", "add") && ME.role === "front_desk")), count: () => inbox().length },
   { v: "all", l: "All applications", ic: "list", ok: () => can("applications") },
-  { v: "track", l: "Smart tracking", ic: "target", ok: () => can("tracking") && can("applications") },
+  { v: "track", l: "Track", ic: "target", ok: () => can("tracking") && can("applications") },
   { sec: "Follow-up" },
   { v: "messages", l: "Messages to applicants", ic: "msg", ok: () => can("messages") && can("applications"), count: () => A.apps.reduce((s, a) => s + (a.erased ? 0 : (a.messages || []).filter(m => !m.sent).length), 0) },
   { v: "notes", l: "Notifications", ic: "bell", ok: () => can("applications") || can("dashboard"), count: () => unread().length },
