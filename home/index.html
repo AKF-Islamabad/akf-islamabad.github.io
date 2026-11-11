@@ -1390,6 +1390,7 @@ body.nav-collapsed #sidebar-toggle .i { transform: scaleX(-1); }
 :root:not(.su) [data-su] { display: none !important; } /* appearance controls: super admin only */
 :root.live .fab, :root.live .lg-preview [data-action="login-use"] { display: none !important; } /* sample-only controls are not shown on the live page */
 :root.live .fab.has-new { display: flex !important; }   /* live "+": the forms this person may send */
+.fab { pointer-events: none; } .fab-btn { pointer-events: auto; }   /* the closed menu keeps its space: it must not swallow clicks on the cards under it */
 :root.live .fab { bottom: 88px; }   /* above the Alkhidmat AI button (akf-assistant.js: bottom 20px, 52px tall) */
 @media (max-width: 640px) { :root.live .fab { bottom: 142px; right: 14px; } }   /* phones: the AI button sits at bottom 76px */
 .fab-card { width: min(340px, calc(100vw - 32px)); max-height: min(68vh, 560px); overflow: auto; padding: 8px; border-radius: 16px; background: var(--color-surface); border: 1px solid var(--glow-border, var(--color-border)); box-shadow: 0 24px 60px -20px rgba(15, 23, 42, .45); }
