@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-JhSAQvXd9y4tTipl2jb89MXqyihPOVDsgdGyHsvx1kg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-vvOi8LyZu2nDRwmzrjbZ9z5R92mKM+GnY6r7gxbvAMk='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1144,7 +1144,7 @@ async function rpc(name, args, what) { const { data, error } = await SB.rpc(name
 const fmtD = s => { if (!s) return ""; const d = new Date(String(s).length <= 10 ? s + "T00:00:00" : s); return isNaN(d) ? String(s) : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
 const fmtDT = s => { const d = new Date(s); return isNaN(d) ? "" : d.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); };
 const KIND = { Leave: "Leave", Attendance: "Attendance correction", Shift: "Shift change", Profile: "Profile correction", Document: "HR letter", Policy: "Policy change", Exit: "Exit",
-  Medical: "Medical claim", Expense: "Expense claim", Loan: "Loan", Advance: "Salary advance", Phone: "Phone scheme", Overtime: "Overtime", Outstation: "TA/DA (out-station)", Encashment: "Leave encashment", Payroll: "Payroll", Recruitment: "Staff request (recruitment)" };
+  Medical: "Medical claim", Expense: "Expense claim", Loan: "Loan", Advance: "Salary advance", Phone: "Phone scheme", Overtime: "Overtime", Outstation: "Travel and daily allowance (TA/DA)", Encashment: "Leave encashment", Payroll: "Payroll", Recruitment: "Staff request (recruitment)" };
 const CAREERS = new URL("../careers/", location.href).href, STAGES = ["Received", "Under Review", "Shortlisted", "Interview Done", "Selected", "Regret"];
 const attLead = () => !!ME && ["regional_manager", "gen_sec", "president"].includes(ME.role);   // see everyone's attendance
 const isHead = () => !!ME && (["hod", "finance_hod"].includes(ME.role) || (ME.extraDepts || []).length > 0);
@@ -1356,15 +1356,15 @@ const VIEWS = {
         if (f._files) {   // bills go to the private claims bucket, in my own folder; the server checks every path
           const list = Array.from(f._files.files || []);
           if (list.length > 5) throw Object.assign(new Error("At most 5 files"), { shown: true });
-          d.files = [];
-          for (let file of list) {
+          d.files = []; const done = f._files._done || (f._files._done = {});   // a bill that already uploaded is not uploaded again when Submit is pressed again
+          for (let file of list) { const key = file.name + "|" + file.size + "|" + file.lastModified; if (done[key]) { d.files.push(done[key]); continue; }
             if (file.size > 5242880) file = await AKF_shrinkImage(file, 1600, 0.75, 5242880);   // big photos are made smaller, not refused
             const ext = (file.name.split(".").pop() || "").toLowerCase().replace("jpeg", "jpg");
             if (!/^(pdf|png|jpg)$/.test(ext) || file.size > 5242880) throw Object.assign(new Error("Bills must be PDF, PNG or JPG under 5 MB"), { shown: true });
             const path = "claims/" + ME.id + "/" + crypto.randomUUID() + "." + ext;
             const { error: e1 } = await SB.storage.from("hr-claims").upload(path, file, { contentType: file.type || undefined, upsert: false });
             if (e1) throw Object.assign(new Error(errText(e1, "The bill could not upload")), { shown: true });
-            d.files.push(path);
+            d.files.push(path); done[key] = path;
           }
         }
         const id = await rpc("hr_submit", { p_kind: V.kind, p_data: d }, "The request was not saved"); toast("Request " + id + " sent for approval"); await reload(); go("mine"); }
@@ -1779,14 +1779,14 @@ async function openReq(id) {
         catch (e) { toast(e.message, true); send.disabled = false; } });
       body.push(el("h4", { text: "Correct and resubmit" }), form, el("div", { class: "hr-actions" }, send));
     }
-  } else if (ME.super && r.status === "pending") {
+  } else if ((ME.super || r.myStep) && r.status === "pending") {   // the approver whose step it is, or the Super Admin
     const why = el("textarea", { class: "textarea", rows: 2, maxlength: 500, placeholder: "What must be corrected (required)" }), restart = el("input", { type: "checkbox" });
     const go_ = el("button", { class: "btn btn-outline", type: "button", text: "Send back to " + (r.name || "the requester") });
     go_.addEventListener("click", async () => { if (why.value.trim().length < 5) return toast("Write what must be corrected", true); go_.disabled = true;
       try { await rpc("hr_sendback", { p_id: r.id, p_reason: why.value.trim(), p_restart: restart.checked }, "Not sent back"); toast(r.id + " sent back for correction"); closeModal(); await reload(); render(); }
       catch (e) { toast(e.message, true); go_.disabled = false; } });
-    body.push(el("details", {}, el("summary", { text: "↩ Send back for correction (Super Admin)", style: "cursor:pointer;font-weight:700;margin:10px 0" }), why,
-      el("label", { style: "display:flex;gap:8px;align-items:center;margin:6px 0" }, restart, el("span", { text: "Restart approvals from the first step after the correction" })), el("div", { class: "hr-actions" }, go_)));
+    body.push(el("details", {}, el("summary", { text: "↩ Send back to the requester for correction", style: "cursor:pointer;font-weight:700;margin:10px 0" }), why,
+      ME.super ? el("label", { style: "display:flex;gap:8px;align-items:center;margin:6px 0" }, restart, el("span", { text: "Restart approvals from the first step after the correction" })) : el("p", { class: "small muted", text: "After the correction it continues at this step." }), el("div", { class: "hr-actions" }, go_)));
   }
   if (r.myStep) {
     const rem = el("textarea", { class: "textarea", rows: 2, maxlength: 500, placeholder: "Remarks (required to reject)" });
@@ -1818,11 +1818,14 @@ function grantLeave(p) {
   const t = el("select", { class: "select" }, types.map(x => el("option", { value: x.name, text: x.name + (x.days ? " (usually " + x.days + ")" : "") })));
   const n = el("input", { class: "input", type: "number", min: 0.5, max: 365, step: 0.5 }), why = el("input", { class: "input", maxlength: 300, placeholder: "Reason, e.g. eligible from 1 Dec" });
   const fill = () => { const x = types.find(y => y.name === t.value); if (x && x.days) n.value = x.days; }; t.addEventListener("change", fill); fill();
+  const also = el("select", { class: "select", multiple: true, size: 5 }, (PEOPLE || []).filter(x => x.id !== p.id && x.id !== ME.id).map(x => el("option", { value: x.id, text: x.name + (x.dept ? " · " + x.dept : "") })));
   const save = el("button", { class: "btn btn-primary", type: "button", text: "Give leave" });
   save.addEventListener("click", async () => { save.disabled = true;
-    try { await rpc("hr_grant", { p_id: p.id, p_type: t.value, p_days: +n.value, p_reason: why.value }, "Not saved"); toast(n.value + " days of " + t.value + " given to " + p.name); PEOPLE = null; closeModal(); render(); }
-    catch (er) { toast(er.message, true); save.disabled = false; } });
-  modal("Give leave · " + p.name, el("div", { class: "hr-form" }, el("label", {}, "Leave", t), el("label", {}, "Days", n), el("label", { class: "full" }, "Reason", why)), el("div", { class: "hr-actions" }, save));
+    const who = [p, ...Array.from(also.selectedOptions).map(o => (PEOPLE || []).find(x => x.id === o.value)).filter(Boolean)]; let ok = 0;
+    try { for (const x of who) { await rpc("hr_grant", { p_id: x.id, p_type: t.value, p_days: +n.value, p_reason: why.value }, "Not saved"); ok++; }
+      toast(n.value + " days of " + t.value + " given to " + (ok > 1 ? ok + " people" : p.name)); PEOPLE = null; closeModal(); render(); }
+    catch (er) { toast((ok ? "Given to " + ok + " of " + who.length + " (stopped at " + who[ok].name + "). " : "") + er.message, true); save.disabled = false; if (ok) PEOPLE = null; } });
+  modal("Give leave · " + p.name, el("div", { class: "hr-form" }, el("label", {}, "Leave", t), el("label", {}, "Days", n), el("label", { class: "full" }, "Reason", why), el("label", { class: "full" }, "Also give the same to (optional; hold Ctrl to pick several)", also)), el("div", { class: "hr-actions" }, save));
 }
 function slipModal(s) {
   const row = (k, v, minus) => +v ? [el("dt", { text: k }), el("dd", { text: (minus ? "− " : "") + rs(v) })] : [];

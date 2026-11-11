@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-assistance.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-3gqdTFretYnoXHQWypTAsK6Ap16+R070AK3uWJOOKOw='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-2IhQJAJAvBLHOXK3CrOtWIvt3pqJlcyaq4jT2oIs2f4='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1694,7 +1694,7 @@ function viewNew() {
   const slots = (SET.docSlots || []);
   return head(editing ? "Correct application " + esc(editing) : "New application", editing ? "Fix the points raised, then send it back to the department." : "Copy the details from the paper form.",
       editing ? `<button class="btn btn-ghost" type="button" data-act="open" data-id="${esc(editing)}">${ic("left", "i-sm")}Back to case</button>` : `<button class="btn btn-ghost" type="button" data-act="discard">${ic("x", "i-sm")}Clear form</button>`)
-    + (editing && getApp(editing) && getApp(editing).returnNote ? `<div class="as-note n-warn" style="margin-bottom:16px">${ic("undo")}<span><b>Returned for correction:</b> ${esc(getApp(editing).returnNote)}</span></div>` : "")
+    + (editing && getApp(editing) && getApp(editing).returnNote ? `<div class="as-note n-warn" style="margin-bottom:16px">${ic("undo")}<span><b>Sent back for correction:</b> ${esc(getApp(editing).returnNote)}</span></div>` : "")
     + `<form class="card as-flush" id="wizForm" novalidate style="max-width:1000px">
     <div class="as-sec"><h3>Personal details <span class="as-ur">ذاتی کوائف</span></h3><p class="sub">&nbsp;</p>
       <div class="as-fgrid as-c3">
@@ -1745,7 +1745,9 @@ function viewNew() {
     <div class="as-foot"><button class="btn btn-primary btn-lg" type="submit" ${V.busy ? "disabled" : ""}>${ic("send", "i-sm")}${editing ? "Resubmit to department" : "Submit to department"}</button></div>
   </form>`;
 }
-const dupHtml = () => V.dup.length ? `<div class="as-note n-warn" style="margin-top:16px">${ic("alert")}<span><b>This CNIC already has ${plural(V.dup.length, "application")}:</b> ${V.dup.map(x => `${esc(x.id)} (${esc(x.stage)}, ${esc(x.category)})`).join(", ")}. Check before registering again.</span></div>` : "";
+const dupHtml = () => V.dup.length ? `<div class="as-note n-warn" style="margin-top:16px">${ic("alert")}<span><b>This CNIC already has ${plural(V.dup.length, "application")}:</b> ${V.dup.map(x => `${esc(x.id)} (${esc(x.stage)}, ${esc(x.category)})`).join(", ")}. Check before registering again.${lastCase() ? ` <button type="button" class="btn btn-outline btn-sm" data-act="fill-last" style="margin-left:6px">Fill this person's details from ${esc(lastCase().id)}</button>` : ""}</span></div>` : "";
+/* a returning person: their newest earlier case that this user can already open (nothing new is read from the database) */
+const lastCase = () => V.dup.map(x => getApp(x.id)).filter(a => a && piiOf(a)).sort((a, b) => a.id < b.id ? 1 : -1)[0];
 const flowPrevHtml = () => V.flowPrev && V.flowPrev.length ? `<div class="as-note n-info">${ic("shield")}<span><b>This case will go through:</b> ${V.flowPrev.filter(s => s.key !== "submitted").map(s => esc(s.who)).join(" → ")}</span></div>` : "";
 function collectForm() {
   const f = $("wizForm"); if (!f || !V.draft) return;
@@ -1885,7 +1887,7 @@ function actionPanel(a) {
   const mc = mcBlock(a); if (mc) return `<div class="as-note n-warn">${ic("shield")}<span>${esc(mc)}</span></div>`;
   const st = stepOf(a), i = flowIdx(a, a.status), nx = (a.flow || [])[i + 1];
   const remarks = (req, ph) => `<div class="as-f"><label for="remarks"><span>Remarks${req ? '<span class="req">*</span>' : ""}</span></label><textarea class="textarea" id="remarks" maxlength="1000" placeholder="${esc(ph || "Add your remarks")}" style="min-height:84px"></textarea><span class="msg">Remarks are required for this action</span></div>`;
-  const retRej = (rej = true) => `<div class="${rej ? "as-row2" : ""}"><button class="btn btn-outline" type="button" data-act="do" data-do="return">${ic("undo", "i-sm")}Return${rej ? "" : " to Front Desk"}</button>${ME.isSuper ? `<label class="as-chk" style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="resumeAt"> After correction, continue at this step (Super Admin)</label>` : ""}${rej ? `<button class="btn btn-danger-o" type="button" data-act="do" data-do="reject">${ic("x", "i-sm")}Reject</button>` : ""}</div>`;
+  const retRej = (rej = true) => `<div class="${rej ? "as-row2" : ""}"><button class="btn btn-outline" type="button" data-act="do" data-do="return">${ic("undo", "i-sm")}Send back${rej ? "" : " to Front Desk"}</button><span class="small muted" style="font-size:13px">After the correction it continues at this step.</span>${rej ? `<button class="btn btn-danger-o" type="button" data-act="do" data-do="reject">${ic("x", "i-sm")}Reject</button>` : ""}</div>`;
   const amountBox = (label, v) => `<div class="as-f"><label for="amt">${label}<span class="req">*</span></label><div class="as-prefix"><span>Rs</span><input class="input" id="amt" type="number" min="1" max="${esc(a.request.amount)}" step="1" value="${esc(v)}"></div><span class="help">At most the ${esc(rs(a.request.amount))} requested.</span><span class="msg">Enter an amount from 1 to ${esc(rs(a.request.amount))}</span></div>`;
   if (a.status === "dept" && nx && nx.key === "director") {
     const dir = directorOn(a.department);
@@ -1958,8 +1960,7 @@ async function doAction(kind) {
   const need = (el, cond) => { const w = el && el.closest(".as-f"); if (w) w.classList.toggle("bad", cond); return cond; };
   let action = kind; const data = { note };
   if ((kind === "return" || kind === "reject") && need(remarksEl, !note)) { remarksEl.focus(); return; }
-  if (kind === "return" && !confirm("Return this application to the Front Desk for correction?")) return;
-  if (kind === "return" && ME.isSuper && $("resumeAt") && $("resumeAt").checked) data.resume = true;   // continue where it was after the correction (assistance.sql)
+  if (kind === "return" && !confirm("Send this application back to the Front Desk for correction?")) return;
   if (kind === "reject" && !confirm("Reject this application? This closes the case.")) return;
   if (kind === "forward" && document.querySelector("input[name=nextStep]:checked") && document.querySelector("input[name=nextStep]:checked").value === "skip") {
     const sel = $("skipReason"); if (need(sel, !sel.value || (sel.value === SKIP_REASONS[3] && !note))) { sel.focus(); return; }
@@ -2017,7 +2018,7 @@ function viewMessages() {
   const all = A.apps.flatMap(a => (a.messages || []).map((m, i) => ({ a, m, i }))).filter(x => !x.a.erased).sort((x, y) => String(y.m.at).localeCompare(String(x.m.at)));
   const tosend = all.filter(x => !x.m.sent), sent = all.filter(x => x.m.sent), list = V.msgTab === "sent" ? sent : tosend;
   return head("Messages to applicants", "Prepared automatically at each step, using the templates set on the main page.")
-    + `<div class="as-note n-info" style="margin-bottom:16px">${ic("phone")}<span><b>No SMS service is connected.</b> Send each message yourself (phone, SMS or WhatsApp), then press <b>Mark as sent</b> so the next person knows.</span></div>
+    + `<div class="as-note n-info" style="margin-bottom:16px">${ic("phone")}<span><b>No SMS service is connected.</b> Send each message yourself (phone, SMS or WhatsApp), then press <b>Mark as sent</b> so the next person knows.${V.msgTab !== "sent" && tosend.length > 1 && can("messages", "edit") ? ` <button class="btn btn-outline btn-sm" type="button" data-act="msg-all">${ic("check", "i-sm")}Mark all ${Math.min(tosend.length, 200)} as sent</button>` : ""}</span></div>
     <div class="card"><div class="tabs" role="tablist"><button type="button" class="tab ${V.msgTab !== "sent" ? "on" : ""}" role="tab" aria-selected="${V.msgTab !== "sent"}" data-act="msg-tab" data-tab="tosend">To send (${tosend.length})</button><button type="button" class="tab ${V.msgTab === "sent" ? "on" : ""}" role="tab" aria-selected="${V.msgTab === "sent"}" data-act="msg-tab" data-tab="sent">Sent (${sent.length})</button></div>
     ${list.length ? list.slice(0, 200).map(({ a, m, i }) => { const p = piiOf(a); return `<div class="as-sms"><span class="ic">${ic("msg", "i-sm")}</span><div class="grow"><b>${esc(a.name)}</b> <small class="muted">· ${p && p.phone ? esc(p.phone) : can("applicant") ? "no mobile number" : "mobile hidden (Applicant details tick)"} · ${esc(a.id)} · ${esc(NOTIFY_EVENTS[m.event] || "")} · ${esc(fmtTime(m.at))}</small><p>${esc(m.text)}</p>
       <div class="acts"><button class="btn btn-outline btn-sm" type="button" data-act="copy" data-id="${esc(a.id)}" data-i="${i}">${ic("copy", "i-sm")}Copy text</button>${openBtn(a, "Open case")}${!m.sent && can("messages", "edit") ? `<button class="btn btn-primary btn-sm" type="button" data-act="msg-sent" data-id="${esc(a.id)}" data-i="${i}">${ic("check", "i-sm")}Mark as sent</button>` : ""}${m.sent ? `<span class="small muted">Sent by ${esc(m.sent.by)} · ${esc(fmtTime(m.sent.at))}</span>` : ""}</div></div></div>`; }).join("")
@@ -2256,6 +2257,9 @@ document.addEventListener("click", async e => {
   if (act === "track") { if (can("tracking")) go("track", id); else go("case", id); return; }
   if (act === "note") { markRead(t.dataset.note); if (getApp(id)) go("case", id); return; }
   if (act === "read-all") { markAllRead(); render(); return; }
+  if (act === "fill-last") { const a = lastCase(), p = a && piiOf(a); if (!p || !V.draft) return; collectForm();   // the request and the documents are new each time: not copied
+    Object.assign(V.draft.applicant, { name: a.name, age: a.age, marital: a.marital, education: a.education, guardian: p.guardian, phone: p.phone, address: p.address });
+    V.draft.household = JSON.parse(JSON.stringify(p.household || { housing: "Own" })); render(); toast("Details filled from " + a.id + ". Please check them with the person.", "success"); return; }
   if (act === "discard") { if (confirm("Clear everything entered in this form? Uploaded files are removed too.")) { (V.draft ? V.draft.docs : []).forEach(f => { if (f.path.startsWith(ME.id + "/")) SB.storage.from(BUCKET).remove([f.path]).then(() => {}, () => {}); }); V.draft = null; V.editId = null; V.dup = []; V.flowPrev = null; render(); } return; }
   if (act === "do") return doAction(t.dataset.do);
   if (act === "edit-returned") {
@@ -2272,6 +2276,11 @@ document.addEventListener("click", async e => {
   if (act === "reload-summary") { A.summary = null; render(); return; }
   if (act === "msg-tab") { V.msgTab = t.dataset.tab; render(); return; }
   if (act === "copy") { const a = getApp(id), m = a && (a.messages || [])[+t.dataset.i]; if (!m) return; try { await navigator.clipboard.writeText(m.text); toast("Message copied", "success"); } catch (x) { toast("Copy did not work: select the text and copy it", "error"); } return; }
+  if (act === "msg-all") {   // the same call as one "Mark as sent", once for each message shown
+    const todo = A.apps.filter(a => !a.erased).flatMap(a => (a.messages || []).map((m, i) => ({ a, m, i }))).filter(x => !x.m.sent).slice(0, 200);
+    if (!todo.length || !confirm("Mark all " + todo.length + " messages as sent?\n\nPress OK only if every one of them was really sent.")) return;
+    let n = 0; try { for (const x of todo) { const d = await rpc("assistance_message_sent", { p_id: x.a.id, p_index: x.i }, "Not saved"); applyRow("applications", d.id, d); n++; } } catch (x) { toast(x.message, "error"); }
+    render(); if (n) toast(n + " marked as sent", "success"); return; }
   if (act === "msg-sent") { try { const d = await rpc("assistance_message_sent", { p_id: id, p_index: +t.dataset.i }, "Not saved"); applyRow("applications", d.id, d); render(); toast("Marked as sent", "success"); } catch (x) { toast(x.message, "error"); } return; }
   if (act === "edit-dash") { V.editDash = !V.editDash; render(); return; }
   if (act === "reset-dash") { setDash(null); render(); toast("Dashboard reset", "success"); return; }

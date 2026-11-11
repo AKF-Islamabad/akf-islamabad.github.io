@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Foundation Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-vVW46mnwtiR8k2fD57kkExuXp9rY0svgP2ro4P9KLgw='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-wud1Gp7CNdO7sJQ/NGM6UTIyOWVeLtSekxY/MdZazKE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -1289,6 +1289,7 @@ const ROLES = {
 const NAV = [
   { v: 'dashboard', label: 'Dashboard', icon: 'grid' },
   { v: 'new', label: 'New Receipt', icon: 'plus', perm: 'donation.create', primary: true },
+  { v: 'collect', label: 'Quick Collect (walk-in)', icon: 'zap', perm: 'donation.create' },
   { v: 'donations', label: 'Donations', icon: 'receipt', badge: 'pending' },
   { v: 'goods', label: 'In-kind to receive', icon: 'box', badge: 'goods', perm: 'inkind.verify' },
   { v: 'donors', label: 'Donors', icon: 'users' },
@@ -1512,7 +1513,7 @@ const ERP_PERMS = {
   'corrections.request': [['corrections', 'add']], 'corrections.approve': [['corrections', 'approve']], 'settings': [['settings', 'edit']]
 };
 /* the view → the tab ticked on the main page (views not listed are never shown in ERP mode) */
-const ERP_VIEW_TAB = { dashboard: 'dashboard', new: 'new', donations: 'donations', donors: 'donors', pledges: 'pledges', team: 'team', import: 'import',
+const ERP_VIEW_TAB = { dashboard: 'dashboard', new: 'new', collect: 'new', donations: 'donations', donors: 'donors', pledges: 'pledges', team: 'team', import: 'import',
   corrections: 'corrections', messages: 'messages', reports: 'reports', verify: 'verify', signatories: 'signatories', audit: 'audit' };
 /* no settings page inside the portal: everything is set on the main page (Settings → Donor Management, Super Admin) */
 
@@ -1607,7 +1608,7 @@ function newStore(orgName) {
   return {
     v: 1, createdAt: new Date().toISOString(),
     org: Object.assign({ name: orgName || 'Alkhidmat Foundation Islamabad', footer: 'JazakAllah Khair for your generous contribution. Zakat funds are kept in a restricted account and spent only on eligible beneficiaries.' }, RECEIPT_DEFAULTS),
-    settings: { idleMin: 10, autoShare: true, autoDownload: true, autoServer: false, serverUrl: '', reminderDays: 3, templates: Object.assign({}, DEFAULT_TEMPLATES) },
+    settings: { idleMin: 30, autoShare: true, autoDownload: true, autoServer: false, serverUrl: '', reminderDays: 3, templates: Object.assign({}, DEFAULT_TEMPLATES) },
     pledges: [], messages: [], signatories: [], signatures: {}, corrections: [], stock: [],
     seq: { donor: 0, donation: 0 },
     receiptKey: b64(rand(32)),
@@ -1615,7 +1616,8 @@ function newStore(orgName) {
   };
 }
 function migrate(st) {
-  st.settings = Object.assign({ idleMin: 10, autoShare: true, autoDownload: true, autoServer: false, serverUrl: '', reminderDays: 3 }, st.settings || {});
+  st.settings = Object.assign({ idleMin: 30, autoShare: true, autoDownload: true, autoServer: false, serverUrl: '', reminderDays: 3 }, st.settings || {});
+  if (!st.settings.idle30) { st.settings.idleMin = Math.max(st.settings.idleMin || 0, 30); st.settings.idle30 = true; }   // one time: the idle sign-out moves from 10 to 30 minutes (asked 2026-11-11)
   st.settings.templates = Object.assign({}, DEFAULT_TEMPLATES, st.settings.templates || {});
   if (st.settings.templates.ack === ACK_V7) st.settings.templates.ack = DEFAULT_TEMPLATES.ack;
   ['pledges', 'messages', 'signatories', 'corrections', 'stock'].forEach(k => { if (!Array.isArray(st[k])) st[k] = []; });
@@ -2053,7 +2055,7 @@ function startTicker() {
   clearInterval(tick); lastActivity = Date.now();
   tick = setInterval(() => {
     if (!ME) return;
-    const idleMs = (S.settings.idleMin || 10) * 60000;
+    const idleMs = (S.settings.idleMin || 30) * 60000;
     const left = Math.max(0, idleMs - (Date.now() - lastActivity));
     const s = Math.ceil(left / 1000);
     $('#session-left').textContent = `${Math.floor(s / 60)}:${pad(s % 60, 2)}`;
@@ -2108,7 +2110,7 @@ function enterApp() {
   go(v && allowed(v) ? v : 'dashboard', true);
 }
 const roleViews = () => (ME && ROLES[ME.role] && ROLES[ME.role].views) || null;
-const viewOK = v => v === 'account' || (ERP ? !!ERP_VIEW_TAB[v] && (ME && ME.isSuper || gridHas(ERP_VIEW_TAB[v])) : (!roleViews() || roleViews().includes(v)));
+const viewOK = v => v === 'account' || (ERP ? !!ERP_VIEW_TAB[v] && (ME && ME.isSuper || gridHas(ERP_VIEW_TAB[v])) : (!roleViews() || roleViews().includes(v === 'collect' ? 'new' : v)));   // Quick Collect follows the New Receipt access
 const allowed = v => viewOK(v) && (v === 'account' || NAV.some(n => n.v === v && (!n.perm || can(n.perm))));
 const EMBEDDED = (() => { try { return window.parent !== window; } catch { return true; } })();
 /* Full address of this page with a new #hash. Inside the combined portal this page is about:srcdoc,
@@ -4665,7 +4667,7 @@ async function goLive() {
     else { const tmp = genPassword(12); u.cred = await wrapDEK(DEK, tmp); u.mustChange = true; issued.push([u, tmp]); }
     delete u.testLogin; u.pwChangedAt = Date.now();
   }
-  saveUsers(); meta.set({}); S.settings.testMode = false; S.settings.idleMin = Math.min(S.settings.idleMin || 10, 15);
+  saveUsers(); meta.set({}); S.settings.testMode = false; S.settings.idleMin = Math.min(S.settings.idleMin || 30, 30);
   await audit('GO_LIVE', ME.email, `Testing mode switched off; ${issued.length} one-time password(s) issued`); await persist();
   buildChrome(); render();
   openModal({ title: 'Portal is live', size: 'sm', body: `<div class="alert alert-success">${ic('check')}<span>Passwords are now required. Give each person their one-time password in person or by phone. It is shown <b>only once</b>.</span></div>
