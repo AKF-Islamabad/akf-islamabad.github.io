@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-xpwivdlVHMpXpN6LmIR8WEKFwbQjqHm2lSMg7Vhhhlg='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-XALWuBfUF7DqejiPGV2rcNqutEFpSyEN/JUpwTay2R4='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -4395,7 +4395,7 @@ function Pick({value,options,onChange,disabled,labels,style,placeholder}){
   const show=other||custom;
   return html`<div class="pick" style=${style||""}><select class="select" disabled=${disabled} value=${show?"__other":value} onChange=${e=>{ if(e.target.value==="__other"){ setOther(true); onChange(""); } else { setOther(false); onChange(e.target.value); } }}>${opts.map(o=>html`<option value=${o}>${labels&&labels[o]?labels[o]:o}</option>`)}<option value="__other">Other…</option></select>${show&&html`<input class="input" placeholder=${placeholder||"Please specify…"} value=${custom?value:""} disabled=${disabled} onInput=${e=>onChange(e.target.value)}/>`}</div>`;
 }
-const Field = ({label,children}) => html`<label class="field"><span>${label}</span>${children}</label>`;
+const Field = ({label,req,children}) => html`<label class="field"><span>${label}${req&&html`<b style="color:#DC2626" title="Must be filled"> *</b>`}</span>${children}</label>`;
 const Empty = ({title,children}) => html`<div class="empty"><b>${title}</b>${children}</div>`;
 const Kpi = ({label,value,sub,tone="",onClick}) => html`<button class=${"card kpi tone-"+tone} onClick=${onClick} disabled=${!onClick}><span class="lbl">${label}</span><span class="val num">${value}</span>${sub&&html`<span class="sub">${sub}</span>`}</button>`;
 
@@ -5486,15 +5486,15 @@ function NewRequest({type,user,state,A,onDone}){
   useEffect(()=>{ if(SB_MODE) DB.numbers().then(()=>setF(x=>({...x}))); },[]);   // the number shown and used is fresh when the form opens
   const nextId=type==="procurement"?nextNumber(state,`AKF-MR-${YEAR}-`):nextNumber(state,`AKF-SR-${YEAR}-`);
   const chain=matrixChain(type).slice(1).map(s=>s.who+stepAmt(s)).filter((w,i,a)=>a.indexOf(w)===i).join(" → ");
-  return html`<${Card} title=${type==="procurement"?"Purchase request":"Store request"} desc=${(type==="procurement"?"For items not in store. ":"For items already in store. ")+"Approval chain: "+chain+". No step can be skipped."} right=${html`<${Tag} tone="info"><span class="id">${nextId}</span></${Tag}>`}>
+  return html`<${Card} title=${type==="procurement"?"Purchase request":"Store request"} desc=${(type==="procurement"?"For items not in store. ":"For items already in store. ")+"Approval path: "+chain+". No step can be skipped."} right=${html`<${Tag} tone="info"><span class="id">${nextId}</span></${Tag}>`}>
     <div class="stack">
-      <div class="grid2"><${Field} label="Department"><${Pick} value=${f.dept} options=${DEPTS} onChange=${v=>set("dept",v)} disabled=${user.role==="hod"}/><//>
+      <div class="grid2"><${Field} req label="Department"><${Pick} value=${f.dept} options=${DEPTS} onChange=${v=>set("dept",v)} disabled=${user.role==="hod"}/><//>
         <${Field} label="Urgency"><select class="select" value=${f.urgency} onChange=${e=>set("urgency",e.target.value)}><option>Normal</option><option>Emergency</option></select><//>
-        <${Field} label="Donor"><${Pick} value=${f.donor} options=${DONORS} onChange=${v=>set("donor",v)}/><//>
+        <${Field} req label="Donor"><${Pick} value=${f.donor} options=${DONORS} onChange=${v=>set("donor",v)}/><//>
         <${Field} label="Project code (the budget line this is paid from)"><input class="input" list=${"pc-"+type} placeholder="Pick from the list or type" value=${f.projectCode} onInput=${e=>set("projectCode",e.target.value)}/><datalist id=${"pc-"+type}>${state.budgets.map(b=>html`<option value=${b.code}>${b.dept} · ${b.donor}</option>`)}</datalist><//></div>
-      <${Field} label="Purpose (required for donor audit)"><textarea class="textarea" placeholder="What is needed, for whom, and why…" value=${f.purpose} onInput=${e=>set("purpose",e.target.value)}/><//>
+      <${Field} req label="Purpose (needed for donor audit)"><textarea class="textarea" placeholder="What is needed, for whom, and why…" value=${f.purpose} onInput=${e=>set("purpose",e.target.value)}/><//>
       <${ItemsEditor} items=${f.items} onChange=${v=>set("items",v)} stock=${state.stock.filter(s=>s.qty>0)} storeMode=${type==="store"}/>
-      <div class="row wrap"><span class="sm muted grow">${valid?"Ready to submit. You'll be able to track every step.":"Add a purpose (8+ characters) and at least one item."}${dirty?" Your half-filled form is kept on this computer until you submit or clear it.":""}</span>${dirty&&html`<button class="btn btn-ghost" onClick=${()=>setF(blank)}>Clear form</button>`}<button class="btn btn-primary" disabled=${!valid} onClick=${()=>{ const id=A.submitRequest(type,f); setF(blank); onDone(id); }}><${Icon} name="send"/>Send for approval</button></div>
+      <div class="row wrap"><span class="sm muted grow">${valid?"Ready to send. You can track every step.":"Please fill: Purpose (8+ characters) and at least one item."}${dirty?" Your half-filled form is kept on this computer until you submit or clear it.":""}</span>${dirty&&html`<button class="btn btn-ghost" onClick=${()=>setF(blank)}>Clear form</button>`}<button class="btn btn-primary" disabled=${!valid} onClick=${()=>{ const id=A.submitRequest(type,f); setF(blank); onDone(id); }}><${Icon} name="send"/>Send for approval</button></div>
     </div><//>`;
 }
 
@@ -7990,7 +7990,7 @@ function TSettings({state,user,A}){
         ${stages.map(s=>html`<div class="tk-lrow"><input type="color" class="tk-color" value=${s.color} disabled=${!can} onChange=${e=>saveS(stages.map(x=>x.id===s.id?{...x,color:e.target.value}:x))} aria-label="Colour"/><span class="g"><input class="tk-inl" value=${s.name} disabled=${!can} onBlur=${e=>{ const v=e.target.value.trim(); if(v&&v!==s.name) saveS(stages.map(x=>x.id===s.id?{...x,name:v}:x)); }} aria-label="Stage name"/><small>Stage ${s.id}${s.id==="04"?" · approval needed from HOD / RM":s.id==="05"?" · only HOD / RM can approve":s.id==="06"||s.id==="07"?" · closing rule applies":""}</small></span><span class="xs faint">${count("stage",s.id)} tasks</span></div>`)}<//>
       <${Card} title="Rules"><div class="notice notice-info"><${Icon} name="shield"/><span><b>Closing rule.</b> Nobody can close a task assigned to themselves. The person who assigned it, the department HOD or the Regional Manager closes it, and HOD / RM give a quality rating from 1 to 5. Self-assigned tasks need HOD or RM sign-off. Tasks with unfinished dependencies can't be closed. Only the department HOD or the Regional Manager can approve.</span></div>
         <div class="xs faint" style="margin-top:10px">Roles in Tasks: Super Admin and Regional Manager act as <b>RM</b>; Head of Department as <b>HOD</b>; Manager Admin & HR as <b>Manager Admin</b> (the Super Admin can set <b>HR Manager</b> or any other task role per person under Users); President is view-only; General Secretary views and comments; everyone else is <b>Staff</b>. Only RM, HOD, Manager Admin and HR assign tasks to other people. The Super Admin can tick <b>Manage all tasks</b> for anyone to give them RM rights here.</div>
-        <div class="notice notice-info" style="margin-top:10px"><${Icon} name="flag"/><span><b>Events.</b> RM, Manager Admin and HR see every event and can assign event tasks to anyone in any department; a HOD creates events and assigns within their own department for events they organise. Approval chain: ${evSteps().map(s=>s.who).join(" → ")}.</span></div><//>
+        <div class="notice notice-info" style="margin-top:10px"><${Icon} name="flag"/><span><b>Events.</b> RM, Manager Admin and HR see every event and can assign event tasks to anyone in any department; a HOD creates events and assigns within their own department for events they organise. Approval path: ${evSteps().map(s=>s.who).join(" → ")}.</span></div><//>
     </div></div>`;
 }
 
@@ -8028,13 +8028,13 @@ function EngageModal({state,user,A,onClose,onSent}){
   const [form,setForm]=useState({employeeId:"",purpose:"",from:"",to:""});
   const people=tEngPeople(state,user), emp=tUser(state,form.employeeId);
   const send=()=>{ const e=A.engCreate(form); if(e) onSent(e); };
-  return html`<${Modal} title="New engagement request" sub=${`From ${tDept(tUDept(user)).name} · path: you → HOD of the person's department → Regional Manager`} onClose=${onClose}>
+  return html`<${Modal} title="New engagement request" sub=${`From ${tDept(tUDept(user)).name} · Approval path: you → HOD of the person's department → Regional Manager`} onClose=${onClose}>
     <div class="stack">
-      <div class="grid2"><${Field} label="Employee needed"><select class="select" value=${form.employeeId} onChange=${ev=>setForm(x=>({...x,employeeId:ev.target.value}))}><option value="">Choose…</option>${people.map(p=>html`<option value=${p.id}>${p.name} · ${tDept(tUDept(p)).name}${p.designation?" · "+p.designation:""}</option>`)}</select><//>
+      <div class="grid2"><${Field} req label="Employee needed"><select class="select" value=${form.employeeId} onChange=${ev=>setForm(x=>({...x,employeeId:ev.target.value}))}><option value="">Choose…</option>${people.map(p=>html`<option value=${p.id}>${p.name} · ${tDept(tUDept(p)).name}${p.designation?" · "+p.designation:""}</option>`)}</select><//>
         <${Field} label="Their department"><input class="input" disabled value=${emp?tDept(tUDept(emp)).name+(tHodOf(state,tUDept(emp))?" · HOD "+tHodOf(state,tUDept(emp)).name:" · no HOD set"):""}/><//>
-        <${Field} label="Available from"><input class="input" type="datetime-local" value=${form.from} onInput=${ev=>setForm(x=>({...x,from:ev.target.value}))}/><//>
-        <${Field} label="Available until"><input class="input" type="datetime-local" value=${form.to} min=${form.from} onInput=${ev=>setForm(x=>({...x,to:ev.target.value}))}/><//></div>
-      <${Field} label="Purpose"><textarea class="textarea" placeholder="What they will do, where and why…" value=${form.purpose} onInput=${ev=>setForm(x=>({...x,purpose:ev.target.value}))}/><//>
+        <${Field} req label="Available from"><input class="input" type="datetime-local" value=${form.from} onInput=${ev=>setForm(x=>({...x,from:ev.target.value}))}/><//>
+        <${Field} req label="Available until"><input class="input" type="datetime-local" value=${form.to} min=${form.from} onInput=${ev=>setForm(x=>({...x,to:ev.target.value}))}/><//></div>
+      <${Field} req label="Purpose"><textarea class="textarea" placeholder="What they will do, where and why…" value=${form.purpose} onInput=${ev=>setForm(x=>({...x,purpose:ev.target.value}))}/><//>
       <div class="row" style="gap:8px"><button class="btn btn-primary" onClick=${send}><${Icon} name="send"/>Send for approval</button><button class="btn btn-ghost" onClick=${onClose}>Close</button></div>
     </div>  <//>`;
 }

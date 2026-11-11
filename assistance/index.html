@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-assistance.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-k/sE7p2YyOtK1Gpy5it/g53qYZ15GtGNtejzMCAtQII='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-HZEWBQvd1GfndtgW5+pk7ZrQaOqqItuhn4u7PPGVODc='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1748,7 +1748,7 @@ function viewNew() {
 const dupHtml = () => V.dup.length ? `<div class="as-note n-warn" style="margin-top:16px">${ic("alert")}<span><b>This CNIC already has ${plural(V.dup.length, "application")}:</b> ${V.dup.map(x => `${esc(x.id)} (${esc(x.stage)}, ${esc(x.category)})`).join(", ")}. Check before registering again.${lastCase() ? ` <button type="button" class="btn btn-outline btn-sm" data-act="fill-last" style="margin-left:6px">Fill this person's details from ${esc(lastCase().id)}</button>` : ""}</span></div>` : "";
 /* a returning person: their newest earlier case that this user can already open (nothing new is read from the database) */
 const lastCase = () => V.dup.map(x => getApp(x.id)).filter(a => a && piiOf(a)).sort((a, b) => a.id < b.id ? 1 : -1)[0];
-const flowPrevHtml = () => V.flowPrev && V.flowPrev.length ? `<div class="as-note n-info">${ic("shield")}<span><b>This case will go through:</b> ${V.flowPrev.filter(s => s.key !== "submitted").map(s => esc(s.who)).join(" → ")}</span></div>` : "";
+const flowPrevHtml = () => V.flowPrev && V.flowPrev.length ? `<div class="as-note n-info">${ic("shield")}<span><b>Approval path:</b> ${V.flowPrev.filter(s => s.key !== "submitted").map(s => esc(s.who)).join(" → ")}</span></div>` : "";
 function collectForm() {
   const f = $("wizForm"); if (!f || !V.draft) return;
   f.querySelectorAll("input,select,textarea").forEach(el => {
@@ -1765,7 +1765,7 @@ function validateForm() {
   const ph = f.querySelector("[name='applicant.phone']"); if (ph && ph.value && !/^03\d{2}-\d{7}$/.test(ph.value)) bad(ph, true);
   (SET.docSlots || []).filter(s => s.req).forEach(s => { const miss = !V.draft.docs.some(x => x.slot === s.k), box = f.querySelector(`[data-slot="${s.k}"]`); if (box) box.classList.toggle("bad", miss); if (miss) { ok = false; first = first || box; } });
   if (first) { first.scrollIntoView({ block: "center", behavior: "smooth" }); if (first.focus) first.focus({ preventScroll: true }); }
-  if (!ok) toast("Please complete the highlighted fields", "error");
+  if (!ok) toast("Please fill the highlighted fields", "error");
   return ok;
 }
 const num = v => v === "" || v == null ? null : Number(v);

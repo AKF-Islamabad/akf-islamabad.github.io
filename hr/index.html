@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-6jhs73GvaZjz/+7GwXMoJqLL8Kq8L8rfXRBQz6oUAdI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-ryqdXFQMd8PKRSqSUhZl+QRAp8v3JYsG6cyuD8eoMPc='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1287,7 +1287,7 @@ const VIEWS = {
       const draw = () => { const d = docs.find(x => x.name === f.docName.value) || { fields: [] }; extra.replaceChildren(); f._fields = {};
         d.fields.forEach(x => { const n = x.type === "select" ? el("select", { class: "select" }, (x.options || []).map(o => el("option", { value: o, text: o }))) : x.type === "textarea" ? el("textarea", { class: "textarea", rows: 3 }) : el("input", { class: "input" });
           f._fields[x.label] = n; extra.append(el("label", { class: x.type === "textarea" ? "full" : null }, x.label, n)); });
-        extra.append(el("div", { class: "small muted full", text: "Approved by: " + (d.steps || []).join(" → ") })); };
+        extra.append(el("div", { class: "small muted full", text: "Approval path: " + (d.steps || []).join(" → ") })); };
       f.docName.addEventListener("change", draw); draw();
     } else if (V.kind === "Exit") {
       form.append(field("Kind", select("exitKind", ["Resignation"])), field("Last working day", input("lastDay", "date")), field("Reason", area("reason"), true),
@@ -1370,7 +1370,7 @@ const VIEWS = {
         const id = await rpc("hr_submit", { p_kind: V.kind, p_data: d }, "The request was not saved"); toast("Request " + id + " sent for approval"); await reload(); go("mine"); }
       catch (e) { toast(e.shown ? e.message : errText(e, "The request was not saved"), true); btn.disabled = false; }
     });
-    box.append(card(KIND[V.kind], form, route ? el("p", { class: "small muted", text: "Approved by: " + route.join(" → ") + " (a step is skipped when nobody holds it or it is you; at least 2 different people approve)." }) : null, el("div", { class: "hr-actions" }, btn)));
+    box.append(card(KIND[V.kind], form, route ? el("p", { class: "small muted", text: "Approval path: " + route.join(" → ") + " (a step is skipped when nobody holds it or it is you; at least 2 different people approve)." }) : null, el("div", { class: "hr-actions" }, btn)));
   },
   mine(box) { const mine = REQ.filter(r => r.mine); box.append(card("My requests", ...(mine.length ? mine.map(reqRow) : [empty("No requests yet.")]))); },
   approvals(box) {
