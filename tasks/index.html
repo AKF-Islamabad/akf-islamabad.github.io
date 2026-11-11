@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-TTsaSARR+sk5ObFIdMtf2D599jSi+qZpmJmP3WEwokc='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-PN1Eazk9vBZmhgKx8u0tEq46BMn6c3Bx0CZI5VlfpFs='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -4596,6 +4596,9 @@ function Timeline({events}){
   return html`<div class="timeline">${events.map(e=>html`<div class=${"ev "+(/reject|cancel/i.test(e.action)?"bad":/confirm|approved|issued|received/i.test(e.action)?"ok":"")}><time>${fmtDT(e.at)}</time><b>${e.action}</b><div class="who">${e.by} · ${ROLES[e.role]?ROLES[e.role].short:e.role}</div>${e.comment&&html`<div class="cm">${e.comment}</div>`}</div>`)}</div>`;
 }
 
+/* a file over the limit: photos are made smaller automatically (AKF_shrinkImage in akf-desk.js); PDF and Word come back unchanged */
+const fitFile=async(f,lim)=>f&&f.size>lim&&window.AKF_shrinkImage?window.AKF_shrinkImage(f,1600,0.75,lim):f;
+
 /* ---------- Items editor ---------- */
 /* a photo of the item on a purchase requisition: made smaller here (longest side 900 px, JPEG) so the request stays light */
 function itemPhoto(file,done){ if(!file||!String(file.type).startsWith("image/")){ window.__toast&&window.__toast("Choose a photo (JPG, PNG or WebP).","bad"); return; }
@@ -5074,7 +5077,7 @@ function RequestModal({req,state,user,A,onClose,openDoc,readOnly}){
   const can=canAct(user,req);
   const [attLabel,setAttLabel]=useState("Quotation"); const fileRef=useRef();
   const canAttach=!READ_ONLY_ROLES.includes(user.role)&&req.status==="active"&&(user.role!=="hod"||req.dept===user.dept);
-  const onFile=e=>{ const f=e.target.files[0]; if(!f) return; if(f.size>400*1024){ alert("Keep attachments under 400 KB (compress photos or PDFs first)."); e.target.value=""; return; } const rd=new FileReader(); rd.onload=()=>{ A.attach(req.id,{label:attLabel,name:f.name,type:f.type||"application/octet-stream",size:f.size,data:rd.result}); e.target.value=""; }; rd.readAsDataURL(f); };
+  const onFile=async e=>{ const inp=e.target, f=await fitFile(inp.files[0],400*1024); inp.value=""; if(!f) return; if(f.size>400*1024){ alert("This file is still over 400 KB. Photos are made smaller automatically; for a PDF, save it smaller or attach only the needed pages."); return; } const rd=new FileReader(); rd.onload=()=>A.attach(req.id,{label:attLabel,name:f.name,type:f.type||"application/octet-stream",size:f.size,data:rd.result}); rd.readAsDataURL(f); };
   const next=nextStage(req);
   const total=reqTotal(req);
   const rfq=state.rfqs.find(r=>r.id===req.links.rfq);
@@ -8306,8 +8309,9 @@ function TaskModal({isNew,preset,tkey,state,user,A,timer,onClose,open,onCreated,
   };
   const quick=to=>{ if(A.tMove(orig.key,to)) setD(x=>({...x,stage:to})); };
   const MAX=SB_READY?10*1024*1024:400*1024;
-  const onFile=async ev=>{ const files=[...ev.target.files]; ev.target.value=""; for(const fl of files){
-    if(fl.size>MAX){ tToast(`${fl.name}: please keep files under ${SB_READY?"10 MB":"400 KB"}`,"bad"); continue; }
+  const onFile=async ev=>{ const files=[...ev.target.files]; ev.target.value=""; for(let fl of files){
+    fl=await fitFile(fl,MAX);
+    if(fl.size>MAX){ tToast(`${fl.name}: still over ${SB_READY?"10 MB":"400 KB"} (photos are made smaller automatically, other files are not)`,"bad"); continue; }
     setBusy(true);
     try{
       if(SB_READY){ const path=`${orig.key}/${uid()}-${fl.name.replace(/[^\w.\-]+/g,"_").slice(-80)}`; const { error } = await sb.storage.from("task-files").upload(path,fl,{contentType:fl.type||"application/octet-stream",upsert:false}); if(error) throw new Error(/not found|bucket/i.test(error.message)?"File storage is not set up yet — run supabase-tasks.sql once in Supabase.":/mime|type/i.test(error.message)?"This file type is not allowed: use PDF, image, Word, Excel or PowerPoint.":/size|large|exceed/i.test(error.message)?"Files over 10 MB are not allowed: choose a smaller file.":error.message); A.tAddFile(orig.key,{name:fl.name,size:fl.size,type:fl.type,path}); }
@@ -8395,7 +8399,7 @@ function VendorQuote({token}){
   const total=lines.reduce((s,l)=>s+(Number(l.qty)||0)*(Number(l.price)||0),0);
   const v=(data&&data.vendor)||{}; const t=total>0?quoteCalc(total,inclusive,{...v,filer:true}):null;
   const expired=data&&new Date(data.rfq.deadline)<new Date(); const closed=data&&data.rfq.status!=="Open"; const used=data&&["Submitted","Expired"].includes(data.quote.status);
-  const onFile=e=>{ const f=e.target.files[0]; if(!f) return; if(f.size>400*1024){ alert("Please keep the file under 400 KB (compress the PDF or photo)."); e.target.value=""; return; } const rd=new FileReader(); rd.onload=()=>setFile({name:f.name,data:rd.result}); rd.readAsDataURL(f); };
+  const onFile=async e=>{ const inp=e.target, f=await fitFile(inp.files[0],400*1024); if(!f) return; if(f.size>400*1024){ alert("This file is still over 400 KB. Photos are made smaller automatically; please save the PDF smaller."); inp.value=""; return; } const rd=new FileReader(); rd.onload=()=>setFile({name:f.name,data:rd.result}); rd.readAsDataURL(f); };
   const submit=async()=>{ if(!confirm(`Submit your quotation of ${pkr(total)} ${inclusive?"(including all taxes)":"(taxes extra)"}? You cannot change it afterwards.`)) return; setBusy(true);
     const payload={amount:Math.round(total),inclusive,deliveryDays:Number(days)||0,validityDays:Number(valid)||0,note:note.slice(0,500),contact:contact.slice(0,100),lines:lines.map(l=>({item:l.name,qty:Number(l.qty),uom:l.uom,price:Number(l.price)||0})),fileName:file?file.name:"",file:file?file.data:""};
     try{ const r=SB_READY?await DB.vendorSubmit(token,payload):localVendorSubmit(token,payload); if(r==="ok") setDone(true); else setErr(r); }catch(e){ setErr(errRef(e,"The quotation could not be sent")); } setBusy(false); };

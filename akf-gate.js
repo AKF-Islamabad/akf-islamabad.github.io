@@ -46,14 +46,5 @@
     return { sb, profile, role, tabs: tabs || [], portalName: (mod && mod.name) || "", can: (tab, action) => (rights[tab] || []).includes(action || "view") };
   };
 
-  /* Free plan has 1 GB for files: shrink photos before upload (max 1600 px, JPEG). Other files pass through. */
-  window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75) {
-    if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size < 300 * 1024) return file;
-    const img = await createImageBitmap(file);
-    const k = Math.min(1, maxSide / Math.max(img.width, img.height));
-    const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
-    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-    const blob = await new Promise(ok => c.toBlob(ok, "image/jpeg", quality));
-    return blob && blob.size < file.size ? new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" }) : file;
-  };
+  /* AKF_shrinkImage (photos made smaller before upload) lives in akf-desk.js, which every portal loads. */
 })();

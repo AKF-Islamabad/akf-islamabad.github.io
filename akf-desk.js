@@ -9,6 +9,24 @@
         and, when the page is in the background, shows a system notification.
    Loaded after config.js and supabase-js:  <script src="../akf-desk.js"></script>  (main page: src="akf-desk.js")
    Uses the sign-in the page already made; it never changes data. Everything is built with textContent. */
+/* Photos are made smaller before upload, so nobody needs a separate compressor and the 1 GB of file space lasts:
+   longest side 1600 px, JPEG. With `limit` (bytes) it keeps going smaller until the photo fits.
+   Other files (PDF, Word, Excel) pass through unchanged: a browser cannot make those smaller. Never throws. */
+window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, limit = Infinity) {
+  try {
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size < 300 * 1024) return file;
+    const img = await createImageBitmap(file), c = document.createElement("canvas"); let blob;
+    for (let i = 0; i < 8; i++) {
+      const k = Math.min(1, maxSide / Math.max(img.width, img.height));
+      c.width = Math.max(1, Math.round(img.width * k)); c.height = Math.max(1, Math.round(img.height * k));
+      const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);   // white behind see-through PNGs
+      blob = await new Promise(ok => c.toBlob(ok, "image/jpeg", quality));
+      if (!blob || blob.size <= limit) break;
+      maxSide *= 0.8; quality = Math.max(0.4, quality - 0.07);
+    }
+    return blob && blob.size < file.size ? new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" }) : file;
+  } catch (e) { return file; }
+};
 (function () {
   "use strict";
   if (window.AKF_NOTIFY) return;

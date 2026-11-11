@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-WcMJNoLsg3ZDy979y/ewjTlUxb+I6FbIkksGyyeoZ94='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-veelHyclRW3nTcUewS6gLYlKnev94dqWJjBKYofe1DA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1347,7 +1347,8 @@ const VIEWS = {
           const list = Array.from(f._files.files || []);
           if (list.length > 5) throw Object.assign(new Error("At most 5 files"), { shown: true });
           d.files = [];
-          for (const file of list) {
+          for (let file of list) {
+            if (file.size > 5242880) file = await AKF_shrinkImage(file, 1600, 0.75, 5242880);   // big photos are made smaller, not refused
             const ext = (file.name.split(".").pop() || "").toLowerCase().replace("jpeg", "jpg");
             if (!/^(pdf|png|jpg)$/.test(ext) || file.size > 5242880) throw Object.assign(new Error("Bills must be PDF, PNG or JPG under 5 MB"), { shown: true });
             const path = "claims/" + ME.id + "/" + crypto.randomUUID() + "." + ext;
@@ -1465,7 +1466,8 @@ const VIEWS = {
       const f = el("input", { class: "input", type: "file", accept: ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg" }), fol = el("input", { class: "input", maxlength: 60, placeholder: "Folder, e.g. HR Manual, SOPs, Forms" }), ti = el("input", { class: "input", maxlength: 150, placeholder: "Title" });
       const up = el("button", { class: "btn btn-primary", type: "button", text: "Upload" });
       up.addEventListener("click", async () => {
-        const file = f.files && f.files[0]; if (!file) return toast("Choose a file", true);
+        let file = f.files && f.files[0]; if (!file) return toast("Choose a file", true);
+        if (file.size > 10485760) file = await AKF_shrinkImage(file, 1600, 0.75, 10485760);
         const ext = (file.name.split(".").pop() || "").toLowerCase(); if (!/^(pdf|docx?|xlsx?|pptx?|png|jpe?g)$/.test(ext)) return toast("PDF, Word, Excel, PowerPoint or picture files only", true);
         if (file.size > 10485760) return toast("Files must be under 10 MB", true);
         up.disabled = true; const path = "lib/" + crypto.randomUUID() + "." + ext;

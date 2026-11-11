@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by tools/csp-hash.js (inline scripts by hash). Fonts, the background library and images are all served from this site. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-0Q0pNhWfEXrp7zLNMPVLIIg22DQFTVsrToUkHMZYrjA='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-OUJpdoLG/6RGdF9gWdX+lJDjcJHY/XfCte3/7K260QQ='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -3402,7 +3402,7 @@ const Photos = {
   async load(file) {
     if (!file) return;
     if (!/^image\/(jpeg|png|webp|gif|bmp)$/.test(file.type)) return toast('Please choose a JPG, PNG or WebP photo.');
-    if (file.size > 8e6) return toast('That photo is larger than 8 MB. Please choose a smaller one.');
+    if (file.size > 2e7) return toast('That photo is larger than 20 MB. Please choose a smaller one.');   // phone photos pass; it is cut to 192 px below
     try {
       const bmp = await createImageBitmap(file), side = Math.min(bmp.width, bmp.height), c = document.createElement('canvas');
       c.width = c.height = 192; // centre square crop, small enough for browser storage
