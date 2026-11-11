@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-4/s9PoQVyIyEC/dFAH+Q+HuL9waWQI/5CTuEq9ij22c='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-AzUJnCe4QT7C888WJzq2+Ku/EZbCA38rb8lBWn7fTyk='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -4167,7 +4167,13 @@ const NEWEST_FIRST = { ledger:"at", docs:"at", requests:"createdAt", rfqs:"at", 
 function rowKey(col,item){ const k=KEY_FIELD[col]||"id"; if(!item[k]) item[k]=(col==="budgets"&&item.code)?item.code:uid(); return String(item[k]); }
 function emailFor(username){ return username.includes("@")?username:`${username}@${(SB_CONFIG&&SB_CONFIG.emailDomain)||"akf.local"}`; }
 
+/* highest document number used per prefix, from the server (050_number_max.sql): this browser does not hold every record
+   (staff see only their own requests, old finished items stay on the server), so its own count gave out used numbers.
+   shortcut: numbers are read ahead (on opening, every minute, when a form opens), so two people submitting in the same
+   moment can still get the same number (the save is refused, nothing is overwritten); upgrade to numbers issued by the server if that shows up */
+let SRV_MAX={};
 const DB = {
+  async numbers(){ try{ const r=await sb.rpc("portal_number_max"); if(!r.error&&r.data) SRV_MAX=r.data; }catch(e){} },   // a database without 050 yet: as before
   /* read everything and rebuild the in-memory state object */
   /* full=false: only what is in use (open items + the last 90 days, 047_fast_loading.sql); full=true: everything.
      A #track= link (QR code, bell) may point at an old record, so it loads everything. */
@@ -4179,7 +4185,7 @@ const DB = {
     /* Supabase returns at most 1,000 rows per request, so read page by page. A single request silently
        dropped the newest rows (new tasks, requests, stock moves) once the table passed 1,000 rows. */
     let data=[], error=null;
-    const realDepts=authLoaded?loadRealDepts():null;
+    const realDepts=authLoaded?loadRealDepts():null, nums=authLoaded?DB.numbers():null;
     for(let from=0;;from+=1000){
       let res=await page(from);
       if(res.error&&part&&from===0){ part=false; res=await page(0); }   // a database without 047 yet: everything, as before
@@ -4190,7 +4196,7 @@ const DB = {
     /* before sign-in the locked table refuses the public key: show the login screen, not an error */
     if(error && !authLoaded && (error.code==="42501" || /permission denied/i.test(error.message||""))){ data=[]; error=null; }
     if(error) throw error;
-    await realDepts;
+    await realDepts; await nums;
     const seed=seedState();
     const state={ version:3, settings:{...DEFAULT_SETTINGS} };
     COLLECTIONS.forEach(c=>state[c]=[]);
@@ -4658,7 +4664,7 @@ function Modal({title,sub,onClose,children,footer,narrow}){
    commit(fn) clones state, lets fn mutate the draft, then saves. */
 function nextNumber(state, prefix, width=4){
   const re=new RegExp("^"+prefix.replace(/[-]/g,"\\-")+"(\\d+)$");
-  let max=0;
+  let max=Number(SRV_MAX[prefix])||0;
   const scan=id=>{ const m=re.exec(id); if(m) max=Math.max(max,Number(m[1])); };
   state.requests.forEach(r=>scan(r.id)); state.docs.forEach(d=>scan(d.id)); (state.assets||[]).forEach(x=>scan(x.tag)); (state.beneficiaries||[]).forEach(x=>scan(x.id)); (state.invoices||[]).forEach(x=>scan(x.id)); (state.invoices||[]).forEach(i=>scan(i.id)); state.rfqs.forEach(r=>scan(r.id)); state.pos.forEach(p=>scan(p.id)); state.stock.forEach(s=>scan(s.id));
   (state.docs||[]).forEach(d=>{ if(d.gatePass) scan(d.gatePass); });
@@ -5438,6 +5444,7 @@ function NewRequest({type,user,state,A,onDone}){
   const blank={dept:user.dept||DEPTS[0],otherDept:"",donor:DONORS[0],projectCode:"",purpose:"",urgency:"Normal",note:"",items:[{name:"",category:"MED",uom:"Pcs",qty:1,price:0,itemId:""}]};
   const [f,setF]=useState(blank); const set=(k,v)=>setF(x=>({...x,[k]:v}));
   const valid=f.purpose.trim().length>=8&&f.dept&&f.donor&&f.items.some(i=>i.name&&i.qty>0);
+  useEffect(()=>{ if(SB_MODE) DB.numbers().then(()=>setF(x=>({...x}))); },[]);   // the number shown and used is fresh when the form opens
   const nextId=type==="procurement"?nextNumber(state,`AKF-MR-${YEAR}-`):nextNumber(state,`AKF-SR-${YEAR}-`);
   const chain=matrixChain(type).slice(1).map(s=>s.who+stepAmt(s)).filter((w,i,a)=>a.indexOf(w)===i).join(" → ");
   return html`<${Card} title=${type==="procurement"?"Purchase requisition (procurement request)":"Store requisition (store issue request)"} desc=${(type==="procurement"?"For items not in store. ":"For items already in store. ")+"Approval chain: "+chain+". No step can be skipped."} right=${html`<${Tag} tone="info"><span class="id">${nextId}</span></${Tag}>`}>
@@ -6587,7 +6594,9 @@ function App(){
     let t=null, q=[]; off=DB.subscribe(p=>{ q.push(p); clearTimeout(t); t=setTimeout(async()=>{ const batch=q; q=[]; try{ await saving.current;
       const next=DB.patch(stateRef.current,batch); if(next){ setState(next); return; }
       const fresh=await DB.load(!stateRef.current.partial); if(JSON.stringify(fresh)!==JSON.stringify(stateRef.current)) setState(fresh); }catch(e){} },400); });
-    return ()=>{ off(); offAuth(); };
+    const numNow=()=>{ if(!document.hidden&&stateRef.current&&stateRef.current.authLoaded) DB.numbers(); };
+    const numT=setInterval(numNow,60000); document.addEventListener("visibilitychange",numNow);
+    return ()=>{ off(); offAuth(); clearInterval(numT); document.removeEventListener("visibilitychange",numNow); };
   },[]);
   const [tab,setTabRaw]=useState(()=>NEW_HASH==='procurement'||NEW_HASH==='store'?'forms':NEW_HASH?'tasks':null);
   const [modal,setModal]=useState(null); // {kind:'req'|'doc'|'stock', id}

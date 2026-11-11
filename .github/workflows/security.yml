@@ -154,7 +154,10 @@ jobs:
         with:
           target: ${{ env.SITE_URL }}
           rules_file_name: .zap/rules.tsv
-          cmd_options: "-a -j -m 5 -I" # alpha rules, AJAX spider, 5 min spider; FAIL rules fail the job, WARN rules only report
+          # alpha rules, AJAX spider, 5 min spider; FAIL rules fail the job, WARN rules only report.
+          # -P 8090: without it the scanner picks a random port from the range Linux uses for outgoing connections, and now and then
+          # that port is taken a moment later ("Address already in use", the scan never starts and the job fails after 10 minutes).
+          cmd_options: "-a -j -m 5 -I -P 8090"
           allow_issue_writing: false
           fail_action: true
           artifact_name: zap-report
