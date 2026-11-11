@@ -431,7 +431,8 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
     rows.slice(0, 6).forEach((r) => {
       const li = el("li"); const a = el("a"); a.href = BASE + "tasks/#task=" + encodeURIComponent(r.open);
       a.append(el("span", "", r.text));
-      if (r.due) a.append(el("div", "akd-due" + (r.due < today() ? " akd-late" : ""), (r.due < today() ? "Overdue · " : "Due ") + fmt(r.due)));
+      // handed in for review: it waits on the reviewer, so it is not overdue for the person who did it
+      if (r.due) { const late = !r.wait && r.due < today(); a.append(el("div", "akd-due" + (late ? " akd-late" : ""), (r.wait ? "Handed in · due " : late ? "Overdue · " : "Due ") + fmt(r.due))); }
       li.append(a); ul.append(li);
     });
     if (rows.length > 6) { const li = el("li"); const a = el("a", "", `+ ${rows.length - 6} more in Tasks`); a.href = BASE + "tasks/"; li.append(a); ul.append(li); }
@@ -516,7 +517,7 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
     (dn.data || []).forEach((r) => { const c = r.data && new Date(r.data.completedAt); const d = c && days.find((x) => x.t === c.toDateString()); if (d) d.n++; });
     const tasks = (tk.data || []).map((r) => r.data).filter((x) => x && x.v === 2);
     // open: the task itself, or the To-Do & Notes section for a to-do (portal-app reads #task=)
-    const row = (x) => ({ text: (x.id ? x.id + " · " : "") + String(x.title || x.text || "").slice(0, 120), due: x.plannedDate || x.due || "", open: x.title ? String(x.key || "") : "view:myspace" });
+    const row = (x) => ({ text: (x.id ? x.id + " · " : "") + String(x.title || x.text || "").slice(0, 120), due: x.plannedDate || x.due || "", wait: /^0[345]$/.test(x.stage || ""), open: x.title ? String(x.key || "") : "view:myspace" });
     const byDue = (a, b) => (a.due || "9999").localeCompare(b.due || "9999");
     data = {
       pid, week: days,

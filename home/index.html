@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by tools/csp-hash.js (inline scripts by hash). Fonts, the background library and images are all served from this site. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-OUJpdoLG/6RGdF9gWdX+lJDjcJHY/XfCte3/7K260QQ='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-fRScU0P0DZSC9IIkZ/zpCMGiATzTdMAzmsCelEnAHGo='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1969,6 +1969,7 @@ const Live = {
         const T = this.today, C = T.counts || (T.counts = {}), late = h.actions.filter(a => Date.now() - new Date(a.since).getTime() > 2 * 864e5).length;
         T.actions = (T.actions || []).concat(h.actions).sort((a, b) => String(a.since || '').localeCompare(String(b.since || '')));
         C.actions = (C.actions || 0) + h.actions.length; C.late = (C.late || 0) + late; C.my_open_requests = (C.my_open_requests || 0) + (+h.mine_open || 0);
+        if (Array.isArray(h.mine)) T.mine = (T.mine || []).concat(h.mine).sort((a, b) => String(b.since || '').localeCompare(String(a.since || '')));
       }
     } catch (e) { }
     // repaint only when something changed and nobody is working in the lists (keeps focus and scroll)
@@ -2906,6 +2907,11 @@ class HomeView {
       return { sev: late ? 3 : a.kind === 'do' ? 1 : 2, icon: Live.ICON[a.portal] || 'inbox', title: a.title || a.ref,
         meta: [p ? p.name : a.portal, a.sub, late ? `waiting ${plural(Math.max(days(a.since), 2), 'day', 'days')}` : '', a.amount ? 'Rs ' + Number(a.amount).toLocaleString('en-PK') : ''].filter(Boolean).join(' · '),
         actions: url ? [['Open', `href="${esc(url)}"`, 1]] : [] }; });
+    // My requests: everything I raised that is still on its way, with the step it waits at (one list for all portals)
+    const mine = ((T && T.mine) || []).slice(0, 30).map(a => { const p = portalOf(a.portal), url = link(a), d = days(a.since);
+      return { sev: a.back ? 3 : 1, icon: Live.ICON[a.portal] || 'send', title: [ref(a), a.title && a.title !== a.ref ? a.title : ''].filter(Boolean).join(' · ') || a.ref,
+        meta: [p ? p.name : a.portal, a.sub, d > 0 ? `for ${plural(d, 'day', 'days')}` : 'today'].filter(Boolean).join(' · '),
+        actions: url ? [[a.back ? 'Correct it' : 'Track', `href="${esc(url)}"`, a.back ? 1 : 0]] : [] }; });
     const rest = {}; show.slice(20).forEach(a => { const n = portalOf(a.portal)?.name || a.portal; rest[n] = (rest[n] || 0) + 1; });
     const restN = Math.max(0, (tab === 'all' ? (C.actions || 0) : show.length) - Math.min(show.length, 20)) - Object.values(rest).reduce((x, y) => x + y, 0);   // beyond the 50 per portal the list carries
     if (restN > 0) rest['your portals'] = restN;
@@ -2945,7 +2951,7 @@ class HomeView {
       <section class="status-row" aria-label="Your day">
         ${card('accent', 'inbox', C.actions, 'Waiting on you', C.late ? `<span class="pulse"></span>${C.late} waiting more than 2 days` : C.actions ? '<span class="pulse"></span>Approve, check or sign' : 'All clear', 'brief-h')}
         ${card('secondary', 'tasks', C.tasks_week, 'My tasks this week', 'Due in the next 7 days', 'tasks-h')}
-        ${card('neutral', 'send', C.my_open_requests, 'Requests I started', 'Still in approval · news comes in the bell', 'bell')}
+        ${card('neutral', 'send', Math.max(C.my_open_requests || 0, mine.length), 'Requests I started', 'See where each one is', 'mine-h')}
       </section>
       <p class="live-help">${icon('bell')}<span><b>Waiting on you</b> = steps only you can take (approve, check, sign or receive). <b>The bell</b> = news, such as your request moving forward, sent back or approved. <b>+ New request</b> = start any form you are allowed to send.</span></p>
 
@@ -2963,10 +2969,15 @@ class HomeView {
           <div class="brief-head"><div><h2 id="tasks-h">${icon('tasks')}My tasks</h2><p>Due this week</p></div>${tasksP ? `<a class="btn btn-xs btn-secondary" href="${esc(tasksP.href)}">Tasks &amp; Events</a>` : ''}</div>
           ${(T.tasks || []).length ? `<ol class="brief-list">${T.tasks.slice(0, 8).map(t => `<li class="brief-item sev-${t.late ? 3 : 1}${tasksP && t.kind === 'task' && /^[\w.-]+$/.test(t.id || '') ? '" data-action="open-href" data-href="' + esc(tasksP.href.split('#')[0] + '#task=' + t.id) : ''}">
               <span class="bi-ic">${icon('tasks')}</span>
-              <div class="bi-body"><div class="bi-title">${esc(t.title || t.id)}</div><div class="bi-meta">${t.late ? '<span class="sev-tag">Late</span>' : ''}<span>${t.kind === 'todo' ? 'To-do' : 'Task'} · due ${esc(day(t.due))}</span></div></div></li>`).join('')}</ol>`
+              <div class="bi-body"><div class="bi-title">${esc(t.title || t.id)}</div><div class="bi-meta">${t.late ? '<span class="sev-tag">Late</span>' : t.wait ? '<span class="sev-tag">Handed in</span>' : ''}<span>${t.kind === 'todo' ? 'To-do' : 'Task'} · due ${esc(day(t.due))}</span></div></div></li>`).join('')}</ol>`
             : `<div class="brief-empty">${icon('checkCircle')}Nothing due this week. ${tasksP ? 'Enjoy the calm.' : 'No tasks in Tasks &amp; Events.'}</div>`}
         </section>
-      </div>`}
+      </div>
+      <section class="brief" aria-labelledby="mine-h">
+        <div class="brief-head"><div><h2 id="mine-h">${icon('send')}My requests</h2>
+          <p>${mine.length ? 'Everything you sent that is still on its way, and who it is waiting for.' : 'You have no request on its way right now.'}</p></div></div>
+        ${mine.length ? Smart.list(mine) : `<div class="brief-empty">${icon('checkCircle')}Nothing is waiting. A new request will show here as soon as you send it.</div>`}
+      </section>`}
 
       <div class="section-head"><h2>Programmes</h2><span>Alkhidmat Islamabad service areas</span></div>
       <section class="prog-grid">
