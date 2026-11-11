@@ -109,8 +109,8 @@
     unlock();
     if (Notification.permission === "denied") { allowHelp(); return; }   // the browser no longer asks: only the person can allow it again
     const p = await Notification.requestPermission();
-    if (p !== "granted") { if (p === "denied" && !gate) allowHelp(); paint(); enforce(); return; }   // "default" = the question was closed: ask again next time
-    enforce();   // the compulsory notice closes as soon as they are on
+    if (p !== "granted") { if (p === "denied") allowHelp(); paint(); enforce(true); return; }   // "default" = the question was closed: ask again next time
+    enforce();   // the reminder bar goes away as soon as they are on
     try { await subscribe(); await sb.functions.invoke("push", { body: { action: "test" } }); ding(); }
     catch (e) { alert("Notifications could not be switched on: " + e.message); }
     paint();
@@ -118,56 +118,52 @@
   // a site can't undo a "Block" in the browser, so show the person how to allow it, step by step
   let cssIn = false;
   function addCss() { if (cssIn) return; cssIn = true; const st = el("style"); st.textContent = CSS; document.head.appendChild(st); }
+  // where to allow notifications again, for the device in hand (a site cannot undo a "Block" itself)
+  function deviceSteps() {
+    const ua = navigator.userAgent, host = location.host;
+    if (isIOS) return ["Tap the Share button (square with an arrow) at the bottom of Safari.", "Choose \"Add to Home Screen\", then Add.", "Open the portals from that new icon and tap \"Turn on\" there."];
+    if (/Android/i.test(ua) && /SamsungBrowser/i.test(ua)) return ["Tap the menu (three lines) at the bottom right → Settings.", "Sites and downloads → Notifications.", "Find " + host + " and switch it on, then come back and tap \"Check again\"."];
+    if (/Android/i.test(ua)) return ["Tap the three dots ⋮ at the top right of Chrome → Settings.", "Site settings → Notifications.", "Find " + host + " under \"Blocked\" and set it to Allow, then come back and tap \"Check again\"."];
+    return ["Click the icon just left of the web address (a lock or two small sliders).", "Set \"Notifications\" to \"Allow\".", "Click \"Check again\"."];
+  }
   function allowHelp() {
     addCss();   // also on pages that hide the note (data-desk="off")
     const d = el("dialog", "akd-help"); d.setAttribute("aria-labelledby", "akd-help-t");
-    const t = el("h2", "", "Notifications are blocked in this browser"); t.id = "akd-help-t";
-    const steps = el("ol"); [
-      "Click the icon just left of the web address (a lock or two small sliders).",
-      "Find \"Notifications\" (or open \"Site settings\") and set it to \"Allow\".",
-      "Reload this page, then click \"Turn on\" again."].forEach((x) => steps.append(el("li", "", x)));
-    const ok = el("button", "", "OK"); ok.type = "button"; ok.onclick = () => d.close();
+    const t = el("h2", "", isIOS && !standalone ? "Notifications on iPhone and iPad" : "How to allow notifications"); t.id = "akd-help-t";
+    const steps = el("ol"); deviceSteps().forEach((x) => steps.append(el("li", "", x)));
+    const again = el("button", "", "Check again"); again.type = "button"; again.onclick = () => { d.close(); enforce(true); if ("Notification" in window && Notification.permission === "default") turnOn(); };
+    const ok = el("button", "akd-help-2", "Close"); ok.type = "button"; ok.onclick = () => d.close();
     d.addEventListener("close", () => d.remove());
-    d.append(t, el("p", "", "This was chosen in the browser earlier, so the portal can't change it. It takes three clicks:"), steps, el("p", "akd-help-n", "On a phone: open the browser menu → Settings → Site settings → Notifications."), ok);
-    document.body.appendChild(d); d.showModal(); ok.focus();
+    d.append(t, el("p", "", "It takes a few taps. Until then you still see new items in the bell and on this page."), steps, el("div", "akd-help-row"));
+    d.lastChild.append(ok, again);
+    document.body.appendChild(d); d.showModal(); again.focus();
   }
-  /* RULE (every page, every person): notifications with sound are compulsory, so no task, approval or message is ever
-     missed. While they are off, this notice covers the page and cannot be closed; it goes away by itself once they are
-     on. A browser that cannot show notifications at all gets a warning bar instead (the person could never comply). */
+  /* RULE (every page, every person): notifications with sound stay ON, so no task, approval or message is missed.
+     While they are off, a slim bar at the top says so, with "Turn on", "How?" (steps for this device) and "Later" (8 hours).
+     It never blocks the page: the bell and the on-page alerts keep working meanwhile. It goes away by itself once they are on. */
   let gate = null, bar = null;
-  function enforce() {
+  function enforce(force) {
     addCss();
     const off = (x) => { if (x) x.remove(); return null; };
     if (!me) { gate = off(gate); bar = off(bar); return; }
-    if (!canPush && (!isIOS || standalone)) {
-      gate = off(gate);
-      if (!bar) { bar = el("div", "akd-bar", "This browser cannot show notifications, so you may miss tasks. Please use Chrome, Edge or Firefox."); bar.setAttribute("role", "alert"); document.body.prepend(bar); }
-      return;
-    }
-    bar = off(bar);
     const iosTab = isIOS && !standalone, st = "Notification" in window ? Notification.permission : "default";
-    if (!iosTab && st === "granted") { gate = off(gate); return; }
-    const want = iosTab ? "ios" : st;
+    if (!iosTab && canPush && st === "granted") { gate = off(gate); bar = off(bar); return; }
+    const k = "akf-notif-later-" + me.id;
+    if (!force && Date.now() < +store.get(k, 0)) { gate = off(gate); return; }   // "Later" was tapped
+    const want = !canPush && !iosTab ? "none" : iosTab ? "ios" : st;
     if (gate && gate.dataset.want === want) return;
     gate = off(gate);
-    const d = el("dialog", "akd-help akd-gate"); d.dataset.want = want; d.setAttribute("aria-labelledby", "akd-gate-t");
-    d.addEventListener("cancel", (e) => e.preventDefault());   // Esc does not close it: notifications are compulsory
-    const t = el("h2", "", "Turn on notifications to continue"); t.id = "akd-gate-t";
-    const why = el("p", "", "Alkhidmat portals rule: every staff member keeps notifications with sound ON, so no task, approval or message is ever missed.");
-    const btn = el("button", "", ""); btn.type = "button";
-    if (want === "ios") {
-      const s = el("ol"); ["Tap the Share button (the square with an arrow) at the bottom.", "Choose \"Add to Home Screen\", then Add.", "Open the portals from the new icon and turn notifications on there."].forEach((x) => s.append(el("li", "", x)));
-      btn.textContent = "Check again"; btn.onclick = () => location.reload();
-      d.append(t, why, el("p", "", "On iPhone and iPad, notifications work only from the Home Screen icon:"), s, btn);
-    } else if (want === "denied") {
-      const s = el("ol"); ["Click the icon just left of the web address (a lock or two small sliders).", "Set \"Notifications\" to \"Allow\".", "Click \"Check again\" below."].forEach((x) => s.append(el("li", "", x)));
-      btn.textContent = "Check again"; btn.onclick = () => location.reload();
-      d.append(t, why, el("p", "", "Notifications are blocked for this site in your browser. Only you can allow them:"), s, el("p", "akd-help-n", "On a phone: browser menu → Settings → Site settings → Notifications → Allow."), btn);
-    } else {
-      btn.textContent = "Turn on notifications"; btn.onclick = () => turnOn();
-      d.append(t, why, el("p", "", "Click the button, then choose \"Allow\" when the browser asks."), btn);
-    }
-    document.body.appendChild(d); d.showModal(); btn.focus(); gate = d;
+    const b = el("div", "akd-nb"); b.dataset.want = want; b.setAttribute("role", "status");
+    const msg = want === "none" ? "This browser cannot show notifications. Open the portals in Chrome, Edge or Firefox so you never miss an approval."
+      : want === "ios" ? "To get notifications on iPhone, add the portals to your Home Screen."
+      : want === "denied" ? "Notifications are blocked on this device, so you may miss approvals and tasks."
+      : "Turn on notifications so you never miss an approval, task or message.";
+    b.append(el("span", "akd-nb-t", "🔔 " + msg));
+    const btn = (txt, cls, fn) => { const x = el("button", cls, txt); x.type = "button"; x.onclick = fn; b.append(x); return x; };
+    if (want === "default") btn("Turn on", "akd-nb-on", () => turnOn());
+    if (want === "denied" || want === "ios") btn("How?", "akd-nb-on", () => allowHelp());
+    btn("Later", "akd-nb-x", () => { store.set(k, Date.now() + 8 * 36e5); gate = off(gate); });
+    document.body.prepend(b); gate = b;
   }
   // the person may allow it in the browser's settings without reloading
   try { navigator.permissions && navigator.permissions.query({ name: "notifications" }).then((p) => { p.onchange = () => enforce(); }).catch(() => {}); } catch (_) {}
@@ -337,6 +333,12 @@
 .akd-pop-x{position:absolute;top:6px;right:8px;border:0;background:none;font-size:20px;line-height:1;cursor:pointer;color:#5b6475}
 .akd-gate::backdrop{background:rgba(4,20,40,.82);backdrop-filter:blur(3px)}
 .akd-gate h2{color:#B42318}
+.akd-nb{position:sticky;top:0;z-index:2147483000;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;padding:8px 12px;background:#FFF4E5;color:#7A3E00;border-bottom:1px solid #F5C98A;font:600 13.5px/1.35 Manrope,"Segoe UI",system-ui,sans-serif}
+.akd-nb-t{flex:1 1 220px;text-align:center}.akd-nb button{border:0;border-radius:99px;padding:6px 14px;font:inherit;cursor:pointer;min-height:32px}
+.akd-nb-on{background:#0B51A7;color:#fff}.akd-nb-x{background:transparent;color:#7A3E00;text-decoration:underline}
+.akd-help-row{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}.akd-help .akd-help-2{background:transparent;color:#0B51A7;border:1px solid #C9D6EA}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .akd-nb{background:#3A2A12;color:#FFD9A3;border-color:#6B4A1C}:root:not([data-theme="light"]) .akd-nb-x{color:#FFD9A3}}
+:root[data-theme="dark"] .akd-nb{background:#3A2A12;color:#FFD9A3;border-color:#6B4A1C}:root[data-theme="dark"] .akd-nb-x{color:#FFD9A3}
 .akd-bar{position:sticky;top:0;z-index:2147483000;background:#B42318;color:#fff;padding:8px 14px;font:600 14px/1.4 Manrope,"Segoe UI",system-ui,sans-serif;text-align:center}
 .akd-help h2{margin:0 0 8px;font-size:17px}.akd-help ol{margin:8px 0;padding-left:20px}.akd-help li{margin:4px 0}.akd-help .akd-help-n{color:#5b6475;font-size:13px}
 .akd-help button{float:right;margin-top:6px;border:0;border-radius:8px;background:#0b5cad;color:#fff;font:600 14px Manrope,"Segoe UI",system-ui,sans-serif;padding:9px 22px;cursor:pointer}

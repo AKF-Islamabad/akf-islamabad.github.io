@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-AWR8qrGSY3pCi/Nwe1SCld5TRWuvYuMPnB85aG4aiWQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-YUK4ZOotkeCkbh4RQjGCdKEKPbHqAe/5KV1x5jQOdpA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1202,6 +1202,38 @@ function kpi(label, value, sub, icon, onclick) {
     el("div", { class: "k-ic" }, ic(icon)), el("div", { class: "k-l", text: label }), el("div", { class: "k-v num", text: String(value) }), sub ? el("div", { class: "k-s", text: sub }) : null);
 }
 const empty = t => el("div", { class: "hr-empty", text: t });
+/* Public holidays for everyone (hr_holiday_save): the list and a chart for all; HR (HR policy → Edit) or the Super Admin adds and removes */
+function holidaysCard() {
+  const today = new Date().toISOString().slice(0, 10), all = ((ME.policy || {}).holidays || []).filter(h => Array.isArray(h) && h[0] >= today).sort((a, b) => a[0] < b[0] ? -1 : 1);
+  const editor = can("policy", "edit") || !!ME.super, kids = [];
+  const mon = d => new Date(d + "T00:00:00").toLocaleDateString("en-GB", { month: "short", year: "2-digit" }), by = {};
+  all.forEach(h => { const k = h[0].slice(0, 7); by[k] = by[k] || { key: k, label: mon(h[0]), value: 0, note: [] }; by[k].value++; by[k].note.push(h[1]); });
+  const ch = el("div"); if (window.AKF_CHARTS) ch.innerHTML = AKF_CHARTS.bars({ id: "hr-holidays", items: Object.values(by).slice(0, 12).map(x => ({ key: x.key, label: x.label, value: x.value, note: x.note.join(", ") })), empty: "No public holidays ahead" });
+  kids.push(ch);
+  kids.push(all.length ? el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Date", "Day", "Holiday", ""].map(t => el("th", { text: t })))),
+    el("tbody", {}, all.slice(0, 40).map(h => el("tr", {}, el("td", { text: fmtD(h[0]) }), el("td", { text: new Date(h[0] + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long" }) }), el("td", { text: h[1] }),
+      el("td", {}, editor ? el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Remove", onclick: async e => {
+        if (!confirm("Remove " + h[1] + " (" + fmtD(h[0]) + ") as a public holiday for all staff?")) return;
+        e.currentTarget.disabled = true; try { await rpc("hr_holiday_remove", { p_day: h[0] }, "Not removed"); toast("Holiday removed"); await reload(); render(); } catch (x) { toast(x.message, true); } } }) : null)))))) : empty("No public holidays ahead."));
+  if (editor) {
+    const f = el("input", { class: "input", type: "date", min: today }), t = el("input", { class: "input", type: "date", min: today }), n = el("input", { class: "input", maxlength: 80, placeholder: "e.g. Eid-ul-Fitr" });
+    const tell = el("input", { type: "checkbox", checked: true }), save = el("button", { class: "btn btn-primary", type: "button", text: "Save holiday for all staff" });
+    f.addEventListener("change", () => { if (!t.value || t.value < f.value) t.value = f.value; t.min = f.value; });
+    save.addEventListener("click", async () => {
+      if (!f.value) return toast("Choose the date", true);
+      if (n.value.trim().length < 2) return toast("Write the name of the holiday", true);
+      save.disabled = true;
+      try { const d = await rpc("hr_holiday_save", { p_from: f.value, p_to: t.value || f.value, p_name: n.value.trim(), p_tell: tell.checked }, "Not saved");
+        toast((d === 1 ? "1 day" : d + " days") + " saved as a public holiday for all staff" + (tell.checked ? " · announcement sent" : "")); await reload(); render(); }
+      catch (x) { toast(x.message, true); save.disabled = false; }
+    });
+    kids.push(el("div", { class: "hr-form" }, el("label", {}, "First day", f), el("label", {}, "Last day (same day if one day)", t), el("label", { class: "full" }, "Name of the holiday", n),
+      el("label", { class: "full", style: "flex-direction:row;align-items:center;gap:8px" }, tell, el("span", { text: "Tell all staff (post an announcement)" }))),
+      el("div", { class: "hr-actions" }, save),
+      el("p", { class: "small muted", text: "Saved straight away for everyone: these days are not counted as leave, attendance shows them as Holiday, and no overtime is claimed on them. Every change is in the audit log." }));
+  }
+  return card("Public holidays", ...kids);
+}
 function reqRow(r) {
   return el("button", { class: "hr-row", type: "button", onclick: () => openReq(r.id) }, r.myStep ? el("span", { class: "hr-dot", title: "Waiting on you" }) : null,
     el("span", { class: "grow" }, el("b", { text: (r.mine ? "" : (r.name || "") + " · ") + what(r) }),
@@ -1454,6 +1486,7 @@ const VIEWS = {
     const first = m + "-01", last = new Date(+m.slice(0, 4), +m.slice(5, 7), 0).toISOString().slice(0, 10);
     const pick = el("input", { class: "input", type: "month", value: m, onchange: e => { V.cal = e.target.value || m; render(); } });
     let rows = []; try { rows = await rpc("hr_leave_calendar", { p_from: first, p_to: last }, "The calendar could not load") || []; } catch (e) { box.append(empty(e.message)); return; }
+    box.append(holidaysCard());
     box.append(card("Approved leave · " + new Date(first + "T00:00:00").toLocaleDateString("en-GB", { month: "long", year: "numeric" }), el("div", { class: "hr-filters" }, pick),
       rows.length ? el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Name", "Department", "Leave", "From", "To"].map(t => el("th", { text: t })))),
         el("tbody", {}, rows.map(r => el("tr", {}, [r.name, r.dept || "", r.type, fmtD(r.from), fmtD(r.to)].map(x => el("td", { text: x }))))))) : empty("Nobody is on approved leave this month."),
@@ -1475,6 +1508,7 @@ const VIEWS = {
   async policy(box) {
     const pol = ME.policy || {}, pend = REQ.find(r => r.kind === "Policy" && r.status === "pending");
     if (pend) box.append(el("div", { class: "hr-empty", text: "A policy change (" + pend.id + ") is waiting for the Regional Manager's approval." }));
+    box.append(holidaysCard());
     const lt = pol.leaveTypes || [], edit = can("policy", "edit") && !pend;
     const days = {}, tb = el("tbody", {}, lt.map(t => el("tr", {}, el("td", { text: t.name }),
       el("td", {}, edit && !t.wallet && !t.unpaid && !t.duty ? (days[t.name] = el("input", { class: "input", type: "number", min: 0, max: 365, value: t.days, style: "max-width:90px" })) : el("span", { text: t.wallet ? (t.perMonth || 0) + " a month" : t.unpaid || t.duty ? "—" : String(t.days) })),
@@ -1483,7 +1517,7 @@ const VIEWS = {
     const hol = el("textarea", { class: "textarea", rows: 8, disabled: !edit, value: (pol.holidays || []).map(h => h[0] + " " + h[1]).join("\n") });
     box.append(card("Leave types", el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Leave", "Days a year", "Rules"].map(t => el("th", { text: t })))), tb))),
       el("div", { class: "hr-grid" },
-        card("Leave year and holidays", el("div", { class: "hr-form" }, el("label", {}, "Leave year from", yf), el("label", {}, "to", yt), el("label", { class: "full" }, "Public holidays (one per line: YYYY-MM-DD name)", hol)),
+        card("Leave year and holidays", el("div", { class: "hr-form" }, el("label", {}, "Leave year from", yf), el("label", {}, "to", yt), el("label", { class: "full" }, "Public holidays (one per line: YYYY-MM-DD name). To add one now, use Public holidays above.", hol)),
           el("p", { class: "small muted", text: "Weekly off: " + (pol.weeklyOff || []).join(", ") })),
         card("Who approves", el("dl", { class: "hr-kv" }, Object.entries(pol.routes || {}).flatMap(([k, s]) => [el("dt", { text: KIND[k] || k }), el("dd", { text: s.join(" → ") })]),
           (pol.documents || []).flatMap(d => [el("dt", { text: d.name }), el("dd", { text: d.steps.join(" → ") })])),
