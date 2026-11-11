@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by tools/csp-hash.js (inline scripts by hash). Fonts, the background library and images are all served from this site. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-fRScU0P0DZSC9IIkZ/zpCMGiATzTdMAzmsCelEnAHGo='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-UHe7yggkOX6JuNLdRCCMOTOtckOjmjfn/3RUkAXxM4Q='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1952,8 +1952,19 @@ const Live = {
     Notifs.render();
     Router.render(false);
     this.assistant();
-    this.today = null; this.todayErr = false; this.loadToday();
+    this.today = null; this.todayErr = false; this.reqs = null; this.reqsAt = 0; this.loadToday();   // a new sign-in never sees the last person's lists
     return true;
+  },
+  // "My requests" page: every request I raised, any status, all portals (052_my_requests.sql). Loaded when the page is opened.
+  ref: a => /^[\w.-]+$/.test(a.ref || '') ? a.ref : '',
+  link(a) { const p = this.nav().find(x => x.id === a.portal); if (!p || p.href === '#') return ''; const r = this.ref(a);
+    return p.href + (r && ['procurement', 'store', 'fleet'].includes(a.portal) ? '#track=' + r : r && a.portal === 'hr' ? '#req=' + r : ''); },
+  async loadReqs() {
+    this.reqsAt = Date.now();
+    try { const r = await this.sb.rpc('core_my_requests'); if (r.error) throw r.error;
+      this.reqs = (Array.isArray(r.data) ? r.data : []).sort((a, b) => (Date.parse(b.since) || 0) - (Date.parse(a.since) || 0)); this.reqsErr = false; }
+    catch (e) { this.reqsErr = true; }
+    if (this.me && Router.parse().id === 'requests') Router.render(false);
   },
   // The old main page's "Today" data, unchanged: core_my_today (013_today.sql) plus HR's own list (hr_today); refreshed every 2 minutes.
   async loadToday() {
@@ -2011,6 +2022,7 @@ const NAV = () => Live.on ? Live.nav() : PORTALS;
 if (Live.on) {
   document.documentElement.classList.add('live');   // hides the sample-only quick-create button
   document.addEventListener('akf-inbox', () => { if (Live.me) Notifs.render(); });   // the shared bell's count changed (akf-desk.js)
+  document.addEventListener('akf-chart-pick', e => { if (e.detail?.chart === 'my-requests') { Live.reqTab = e.detail.key; Router.render(false); } });
   document.addEventListener('akf-chart-pick', e => { if (e.detail?.chart !== 'today-portals') return; const p = Live.nav().find(x => x.id === e.detail.key); if (p && p.href !== '#') location.href = p.href; });
 }
 
@@ -2899,9 +2911,7 @@ class HomeView {
     const portalOf = k => nav.find(p => p.id === k);
     const days = s => { const d = Math.floor((Date.now() - new Date(s).getTime()) / 864e5); return isFinite(d) ? d : 0; };
     const isLate = s => Date.now() - new Date(s).getTime() > 2 * 864e5;   // the same rule as the "waiting more than 2 days" count (013_today.sql)
-    const ref = a => /^[\w.-]+$/.test(a.ref || '') ? a.ref : '';
-    const link = a => { const p = portalOf(a.portal); if (!p || p.href === '#') return ''; const r = ref(a);
-      return p.href + (r && ['procurement', 'store', 'fleet'].includes(a.portal) ? '#track=' + r : r && a.portal === 'hr' ? '#req=' + r : ''); };
+    const ref = Live.ref, link = a => Live.link(a);
     const tab = Live.tab || 'all', show = A.filter(a => tab === 'all' || (tab === 'approve' ? a.kind !== 'do' : a.kind === 'do'));
     const items = show.slice(0, 20).map(a => { const p = portalOf(a.portal), late = isLate(a.since), url = link(a);
       return { sev: late ? 3 : a.kind === 'do' ? 1 : 2, icon: Live.ICON[a.portal] || 'inbox', title: a.title || a.ref,
@@ -2975,7 +2985,7 @@ class HomeView {
       </div>
       <section class="brief" aria-labelledby="mine-h">
         <div class="brief-head"><div><h2 id="mine-h">${icon('send')}My requests</h2>
-          <p>${mine.length ? 'Everything you sent that is still on its way, and who it is waiting for.' : 'You have no request on its way right now.'}</p></div></div>
+          <p>${mine.length ? 'Everything you sent that is still on its way, and who it is waiting for.' : 'You have no request on its way right now.'}</p></div><a class="btn btn-xs btn-secondary" href="#/requests">All my requests</a></div>
         ${mine.length ? Smart.list(mine) : `<div class="brief-empty">${icon('checkCircle')}Nothing is waiting. A new request will show here as soon as you send it.</div>`}
       </section>`}
 
@@ -3195,6 +3205,39 @@ class PortalView {
    this page (the main page in "embed" mode, ../?embed=admin). The database and the admin-users function still decide
    what a Super Admin may do; the frame only shows it. */
 const ADMIN_TABS = { people: ['People & access', 'users'], setup: ['Portals & departments', 'grid'], settings: ['Settings', 'settings'], activity: ['Activity & usage', 'chart'] };
+/* My requests: every request the person raised across the ERP, in any status (asked 2026-11-11) */
+const REQ_STATES = { open: ['On its way', '#0A74C9', 1], back: ['Sent back to you', '#F59323', 2], done: ['Approved / completed', '#16A34A', 0], no: ['Rejected / cancelled', '#DC2626', 3] };
+class RequestsView {
+  mount() {
+    if (Date.now() - (Live.reqsAt || 0) > 30000) Live.loadReqs();   // not on every repaint
+    // the chart kit is loaded by akf-desk.js and can arrive after the list: draw the chart when it does
+    const ck = !window.AKF_CHARTS && document.querySelector('script[src*="akf-charts.js"]');
+    if (ck && !ck.dataset.rq) { ck.dataset.rq = 1; ck.addEventListener('load', () => { if (Router.parse().id === 'requests') Router.render(false); }, { once: true }); }
+  }
+  html() {
+    const R = Live.reqs, f = REQ_STATES[Live.reqTab] ? Live.reqTab : 'all', n = k => (R || []).filter(a => a.state === k).length;
+    const show = (R || []).filter(a => f === 'all' || a.state === f);
+    const chart = R && R.length && window.AKF_CHARTS ? AKF_CHARTS.donut({ id: 'my-requests', center: 'requests',
+      items: Object.entries(REQ_STATES).map(([k, [label, color]]) => ({ key: k, label, value: n(k), color })).filter(x => x.value) }) : '';
+    const row = a => { const st = REQ_STATES[a.state] || REQ_STATES.open, p = Live.nav().find(x => x.id === a.portal), url = Live.link(a), r = Live.ref(a);
+      const d = Math.floor((Date.now() - Date.parse(a.since)) / 864e5), when = !isFinite(d) ? '' : d <= 0 ? 'today' : plural(d, 'day', 'days') + ' ago';
+      return `<li class="brief-item sev-${st[2] || 1}"${st[2] ? '' : ' style="--sev:#16A34A;--sev-fg:#15803D"'}>
+        <span class="bi-ic">${icon(Live.ICON[a.portal] || 'send')}</span>
+        <div class="bi-body"><div class="bi-title">${esc([r, a.title].filter(Boolean).join(' · ') || 'Request')}</div>
+          <div class="bi-meta"><span class="sev-tag">${esc(st[0])}</span><span>${esc([p ? p.name : a.portal, a.status, when].filter(Boolean).join(' · '))}</span></div></div>
+        <div class="bi-actions">${url ? `<a class="btn btn-xs ${a.state === 'back' ? 'btn-primary' : 'btn-secondary'}" href="${esc(url)}">${a.state === 'back' ? 'Correct it' : a.state === 'open' ? 'Track' : 'Open'}</a>` : ''}</div></li>`; };
+    return `<header class="admin-head"><span class="admin-ic">${icon('send')}</span><div><p class="eyebrow">Across the ERP</p><h1 id="page-h1" tabindex="-1">My requests</h1></div></header>
+      ${!R ? `<div class="brief-empty">${icon(Live.reqsErr ? 'alert' : 'clock')}${Live.reqsErr ? 'Your requests could not be loaded right now. Please try again in a minute.' : 'Loading your requests…'}</div>` : `
+      ${chart ? `<section class="brief" aria-labelledby="rq-chart-h"><div class="brief-head"><div><h2 id="rq-chart-h">${icon('bolt')}By status</h2><p>Click a status to see only those requests.</p></div></div><div class="live-chart">${chart}</div></section>` : ''}
+      <section class="brief" aria-labelledby="rq-h">
+        <div class="brief-head"><div><h2 id="rq-h">${icon('send')}Every request you sent</h2>
+          <p>${R.length ? `${plural(show.length, 'request', 'requests')}, newest movement first` : 'You have not sent any request yet.'}</p></div>
+          <div class="seg live-tabs" role="tablist">${[['all', 'All', R.length], ...Object.entries(REQ_STATES).map(([k, [t]]) => [k, t, n(k)])].map(([k, t, c]) => `<button type="button" role="tab" aria-selected="${f === k}" data-action="req-tab" data-value="${k}">${t} (${c})</button>`).join('')}</div></div>
+        ${show.length ? `<ol class="brief-list">${show.slice(0, 300).map(row).join('')}</ol>` : `<div class="brief-empty">${icon('checkCircle')}${R.length ? 'No request with this status.' : 'A request will show here as soon as you send it, from any portal.'}</div>`}
+      </section>`}`;
+  }
+}
+
 class AdminView {
   constructor(tab) { this.tab = tab; }
   html() {
@@ -3214,13 +3257,14 @@ const Router = {
   render(animate = true) {
     const { id, params } = this.parse();
     const adm = Live.on && /^admin\/(people|setup|settings|activity)$/.exec(id);   // Super Admin tools, shown inside this page
-    if (Live.on && id !== 'home' && !adm) {   // live: each portal is its own ERP page
+    const reqR = Live.on && id === 'requests', reqs = reqR && !!Live.me;   // "My requests" is a page of its own inside the main page (the address is kept while signing in)
+    if (Live.on && id !== 'home' && !adm && !reqR) {   // live: each portal is its own ERP page
       const p = Live.nav().find(x => x.id === id);
       if (p && p.href !== '#') { location.assign(p.href); return; }
       history.replaceState(null, '', location.pathname + location.search);
     }
     const portal = Live.on ? null : PORTALS.find(p => p.id === id);
-    const page = adm ? (Live.me?.is_super ? new AdminView(adm[1]) : new HomeView()) : portal ? new PortalView(portal, params) : new HomeView();
+    const page = reqs ? new RequestsView() : adm ? (Live.me?.is_super ? new AdminView(adm[1]) : new HomeView()) : portal ? new PortalView(portal, params) : new HomeView();
     const el = $('#view'), token = ++this.token, wasFirst = this.first;
     this.first = false;
     const swap = () => {
@@ -3238,8 +3282,8 @@ const Router = {
       }
     };
     if (animate && !wasFirst) { el.classList.add('is-leaving'); setTimeout(swap, 160); } else swap();
-    document.title = `${adm && Live.me?.is_super ? ADMIN_TABS[adm[1]][0] : portal ? portal.short : 'Home'} · ${Live.on ? 'Jazba' : 'Alkhidmat Portal'}`;
-    Sidebar.render(adm && Live.me?.is_super ? id : portal ? portal.id : 'home');
+    document.title = `${reqs ? 'My requests' : adm && Live.me?.is_super ? ADMIN_TABS[adm[1]][0] : portal ? portal.short : 'Home'} · ${Live.on ? 'Jazba' : 'Alkhidmat Portal'}`;
+    Sidebar.render(reqs ? 'requests' : adm && Live.me?.is_super ? id : portal ? portal.id : 'home');
     document.body.classList.remove('nav-open');
   },
 };
@@ -3248,7 +3292,7 @@ const Router = {
    CHROME: sidebar, theme, notifications, toasts
    ============================================================ */
 // Alt+1 = Home, Alt+2… = modules in sidebar order.
-const NAV_ORDER = () => ['home', ...NAV().map(p => p.id)];
+const NAV_ORDER = () => ['home', ...NAV().map(p => p.id), ...(Live.on ? ['requests'] : [])];   // last, so the portals keep their Alt+number
 const keyOf = id => NAV_ORDER().indexOf(id) + 1;
 const Sidebar = {
   // Layout: 'side' rail (default) or 'top' tabs like the current Alkhidmat portal; collapse state remembered.
@@ -3288,7 +3332,7 @@ const Sidebar = {
   },
   render(active) {
     // Top tabs (same items and badges, shown instead of the rail when "Top tabs" is chosen)
-    $('#topnav').innerHTML = [{ id: 'home', short: 'Home', color: 'rgba(255,255,255,.55)' }, ...NAV()].map(p => `
+    $('#topnav').innerHTML = [{ id: 'home', short: 'Home', color: 'rgba(255,255,255,.55)' }, ...(Live.on && Live.me ? [{ id: 'requests', short: 'My requests', href: '#/requests', color: 'rgba(255,255,255,.55)' }] : []), ...NAV()].map(p => `
       <a class="tn-item" href="${p.href || `#/${p.id === 'home' ? '' : p.id}`}" style="--mc:${p.color}" ${active === p.id ? 'aria-current="page"' : ''} title="${p.name || p.short} (Alt+${keyOf(p.id)})" aria-keyshortcuts="Alt+${keyOf(p.id)}">
         <i class="tn-dot" aria-hidden="true"></i>${p.name || p.short}${p.badge?.() ? `<span class="tn-badge">${p.badge()}<span class="sr-only"> waiting</span></span>` : ''}</a>`).join('');
     const item = (href, id, ic, label, badge, tone, color) => `
@@ -3300,6 +3344,7 @@ const Sidebar = {
         <img src="../icon.jpg" alt="" width="40" height="40">
         <span><b>Alkhidmat</b><small>Islamabad · ${Live.on ? 'Jazba' : 'Internal Portal'}</small></span></a>`
       + item('#/', 'home', 'home', 'Home')
+      + (Live.on && Live.me ? item('#/requests', 'requests', 'send', 'My requests') : '')
       + (Live.on ? ''   // live: the portals are the cards on the page; listed once, not again here
         : '<div class="nav-section">Portals</div>' + NAV().map(p => item(p.href || `#/${p.id}`, p.id, p.icon, p.short, p.badge?.(), p.tone, p.color)).join(''))
       + (Live.on
@@ -4298,6 +4343,7 @@ const App = {
     'palette-backdrop': (el, e) => { if (e.target === el) Palette.close(); },
     'palette-run': el => Palette.run(+el.dataset.idx),
     'toggle-notifs': () => { if (Live.on && window.AKF_DESK && AKF_DESK.openInbox) AKF_DESK.openInbox($('#bell-btn')); else Notifs.toggle(); },
+    'req-tab': el => { Live.reqTab = el.dataset.value; Router.render(false); $(`[data-action="req-tab"][data-value="${Live.reqTab}"]`)?.focus(); },
     'live-tab': el => { Live.tab = el.dataset.value; Router.render(false); $(`[data-action="live-tab"][data-value="${Live.tab}"]`)?.focus(); },
     'open-href': el => { if (/^(https:\/\/|\/(?!\/))/.test(el.dataset.href || '')) location.href = el.dataset.href; },   // same rule as Live.href
     'scroll-to': (el, e) => { e.preventDefault(); document.getElementById(el.dataset.target)?.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'start' }); },
