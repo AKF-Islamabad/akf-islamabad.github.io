@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by tools/csp-hash.js (inline scripts by hash). Fonts, the background library and images are all served from this site. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-BGYf6vO137s0NvEHX4vNuHieT9aD6zYipdf+eoK7SvA='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-CTQnTiK5WwhSPb3ktzaDdK7ks+4Kebg15ZnIaycq0Vk='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1960,7 +1960,8 @@ const Live = {
   // Fleet stores "Pending X"; show it in the same words as every other portal
   words: s => String(s || '').replace(/^Pending Correction$/, 'Sent back for correction').replace(/^Pending /, 'Waiting for '),
   link(a) { const p = this.nav().find(x => x.id === a.portal); if (!p || p.href === '#') return ''; const r = this.ref(a);
-    return p.href + (r && ['procurement', 'store', 'fleet'].includes(a.portal) ? '#track=' + r : r && a.portal === 'hr' ? '#req=' + r : ''); },
+    return p.href + (r && ['procurement', 'store', 'fleet'].includes(a.portal) ? '#track=' + r : r && a.portal === 'hr' ? '#req=' + r : r && a.portal === 'assistance' ? '#case=' + r
+      : a.portal === 'tasks' && /^EV-\d+$/.test(r) ? '#task=ev:' + r : a.portal === 'tasks' && /^EN-\d+$/.test(r) ? '#task=view:engagements' : ''); },
   async loadReqs() {
     this.reqsAt = Date.now();
     try { const r = await this.sb.rpc('core_my_requests'); if (r.error) throw r.error;
