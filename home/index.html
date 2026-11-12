@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by tools/csp-hash.js (inline scripts by hash). Fonts, the background library and images are all served from this site. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-1kCTtxTVB2RvO0/WXxigjTzfTMCEoA2BtDb6oyA+5jg='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-B1YorqWOi3n76/616LLUWVQjany+cX8lj1pHynFdPjg='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1414,6 +1414,13 @@ body.nav-collapsed #sidebar-toggle .i { transform: scaleX(-1); }
 .live-tabs { flex: none; }
 .live-tabs button[aria-selected="true"] { background: var(--color-surface); color: var(--color-text); box-shadow: var(--premium-glow); }
 .live-chart { max-width: 560px; }
+.live-grid + .live-grid, .live-grid + .brief { margin-top: 16px; }
+.du-text { width: 100%; min-height: 58px; }
+[data-action="quick-approve"] { min-height: 34px; padding-inline: 14px; }   /* a thumb-size target on a phone */
+.du-foot { display: flex; justify-content: flex-end; margin: 8px 0 2px; }
+.du-h3 { font-size: 13px; font-weight: 600; margin: 10px 0 4px; }
+.du-body { font-size: 13px; color: var(--color-text-muted); overflow-wrap: anywhere; }
+.bi-title small { font-weight: 400; color: var(--color-text-subtle); }
 .sign-btn { font-size: 17px; }
 /* My note (akf-desk.js) sits beside the sidebar instead of over it */
 @media (min-width: 861px) { :root.live .akd { left: calc(var(--sidebar-w) + 14px); } }
@@ -1952,11 +1959,14 @@ const Live = {
     Notifs.render();
     Router.render(false);
     this.assistant();
-    this.today = null; this.todayErr = false; this.reqs = null; this.reqsAt = 0; this.loadToday();   // a new sign-in never sees the last person's lists
+    this.today = null; this.todayErr = false; this.reqs = null; this.reqsAt = 0; this.day = null; this.loadToday(); this.loadReqs();   // loadReqs: the search bar finds my requests   // a new sign-in never sees the last person's lists
     return true;
   },
   // "My requests" page: every request I raised, any status, all portals (052_my_requests.sql). Loaded when the page is opened.
   ref: a => /^[\w.-]+$/.test(a.ref || '') ? a.ref : '',
+  QUICK: ['Leave', 'Attendance', 'Shift', 'Expense', 'Overtime'],   // HR requests that can be approved from the main page; every other kind opens the request
+  fail(what, e) { if (navigator.onLine === false) return what + '. You are offline. Check your internet and try again.';
+    return ['P0001', '42501', '22023'].includes(e && e.code) && e.message ? what + ': ' + e.message : what + '. Please try again.'; },
   // Fleet stores "Pending X"; show it in the same words as every other portal
   words: s => String(s || '').replace(/^Pending Correction$/, 'Sent back for correction').replace(/^Pending /, 'Waiting for '),
   link(a) { const p = this.nav().find(x => x.id === a.portal); if (!p || p.href === '#') return ''; const r = this.ref(a);
@@ -1974,7 +1984,7 @@ const Live = {
     clearTimeout(this.timer);
     if (!this.me) return;
     if (document.hidden && this.today) { this.timer = setTimeout(() => this.loadToday(), 120000); return; }   // background tab: no fetch
-    const before = JSON.stringify([this.today, this.todayErr]);
+    const before = JSON.stringify([this.today, this.todayErr, this.day]);
     try { const r = await this.sb.rpc('core_my_today'); if (r.error) throw r.error; this.today = r.data; this.todayErr = false; }
     catch (e) { this.todayErr = true; }
     if (this.today) try {
@@ -1986,9 +1996,10 @@ const Live = {
         if (Array.isArray(h.mine)) T.mine = (T.mine || []).concat(h.mine).sort((a, b) => String(b.since || '').localeCompare(String(a.since || '')));
       }
     } catch (e) { }
+    try { const r = await this.sb.rpc('core_my_day'); this.day = r.error ? null : r.data; } catch (e) { this.day = null; }   // my daily update, team updates, today's events (053)
     // repaint only when something changed and nobody is working in the lists (keeps focus and scroll)
     const busy = document.activeElement?.closest?.('.live-grid');
-    if (this.me && Router.parse().id === 'home' && JSON.stringify([this.today, this.todayErr]) !== before && !busy) Router.render(false);
+    if (this.me && Router.parse().id === 'home' && JSON.stringify([this.today, this.todayErr, this.day]) !== before && !busy) Router.render(false);
     this.timer = setTimeout(() => this.loadToday(), 120000);
   },
   // The one bell for every portal (akf-desk.js), as on the old main page.
@@ -2916,10 +2927,11 @@ class HomeView {
     const isLate = s => Date.now() - new Date(s).getTime() > 2 * 864e5;   // the same rule as the "waiting more than 2 days" count (013_today.sql)
     const ref = Live.ref, link = a => Live.link(a);
     const tab = Live.tab || 'all', show = A.filter(a => tab === 'all' || (tab === 'approve' ? a.kind !== 'do' : a.kind === 'do'));
-    const items = show.slice(0, 20).map(a => { const p = portalOf(a.portal), late = isLate(a.since), url = link(a);
+    const items = show.slice(0, 20).map(a => { const p = portalOf(a.portal), late = isLate(a.since), url = link(a), quick = a.portal === 'hr' && a.kind === 'approve' && Live.QUICK.includes(a.k) && ref(a);
       return { sev: late ? 3 : a.kind === 'do' ? 1 : 2, icon: Live.ICON[a.portal] || 'inbox', title: a.title || a.ref,
-        meta: [p ? p.name : a.portal, Live.words(a.sub), late ? `waiting ${plural(Math.max(days(a.since), 2), 'day', 'days')}` : '', a.amount ? 'Rs ' + Number(a.amount).toLocaleString('en-PK') : ''].filter(Boolean).join(' · '),
-        actions: url ? [['Open', `href="${esc(url)}"`, 1]] : [] }; });
+        meta: [p ? p.name : a.portal, a.info, Live.words(a.sub), late ? `waiting ${plural(Math.max(days(a.since), 2), 'day', 'days')}` : '', a.amount ? 'Rs ' + Number(a.amount).toLocaleString('en-PK') : ''].filter(Boolean).join(' · '),
+        actions: [...(quick ? [[a.last ? 'Approve' : 'Recommend', `data-action="quick-approve" data-id="${esc(quick)}" data-word="${a.last ? 'Approve' : 'Recommend'}"`, 1]] : []), ...(url ? [['Open', `href="${esc(url)}"`, quick ? 0 : 1]] : [])] }; });
+    const D = Live.day, U = D && D.update, evs = (D && D.events) || [], team = (D && D.team) || [];
     // My requests: everything I raised that is still on its way, with the step it waits at (one list for all portals)
     const mine = ((T && T.mine) || []).slice(0, 30).map(a => { const p = portalOf(a.portal), url = link(a), d = days(a.since);
       return { sev: a.back ? 3 : 1, icon: Live.ICON[a.portal] || 'send', title: [ref(a), a.title && a.title !== a.ref ? a.title : ''].filter(Boolean).join(' · ') || a.ref,
@@ -2968,8 +2980,8 @@ class HomeView {
       </section>
       <p class="live-help">${icon('bell')}<span>Three things do everything: <b>+ New request</b> = start any form you are allowed to send. <b>Waiting for you</b> = steps only you can take (approve, check, sign or receive). <b>My requests</b> = everything you sent and where it is now. <b>The bell</b> = news only.</span></p>
 
-      ${chart ? `<section class="brief" aria-labelledby="chart-h"><div class="brief-head"><div><h2 id="chart-h">${icon('bolt')}Waiting for you, by portal</h2><p>Click a portal to open it.</p></div></div><div class="live-chart">${chart}</div></section>` : ''}
 
+      <div class="section-head" style="margin-top:8px"><h2>My work today</h2><span>Approvals, tasks, events and your daily update, in one place</span></div>
       <div class="live-grid">
         <section class="brief" aria-labelledby="brief-h">
           <div class="brief-head"><div><h2 id="brief-h">${icon('bolt')}Waiting for you</h2>
@@ -2986,6 +2998,23 @@ class HomeView {
             : `<div class="brief-empty">${icon('checkCircle')}Nothing due this week. ${tasksP ? 'Enjoy the calm.' : 'No tasks in Tasks &amp; Events.'}</div>`}
         </section>
       </div>
+      ${D ? `<div class="live-grid">
+        <section class="brief" aria-labelledby="du-h">
+          <div class="brief-head"><div><h2 id="du-h">${icon('send')}Daily work update</h2>
+            <p>${U ? `Sent today at ${new Date(U.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}. You can change it until the day ends.` : 'Write what you did today, in two lines.'}</p></div></div>
+          <label class="sr-only" for="du-text">What I did today</label>
+          <textarea class="input du-text" id="du-text" rows="2" maxlength="400" placeholder="Example: Checked 12 applications. Visited the camp site with the store team.">${U ? esc(U.body) : ''}</textarea>
+          <div class="du-foot"><button type="button" class="btn btn-xs btn-primary" data-action="daily-update">${U ? 'Save change' : 'Send update'}</button></div>
+          ${team.length ? `<h3 class="du-h3">Team updates</h3><ol class="brief-list">${team.slice(0, 30).map(t => `<li class="brief-item sev-1"><span class="bi-ic">${icon('users')}</span>
+            <div class="bi-body"><div class="bi-title">${esc(t.name)} <small>· ${esc(day(t.day))}${t.dept ? ' · ' + esc(t.dept) : ''}</small></div><div class="du-body">${esc(t.body)}</div></div></li>`).join('')}</ol>` : ''}
+        </section>
+        <section class="brief" aria-labelledby="ev-h">
+          <div class="brief-head"><div><h2 id="ev-h">${icon('calendar')}Today's events</h2><p>${evs.length ? plural(evs.length, 'event', 'events') + ' today' : 'From Tasks &amp; Events'}</p></div></div>
+          ${evs.length ? Smart.list(evs.map(e => ({ sev: 1, icon: 'calendar', title: e.title, meta: [e.time, e.venue].filter(Boolean).join(' · ') || 'Today',
+            actions: tasksP && /^EV-\d+$/.test(e.ref || '') ? [['Open', `href="${esc(tasksP.href.split('#')[0] + '#task=ev:' + e.ref)}"`, 0]] : [] }))) : `<div class="brief-empty">${icon('checkCircle')}No event today.</div>`}
+        </section>
+      </div>` : ''}
+      ${chart ? `<section class="brief" aria-labelledby="chart-h"><div class="brief-head"><div><h2 id="chart-h">${icon('bolt')}Waiting for you, by portal</h2><p>Click a portal to open it.</p></div></div><div class="live-chart">${chart}</div></section>` : ''}
       <section class="brief" aria-labelledby="mine-h">
         <div class="brief-head"><div><h2 id="mine-h">${icon('send')}My requests</h2>
           <p>${mine.length ? 'Everything you sent that is still on its way, and who it is waiting for.' : 'You have no request on its way right now.'}</p></div><a class="btn btn-xs btn-secondary" href="#/requests">All my requests</a></div>
@@ -3931,6 +3960,10 @@ const Palette = {
       { group: 'Actions', label: 'Toggle light / dark mode', icon: 'moon', hint: 'Appearance', run: () => Theme.toggle() },
       ...(Role.isSuper() ? [{ group: 'Actions', label: 'Change background or colour style', icon: 'palette', hint: 'Super admin', run: () => Appear.toggle(true) }] : []),
       ...Live.inbox.map(x => ({ group: 'Waiting for you', record: true, label: x.title, icon: Live.ICON[x.portal] || 'inbox', hint: x.body, run: () => location.assign(Live.open(x)) })),
+      ...(Live.reqs || []).map(a => ({ group: 'My requests', record: true, label: [Live.ref(a), a.title].filter(Boolean).join(' · ') || 'Request', icon: Live.ICON[a.portal] || 'send', hint: a.status || '',
+        run: () => { const u = Live.link(a); if (u) location.assign(u); else Router.go('#/requests'); } })),
+      ...((Live.today && Live.today.tasks) || []).map(t => ({ group: 'My tasks', record: true, label: t.title || t.id, icon: 'tasks', hint: 'due ' + t.due,
+        run: () => { const p = Live.nav().find(x => x.id === 'tasks'); if (p) location.assign(p.href.split('#')[0] + (t.kind === 'task' && /^[\w.-]+$/.test(t.id || '') ? '#task=' + t.id : '')); } })),
     ];
     return [
       { group: 'Navigate', label: 'Home', icon: 'home', hint: 'Overview', run: () => Router.go('#/') },
@@ -3988,7 +4021,7 @@ const Palette = {
   },
   render() {
     const list = $('#palette-list');
-    if (!this.results.length) { list.innerHTML = '<li class="pl-empty">No results. Try “procurement” or “task”.</li>'; return; }
+    if (!this.results.length) { list.innerHTML = '<li class="pl-empty">No results. Try a request number, a task or a portal name.</li>'; return; }
     let last = '', html = '';
     this.results.forEach((c, i) => {
       if (c.group !== last) { html += `<li class="pl-group" role="presentation">${c.group}</li>`; last = c.group; }
@@ -4347,6 +4380,23 @@ const App = {
     'palette-run': el => Palette.run(+el.dataset.idx),
     'toggle-notifs': () => { if (Live.on && window.AKF_DESK && AKF_DESK.openInbox) AKF_DESK.openInbox($('#bell-btn')); else Notifs.toggle(); },
     'req-tab': el => { Live.reqTab = el.dataset.value; Router.render(false); $(`[data-action="req-tab"][data-value="${Live.reqTab}"]`)?.focus(); },
+    // Approve / Recommend on the row (HR only: the server checks the step, the signature and the rules again). Two taps, so a slip of the thumb approves nothing.
+    'quick-approve': async el => {
+      if (!el.dataset.sure) { el.dataset.sure = 1; el.textContent = 'Confirm'; setTimeout(() => { if (el.isConnected && !el.disabled) { delete el.dataset.sure; el.textContent = el.dataset.word; } }, 4000); return; }
+      el.disabled = true;
+      const r = await Live.sb.rpc('hr_act', { p_id: el.dataset.id, p_action: 'approve', p_remarks: '' }).then(x => x, e => ({ error: e }));
+      if (r.error) { el.disabled = false; delete el.dataset.sure; el.textContent = el.dataset.word; toast(Live.fail('Not saved', r.error)); return; }
+      toast(el.dataset.id + ': ' + (r.data && r.data.status === 'pending' ? 'sent to the next step' : 'approved')); el.blur(); Live.loadToday();
+    },
+    'daily-update': async el => {
+      const t = $('#du-text'), v = t.value.trim();
+      if (v.length < 3) { toast('Please fill what you did today.'); t.focus(); return; }
+      el.disabled = true;
+      const r = await Live.sb.rpc('core_daily_update', { p_text: v }).then(x => x, e => ({ error: e }));
+      el.disabled = false;
+      if (r.error) { toast(Live.fail('Not saved', r.error)); return; }
+      toast('Daily work update saved.'); el.blur(); t.blur(); Live.loadToday();
+    },
     'live-tab': el => { Live.tab = el.dataset.value; Router.render(false); $(`[data-action="live-tab"][data-value="${Live.tab}"]`)?.focus(); },
     'open-href': el => { if (/^(https:\/\/|\/(?!\/))/.test(el.dataset.href || '')) location.href = el.dataset.href; },   // same rule as Live.href
     'scroll-to': (el, e) => { e.preventDefault(); document.getElementById(el.dataset.target)?.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'start' }); },
