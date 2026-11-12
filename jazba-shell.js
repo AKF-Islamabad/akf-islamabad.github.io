@@ -26,7 +26,8 @@
   const proxy = (label, list) => () => { const o = list().find(b => labelOf(b) === label); if (o) o.click(); };
 
   let rail, mine, acct, strip, stripLinks, meBox, portals = [];
-  const sh = () => { if (strip) document.documentElement.style.setProperty("--jz-strip-h", strip.offsetHeight + "px"); };
+  const sh = () => { if (!strip) return; document.documentElement.style.setProperty("--jz-strip-h", strip.offsetHeight + "px");
+    const r = strip.querySelector(".jz-ts-portals"); if (r) r.classList.toggle("more", r.scrollWidth > r.clientWidth + 2); };   // fade the edge only while names are hidden to the right
   // the signed-in person, read from the portal's own account button: full name and designation / role
   const meOf = () => { const n = document.querySelector(".me-t b, #me-name"), r = document.querySelector(".me-t span, #me-role");
     return [(n && n.textContent || "").trim(), (r && r.textContent || "").trim()]; };
@@ -100,11 +101,13 @@
       const here = location.href.startsWith(href);
       const dot = el("span", "jz-rail-dot"); dot.style.background = /^#[0-9a-f]{6}$/i.test(p.color || "") ? p.color : "#0060AE";
       if (here) document.documentElement.style.setProperty("--jz-pc", dot.style.background);
-      const s = el("a", "jz-ts-link" + (here ? " on" : "")); s.href = href; s.title = p.name; if (here) s.setAttribute("aria-current", "page");
-      s.append(dot, el("span", "", p.name)); stripLinks.append(s);
+      const s = el("a", "jz-ts-link" + (here ? " on" : "")); s.href = href; s.title = p.name; s.setAttribute("aria-label", p.name); if (here) s.setAttribute("aria-current", "page");
+      // one tidy row: this portal in full, the others without the word "Management" (full name on hover and for screen readers)
+      s.append(dot, el("span", "", here ? p.name : p.name.replace(/s+Management$/i, "") || p.name)); stripLinks.append(s);
       if (here) requestAnimationFrame(() => { stripLinks.scrollLeft = Math.max(0, s.offsetLeft - 40); });   // phones: this portal visible in the one-row list
     });
-    sh();   // the names may need a second row: move the page down to match
+    stripLinks.onwheel = e => { if (stripLinks.scrollWidth > stripLinks.clientWidth && e.deltaY && !e.deltaX) { stripLinks.scrollLeft += e.deltaY; e.preventDefault(); } };   // mouse wheel moves the row sideways when it does not fit
+    sh();
   }
 
   /* Ctrl/Cmd+K: this portal's pages, other portals, Ask Alkhidmat AI (opens the portal's own assistant) */
