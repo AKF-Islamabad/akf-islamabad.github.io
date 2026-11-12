@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-assistance.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-XqO7uETNYuVeZ8F7/CJPmZr9n84C0/zdmWo+yBXUyl4='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-54GAQh+e395YN/kOHxxdjTq06td/eplHXxeTZqbiB1M='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1815,8 +1815,8 @@ function trackerHtml(a) {
     if (a.status === "rejected" && i === cur) { cls = "rej"; mark = ic("x", "i-sm"); sub = "Rejected"; }
     if (a.status === "returned" && i === 0) sub = "Correction";
     if (a.status === "closed" && i === steps.length - 1) { cls = "done"; mark = ic("check", "i-sm"); }
-    if (i === cur && !sub && a.status !== "closed") sub = isLate(a) ? "Overdue" : "Current";
-    return `<div class="st ${cls}" role="listitem"><div class="dot">${mark}</div><b>${esc(l)}</b><small class="${sub === "Overdue" ? "as-wait-late" : ""}">${sub}</small></div>`; }).join("")}</div>`;
+    if (i === cur && !sub && a.status !== "closed") { const w = daysWaiting(a), t = w > 0 ? "for " + w + (w === 1 ? " day" : " days") : "since today"; sub = isLate(a) ? "Overdue · " + t : "Waiting " + t; }
+    return `<div class="st ${cls}" role="listitem"><div class="dot">${mark}</div><b>${esc(l)}</b><small class="${sub.startsWith("Overdue") ? "as-wait-late" : ""}">${sub}</small></div>`; }).join("")}</div>`;
 }
 function trackCard(a, full) {
   const w = daysWaiting(a), lim = slaFor(a.status), late = isLate(a), exp = expectedFinish(a);

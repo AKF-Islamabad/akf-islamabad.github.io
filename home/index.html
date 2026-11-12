@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by tools/csp-hash.js (inline scripts by hash). Fonts, the background library and images are all served from this site. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-CTQnTiK5WwhSPb3ktzaDdK7ks+4Kebg15ZnIaycq0Vk='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-gOTBucWtYEJkyvAb3zLE11NA+XYTuz8FFGJJPDD2RmI='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -3223,7 +3223,7 @@ class RequestsView {
     const chart = R && R.length && window.AKF_CHARTS ? AKF_CHARTS.donut({ id: 'my-requests', center: 'requests',
       items: Object.entries(REQ_STATES).map(([k, [label, color]]) => ({ key: k, label, value: n(k), color })).filter(x => x.value) }) : '';
     const row = a => { const st = REQ_STATES[a.state] || REQ_STATES.open, p = Live.nav().find(x => x.id === a.portal), url = Live.link(a), r = Live.ref(a);
-      const d = Math.floor((Date.now() - Date.parse(a.since)) / 864e5), when = !isFinite(d) ? '' : d <= 0 ? 'today' : plural(d, 'day', 'days') + ' ago';
+      const d = Math.floor((Date.now() - Date.parse(a.since)) / 864e5), wait = a.state === 'open' || a.state === 'back', when = !isFinite(d) ? '' : d <= 0 ? (wait ? 'since today' : 'today') : wait ? 'for ' + plural(d, 'day', 'days') : plural(d, 'day', 'days') + ' ago';
       return `<li class="brief-item sev-${st[2] || 1}"${st[2] ? '' : ' style="--sev:#16A34A;--sev-fg:#15803D"'}>
         <span class="bi-ic">${icon(Live.ICON[a.portal] || 'send')}</span>
         <div class="bi-body"><div class="bi-title">${esc([r, a.title].filter(Boolean).join(' · ') || 'Request')}</div>

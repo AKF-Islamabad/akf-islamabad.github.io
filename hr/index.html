@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-rp41xgRV+Rde+Q+X2wv60Si1fbOKZ3Unjs7dhVGNLlE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-GeuCh03byCv9QOgDqxQhI1FBLjsCWiFS2FGP8MrJwsM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1747,7 +1747,9 @@ async function openReq(id) {
     add("Work log", d.workLog); add("Paid with salary", x.paidIn ? monthName(x.paidIn) : r.status === "approved" && !["Loan", "Advance", "Phone"].includes(r.kind) ? "next payroll" : null);
   }
   const tl = el("ol", { class: "hr-tl" }, (r.history || []).map(h => el("li", {}, el("b", { text: h.action + (h.step ? " · " + h.step : "") }), el("span", { text: " — " + (h.name || "") + " · " + fmtDT(h.at) }), h.remarks ? el("div", { class: "small muted", text: h.remarks }) : null)));
-  const body = [steps, kv, el("h4", { text: "History" }), tl];
+  const wd = Math.floor((Date.now() - new Date(r.updated_at).getTime()) / 864e5);   // how long it has waited at this step, and with whom
+  const body = [steps].concat(r.status === "pending" && isFinite(wd) ? [el("p", { class: "small muted", style: overdue(r) ? "color:#B45309;font-weight:600" : "",
+    text: "Waiting for: " + (((r.route || [])[r.step] || {}).step || "approval") + " · " + (wd > 0 ? "for " + wd + (wd === 1 ? " day" : " days") : "since today") })] : [], [kv, el("h4", { text: "History" }), tl]);
   if ((d.files || []).length) body.splice(2, 0, el("div", { class: "hr-actions" }, d.files.map((p, i) => el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Bill " + (i + 1),
     onclick: async () => { const { data: s, error: e } = await SB.storage.from("hr-claims").createSignedUrl(p, 60); if (e || !s) return toast(errText(e, "The bill could not open"), true); el("a", { href: s.signedUrl, target: "_blank", rel: "noopener" }).click(); } }))));
   if (r.kind === "Payroll") {   // approvers see every payslip of the run they are deciding
