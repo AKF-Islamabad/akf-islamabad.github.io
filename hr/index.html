@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-uvXeOc5gDcbuPRhkflrdmS/w9yHLQV5sQncBar5qNuc='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-rp41xgRV+Rde+Q+X2wv60Si1fbOKZ3Unjs7dhVGNLlE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1036,10 +1036,17 @@ html.side-pinned .side-pin{background:#fff;color:#0B3D91}
 .hr-row b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hr-row small{color:var(--muted,#5A6684)}
 .hr-dot{width:9px;height:9px;border-radius:50%;background:#F59323;flex:none}
-.hr-steps{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
-.hr-steps span{border:1px solid var(--border,#E2E7F1);border-radius:999px;padding:4px 11px;font-size:13px}
-.hr-steps span.done{background:#DCFCE7;border-color:#86EFAC;color:#166534}
-.hr-steps span.now{background:#FEF3C7;border-color:#FCD34D;color:#92400E;font-weight:700}
+.hr-steps{display:flex;margin:14px 0 10px;padding:6px 0;overflow-x:auto;counter-reset:hrs}
+.hr-steps span{flex:1;min-width:84px;position:relative;text-align:center;font-size:12.5px;padding-top:40px;counter-increment:hrs;color:var(--muted,#5A6684)}
+.hr-steps span::before{content:counter(hrs);position:absolute;top:0;left:50%;transform:translateX(-50%);box-sizing:border-box;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--surface,#fff);border:2px solid #CBD5E1;font-weight:700;z-index:1}
+.hr-steps span::after{content:"";position:absolute;top:15px;left:-50%;right:50%;height:2px;background:#CBD5E1}
+.hr-steps span:first-child::after{display:none}
+.hr-steps span.done,.hr-steps span.now,.hr-steps span.bad{color:inherit}
+.hr-steps span.done::before{content:"\2713";background:#16A34A;border-color:#16A34A;color:#fff}
+.hr-steps span.done::after,.hr-steps span.now::after,.hr-steps span.bad::after{background:#16A34A}
+.hr-steps span.now{font-weight:700}
+.hr-steps span.now::before{border-color:#F59E0B;box-shadow:0 0 0 5px rgba(245,158,11,.2)}
+.hr-steps span.bad::before{content:"\2715";background:#DC2626;border-color:#DC2626;color:#fff}
 .hr-tl{list-style:none;margin:10px 0 0;padding:0}
 .hr-tl li{padding:8px 0 8px 18px;border-left:2px solid var(--border,#E2E7F1);position:relative;font-size:14px}
 .hr-tl li::before{content:"";position:absolute;left:-6px;top:13px;width:10px;height:10px;border-radius:50%;background:var(--primary,#0A74C9)}
@@ -1724,7 +1731,7 @@ async function openReq(id) {
   const r = REQ.find(x => x.id === id); if (!r) return toast("This request is not one you can see", true);
   const signed = (r.history || []).filter(h => h.action === "Recommended" || h.action === "Approved").length;
   const steps = el("div", { class: "hr-steps" }, el("span", { class: "done", text: "Requested" }),
-    (r.route || []).map((s, i) => el("span", { class: r.status === "approved" || i < signed ? "done" : r.status === "pending" && i === r.step ? "now" : "", text: s.step })));
+    (r.route || []).map((s, i) => el("span", { class: r.status === "approved" || i < signed ? "done" : r.status === "pending" && i === r.step ? "now" : r.status === "rejected" && i === r.step ? "bad" : "", text: s.step })));
   const kv = el("dl", { class: "hr-kv" }); const add = (k, v) => { if (v != null && v !== "") kv.append(el("dt", { text: k }), el("dd", { text: String(v) })); };
   add("Name", r.name + (r.designation ? " · " + r.designation : "")); add("Department", r.deptName || r.dept); add("Request", what(r)); add("Status", (STATUS[r.status] || [r.status])[0] + (overdue(r) ? " (overdue)" : ""));
   const d = r.data || {};

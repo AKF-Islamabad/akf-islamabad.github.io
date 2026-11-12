@@ -1147,10 +1147,10 @@ body{background:var(--bg)}
 .as-track .st{flex:1;min-width:100px;position:relative;text-align:center;font-size:12.5px}
 .as-track .st::before{content:"";position:absolute;top:15px;left:-50%;right:50%;height:2px;background:var(--border-strong)}
 .as-track .st:first-child::before{display:none}
-.as-track .st.done::before,.as-track .st.cur::before,.as-track .st.skip::before,.as-track .st.rej::before{background:var(--brand-600)}
+.as-track .st.done::before,.as-track .st.cur::before,.as-track .st.skip::before,.as-track .st.rej::before{background:var(--as-ok)}
 .as-track .dot{position:relative;width:32px;height:32px;margin:0 auto 8px;border-radius:50%;display:grid;place-items:center;background:var(--surface);border:2px solid var(--border-strong);color:var(--muted);font-weight:700}
-.as-track .done .dot{background:var(--brand-600);border-color:var(--brand-600);color:#fff}
-.as-track .cur .dot{border-color:var(--brand-600);color:var(--as-accent);box-shadow:0 0 0 5px color-mix(in srgb,var(--brand-600) 16%,transparent)}
+.as-track .done .dot{background:var(--as-ok);border-color:var(--as-ok);color:#fff}
+.as-track .cur .dot{border-color:var(--as-warn);color:var(--text);box-shadow:0 0 0 5px color-mix(in srgb,var(--as-warn) 20%,transparent)}
 .as-track .skip .dot{background:var(--as-skip-bg);border-style:dashed;color:var(--as-skip)}
 .as-track .rej .dot{background:var(--as-err);border-color:var(--as-err);color:#fff}
 .as-track b{display:block;font-weight:600;color:var(--text)} .as-track .todo b{color:var(--muted);font-weight:500} .as-track small{color:var(--muted)}
