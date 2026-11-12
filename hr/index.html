@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-kcOKGpdlcJQ1P5J1TvgUyLh+hm8QRPH7PL5oFgtskiU='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-gpM50I96sQ+dxSAtKNU+FkiCbYNGb9ue2zVO+mahbjU='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1143,7 +1143,9 @@ function toast(msg, bad) {
 function errText(e, what) {
   const m = String((e && e.message) || "");
   if (e && ["P0001", "42501"].includes(e.code) && m.length < 300 && !/relation|column|policy|violates|syntax|function/i.test(m)) return m;
-  const r = ref(); console.error("[ref " + r + "]", e); return what + " (ref " + r + ").";
+  const r = ref(); console.error("[ref " + r + "]", e);
+  if (navigator.onLine === false) return what + ". You are offline. Check your internet and try again.";
+  return what + ". Please try again. If it happens again, give reference " + r + " to the Super Admin.";
 }
 let SB = null, ME = null, GRID = {}, REQ = [], PEOPLE = null, V = { view: "dashboard", id: null, kind: "Leave", cal: null, f: { q: "", kind: "", status: "" } };
 const can = (tab, a = "view") => !!(ME && (ME.super || (GRID[tab] || []).includes(a)));
@@ -1263,7 +1265,7 @@ const VIEWS = {
       card("My leave this year", ch, el("div", { class: "hr-bal" }, bal.filter(b => b.entitled != null && (b.entitled > 0 || !b.grant)).map(b =>
         el("div", {}, el("small", { text: b.type }), el("b", { text: String(b.left ?? "—") }), el("small", { text: "left · " + (b.taken || 0) + " taken" + (b.waiting ? " · " + b.waiting + " waiting" : "") }))))),
       waiting.length ? card("Waiting for you", ...waiting.slice(0, 8).map(reqRow)) : null,
-      card("My requests", ...(mine.length ? mine.slice(0, 8).map(reqRow) : [empty("No requests yet.")]))));
+      card("My requests", ...(mine.length ? mine.slice(0, 8).map(reqRow) : [empty("No requests yet. Press New request to start one.")]))));
   },
   apply(box) {
     const pol = ME.policy || {}, kinds = ["Leave", "Attendance", "Shift", "Profile", "Document", "Exit"].concat(mayRecruit() ? ["Recruitment"] : []);
@@ -1385,10 +1387,10 @@ const VIEWS = {
     });
     box.append(card(KIND[V.kind], form, route ? el("p", { class: "small muted", text: "Approval path: " + route.join(" → ") + " (a step is skipped when nobody holds it or it is you; at least 2 different people approve)." }) : null, el("div", { class: "hr-actions" }, btn)));
   },
-  mine(box) { const mine = REQ.filter(r => r.mine); box.append(card("My requests", ...(mine.length ? mine.map(reqRow) : [empty("No requests yet.")]))); },
+  mine(box) { const mine = REQ.filter(r => r.mine); box.append(card("My requests", ...(mine.length ? mine.map(reqRow) : [empty("No requests yet. Press New request to start one.")]))); },
   approvals(box) {
     const now = REQ.filter(r => r.myStep), done = REQ.filter(r => !r.mine && !r.myStep && (r.history || []).some(h => h.by === ME.id)).slice(0, 30);
-    box.append(card("Waiting for you", ...(now.length ? now.map(reqRow) : [empty("All clear. JazakAllah khair!")])),
+    box.append(card("Waiting for you", ...(now.length ? now.map(reqRow) : [empty("Nothing is waiting for you. JazakAllah khair!")])),
       el("div", { class: "hr-grid" }, card("Signed by you", ...(done.length ? done.map(reqRow) : [empty("Nothing yet.")])), delegationCard()));
   },
   async attendance(box) {
@@ -1641,7 +1643,7 @@ const VIEWS = {
       card(list.length + " requests", el("div", { class: "hr-filters" }, sel("kind", kinds, "All types"), sel("status", Object.keys(STATUS), "All statuses"),
         can("reports", "export") ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Download CSV", onclick: () => csv("hr-requests", ["ID", "Type", "Name", "Department", "Details", "Status", "Filed", "Step"],
           list.map(r => [r.id, KIND[r.kind], r.name, r.deptName || r.dept, what(r), (STATUS[r.status] || [r.status])[0], r.created_at.slice(0, 10), r.status === "pending" ? ((r.route[r.step] || {}).step || "") : ""])) }) : null),
-        ...(list.length ? list.slice(0, 200).map(reqRow) : [empty("No requests match.")])));
+        ...(list.length ? list.slice(0, 200).map(reqRow) : [empty("No requests match. Change the search or the filters.")])));
   }
 };
 // Jazba charts: a click opens the matching requests

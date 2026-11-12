@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by tools/csp-hash.js (inline scripts by hash). Fonts, the background library and images are all served from this site. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-gOTBucWtYEJkyvAb3zLE11NA+XYTuz8FFGJJPDD2RmI='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-1kCTtxTVB2RvO0/WXxigjTzfTMCEoA2BtDb6oyA+5jg='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -2975,7 +2975,7 @@ class HomeView {
           <div class="brief-head"><div><h2 id="brief-h">${icon('bolt')}Waiting for you</h2>
             <p>${show.length ? `${plural(show.length, 'item', 'items')}, longest waiting first` : 'Nothing is waiting for you right now.'}</p></div>
             <div class="seg live-tabs" role="tablist">${[['all', 'All'], ['approve', 'Approvals'], ['do', 'To do']].map(([k, t]) => `<button type="button" role="tab" aria-selected="${tab === k}" data-action="live-tab" data-value="${k}">${t}</button>`).join('')}</div></div>
-          ${items.length ? Smart.list(items) : `<div class="brief-empty">${icon('checkCircle')}All clear. JazakAllah khair!</div>`}
+          ${items.length ? Smart.list(items) : `<div class="brief-empty">${icon('checkCircle')}Nothing is waiting for you. JazakAllah khair!</div>`}
           ${Object.keys(rest).length ? `<p class="brief-more" style="margin:10px 0 0">${Object.entries(rest).map(([n, c]) => `+${c} more in ${esc(n)}`).join(' · ')}</p>` : ''}
         </section>
         <section class="brief" aria-labelledby="tasks-h">
@@ -3234,7 +3234,7 @@ class RequestsView {
       ${chart ? `<section class="brief" aria-labelledby="rq-chart-h"><div class="brief-head"><div><h2 id="rq-chart-h">${icon('bolt')}By status</h2><p>Click a status to see only those requests.</p></div></div><div class="live-chart">${chart}</div></section>` : ''}
       <section class="brief" aria-labelledby="rq-h">
         <div class="brief-head"><div><h2 id="rq-h">${icon('send')}Every request you sent</h2>
-          <p>${R.length ? `${plural(show.length, 'request', 'requests')}, newest movement first` : 'You have not sent any request yet.'}</p></div>
+          <p>${R.length ? `${plural(show.length, 'request', 'requests')}, newest movement first` : 'No requests yet. Press New request to start one.'}</p></div>
           <div class="seg live-tabs" role="tablist">${[['all', 'All', R.length], ...Object.entries(REQ_STATES).map(([k, [t]]) => [k, t, n(k)])].map(([k, t, c]) => `<button type="button" role="tab" aria-selected="${f === k}" data-action="req-tab" data-value="${k}">${t} (${c})</button>`).join('')}</div></div>
         ${show.length ? `<ol class="brief-list">${show.slice(0, 300).map(row).join('')}</ol>` : `<div class="brief-empty">${icon('checkCircle')}${R.length ? 'No request with this status.' : 'A request will show here as soon as you send it, from any portal.'}</div>`}
       </section>`}`;

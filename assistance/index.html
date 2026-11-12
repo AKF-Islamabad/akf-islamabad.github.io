@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-assistance.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-54GAQh+e395YN/kOHxxdjTq06td/eplHXxeTZqbiB1M='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-kVkCOycTbv2cvFelnz/EHaj9sGmZOrJiLP2QggfC3rs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1378,7 +1378,8 @@ function erpErr(e, what) {
   const ref = errRef(); console.error("[ref " + ref + "]", e && (e.code || e.name));   // no message: it may contain personal data
   const m = e && e.message || "";
   const friendly = e && ["42501", "22023", "23514", "P0001"].includes(e.code) && m.length < 300 && !/relation|column|function|syntax|policy|violates|jsonb/i.test(m);
-  return what + (friendly ? ": " + m : ".") + " (ref " + ref + ")";
+  if (navigator.onLine === false) return what + ". You are offline. Check your internet and try again.";
+  return friendly ? what + ": " + m + " (ref " + ref + ")" : what + ". Please try again. If it happens again, give reference " + ref + " to the Super Admin.";
 }
 /* text safety: no stored text can break out of HTML (the database refuses these characters) */
 const BADMAP = { "<": "‹", ">": "›", '"': "”", "'": "’", "`": "ʼ", "\\": "/" };
@@ -1616,7 +1617,7 @@ function viewDashboard() {
 
 /* ---------- lists ---------- */
 function appTable(list, emptyMsg) {
-  if (!list.length) return emptyBox("inbox", emptyMsg, "Nothing needs your attention right now.");
+  if (!list.length) return emptyBox("inbox", emptyMsg, /match/.test(emptyMsg) ? "Change the search or the filters." : "");
   const sub = a => { const p = piiOf(a); return p ? esc(p.cnic) : esc(a.category); };
   const wait = a => { if (!isOpen(a)) return "—"; const w = daysWaiting(a); return `<span class="${isLate(a) ? "as-wait-late" : ""}">${w === 0 ? "Today" : plural(w, "day")}</span>`; };
   const req = a => a.type === "inkind" ? esc(trimS(a.request.items, 28)) : esc(rs(a.request.amount));
@@ -1628,7 +1629,7 @@ function appTable(list, emptyMsg) {
 function viewInbox() {
   const front = ME.role === "front_desk", list = inbox();
   const t = front ? ["Sent back to me", "Applications sent back for correction."] : ME.isSuper ? ["Waiting for action", "Every open case (you may stand in for an approver)."] : ["My inbox", "Applications waiting for your step."];
-  return head(t[0], t[1] + " Oldest first.") + `<div class="card">${appTable(list, "Your inbox is clear")}</div>`;
+  return head(t[0], t[1] + " Oldest first.") + `<div class="card">${appTable(list, "Nothing is waiting for you")}</div>`;
 }
 function filtered() {
   const f = V.filter, q = f.q.trim().toLowerCase();
