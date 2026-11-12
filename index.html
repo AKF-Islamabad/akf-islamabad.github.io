@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-AIY5ESGp/zTPFKEbXgv01ggGcj2HVKdtGm/1NtXhlwI='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-a4jJ8HAzkOgiltUyAdn4emIpVTxTir6keTzCG6KPHAI=' 'sha256-0M43Q3LQItNkQk6v5pV0Sqp4ztRYxQzjP1ZudamKEcY='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>(function(){var em=/[?&]embed=admin(&|$)/.test(location.search),ok=window.self===window.top;if(!ok&&em){try{ok=window.parent.location.origin===location.origin;}catch(e){ok=false;}}if(ok){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);if(em&&window.self!==window.top){window.AKF_EMBED=true;document.documentElement.classList.add("embed");window.AKF_NOTIFY=function(){};window.AKF_ASSISTANT=function(){};}}else{try{window.top.location=window.self.location;}catch(e){}}})();</script>
@@ -1085,6 +1085,9 @@ function managePerson(p) {
   const self = p.id === S.me.id;
   const name = el("input", { class: "input", value: p.full_name, maxlength: 120 }), desig = el("input", { class: "input", value: p.designation || "", maxlength: 120 }), dept = deptSelect(p.dept), orgRole = roleSelect(p.org_role);
   const sup = el("input", { type: "checkbox", disabled: self }); sup.checked = p.is_super;
+  // the person's real mailbox for approval e-mails (054). Kept in its own closed table; null = not loaded, so Save leaves it alone
+  const alertMail = el("input", { class: "input", type: "email", maxlength: 254, disabled: true, placeholder: "name@example.org", autocomplete: "off" }); let alertWas = null;
+  q(sb.rpc("core_alert_email_of", { p_id: p.id })).then(v => { alertWas = v || ""; alertMail.value = alertWas; alertMail.disabled = false; }, () => {});
   // a Director or HOD who looks after more than one department (Tasks and Purchase / Store treat every one as theirs; 044)
   const extra = new Set(p.extra_depts || []);
   const extraBox = el("div", { class: "row", style: "flex-wrap:wrap;gap:6px 14px" }, (S.admin.depts || []).filter(d => d.active !== false && d.code !== p.dept).map(d => {
@@ -1101,7 +1104,9 @@ function managePerson(p) {
   const run = async (body, done, what) => { try { const r = await adminCall({ id: p.id, ...body }); toast(done); if (r.temp_password) showSecret(p.full_name, r.temp_password); await loadAdmin(); return true; } catch (e) { fail(e, what); return false; } };
   dialog(p.full_name, [el("div", { class: "small muted", text: p.email }),
     el("div", { class: "grid2" }, el("label", { class: "f" }, "Full name", name), el("label", { class: "f" }, "Designation", desig), el("label", { class: "f" }, "Department", dept), p.is_super ? null : el("label", { class: "f" }, "Role in approvals", orgRole),
-      el("label", { class: "f" }, "Super Admin", el("span", { class: "row", style: "font-weight:600;color:var(--ink)" }, sup, self ? "You (cannot remove your own)" : "Full control of everything"))),
+      el("label", { class: "f" }, "Super Admin", el("span", { class: "row", style: "font-weight:600;color:var(--ink)" }, sup, self ? "You (cannot remove your own)" : "Full control of everything")),
+      el("label", { class: "f" }, "E-mail for alerts", alertMail)),
+    el("div", { class: "small muted", text: "E-mail for alerts: this person's real mailbox. Approval e-mails go there. Leave it empty for no e-mail." }),
     p.is_super ? null : el("div", {}, el("b", { class: "small", text: "Also oversees departments (a Director or HOD over more than one department)" }), extraBox,
       el("div", { class: "small muted", text: "They see, assign and approve for each ticked department as for their own (Tasks, Purchase & Store). Give their portal access as usual below." })),
     p.is_super ? null : el("div", { class: "row" }, el("div", { style: "flex:1;min-width:200px" }, from), copyBtn),
@@ -1113,6 +1118,8 @@ function managePerson(p) {
       const body = { action: "update", full_name: name.value, designation: desig.value, dept: await dept.getCode() }; if (!p.is_super) body.org_role = orgRole.value; if (!self && sup.checked !== p.is_super) body.is_super = sup.checked;
       const was = JSON.stringify([...(p.extra_depts || [])].sort()), now = JSON.stringify([...extra].sort());
       if (!p.is_super && was !== now) { try { await q(sb.rpc("core_set_extra_depts", { p_id: p.id, p_codes: [...extra] })); } catch (e) { return fail(e, "The extra departments were not saved"); } }
+      const mail = alertMail.value.trim().toLowerCase();
+      if (alertWas !== null && mail !== alertWas) { try { await q(sb.rpc("core_set_alert_email", { p_id: p.id, p_email: mail })); alertWas = mail; } catch (e) { return fail(e, "The e-mail for alerts was not saved"); } }
       if (await run(body, "Saved", "Changes were not saved")) close(); } })]);
 }
 
