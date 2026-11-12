@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-gpM50I96sQ+dxSAtKNU+FkiCbYNGb9ue2zVO+mahbjU='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-91H2e4cYkGKydyNEPMhQ1UJuCNqmZINmkbdC0DOdmEM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -2044,7 +2044,7 @@ const RCV = {
   async Positions(box, b) {
     box.append(el("div", { class: "hr-actions" }, mayRecruit() ? el("button", { class: "btn btn-primary", type: "button", text: "Request new staff", onclick: () => { V.kind = "Recruitment"; go("apply"); } }) : null,
       b.depts ? el("button", { class: "btn btn-outline", type: "button", text: "Post a job directly", onclick: () => jobForm(null, null, b.depts) }) : null,
-      el("a", { class: "btn btn-outline", href: CAREERS, target: "_blank", rel: "noopener", text: "Open the Career page" })));
+      el("a", { class: "btn btn-outline", href: CAREERS, text: "Open the Career page" })));
     if (b.editor) box.append(card("Approved staff requests · publish on the Career page", ...(b.waiting.length ? b.waiting.map(w => el("div", { class: "hr-row" },
       el("span", { class: "grow" }, el("b", { text: w.data.vacancies + " × " + w.data.post + " · " + (w.deptName || w.dept || "") }), el("small", { text: w.id + " · asked by " + (w.by || "") + " · approved " + fmtD(w.decided_at) })),
       el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Publish", onclick: () => jobForm(w, null) }))) : [empty("Nothing waiting. Staff requests appear here once the President approves them.")])));
@@ -2200,7 +2200,7 @@ const RCV = {
       el("h4", { text: "Ranking weights (%)" }), el("div", { class: "hr-form" }, el("label", {}, "Qualification", q), el("label", {}, "Experience", x), el("label", {}, "Skills match", k)),
       el("div", { class: "hr-actions" }, save),
       el("h4", { text: "Career page" }), el("p", { class: "small muted", text: "Candidates open this link; no sign-in. Its front page also shows a QR code you can print on posters. Who may work here is set on the main page → People & access → HR → Recruitment." }),
-      el("div", { class: "hr-actions" }, el("a", { class: "btn btn-outline btn-sm", href: CAREERS, target: "_blank", rel: "noopener", text: CAREERS }),
+      el("div", { class: "hr-actions" }, el("a", { class: "btn btn-outline btn-sm", href: CAREERS, text: CAREERS }),
         el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Copy link", onclick: async () => { try { await navigator.clipboard.writeText(CAREERS); toast("Link copied"); } catch (e) { prompt("Copy this link", CAREERS); } } }))));
   },
   async Activity(box) {
