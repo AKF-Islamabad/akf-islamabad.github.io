@@ -1691,6 +1691,57 @@ a.portal-link:active { transform: translateY(0); }
 .ls-bento i:nth-child(2) { left: 5%; top: 64%; width: 52%; height: 28%; background: #fff; box-shadow: var(--shadow-xs); }
 .ls-bento i:nth-child(3) { left: 61%; top: 8%; width: 34%; height: 84%; background: #fff; box-shadow: var(--shadow-xs); }
 
+/* ---------- Home: the request waiting for me (one card at a time), where my requests stand stage by stage, and the My requests table ---------- */
+.jd { margin: 14px 0 4px; }
+.jd-card { position: relative; overflow: hidden; padding: 18px 20px 18px 24px; border-radius: 12px; background: var(--color-surface); border: 1px solid var(--color-border); box-shadow: 0 1px 2px rgba(11,23,54,.05), 0 10px 24px -14px rgba(11,23,54,.22); transition: transform .28s ease, opacity .28s ease; animation: jdRise .3s ease both; }
+.jd-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--color-brand-primary); }
+@keyframes jdRise { from { transform: translateY(14px); opacity: 0; } }
+.jd-card.out { transform: translateY(14px) scale(.97); opacity: 0; }
+.jd-edge { height: 8px; margin: 0 10px; background: var(--color-surface); border: 1px solid var(--color-border); border-top: 0; border-radius: 0 0 12px 12px; }
+.jd-edge + .jd-edge { margin: 0 22px; }
+.jd-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; color: var(--color-text-muted); }
+.jd-tag { padding: 2px 8px; border-radius: 6px; font-weight: 600; background: var(--color-surface-2); }
+.jd-tag.hot { background: color-mix(in srgb, var(--color-danger) 12%, transparent); color: var(--color-danger); }
+.jd-count { margin-left: auto; font-variant-numeric: tabular-nums; }
+.jd-title { margin: 10px 0 14px; font-size: 22px; line-height: 1.25; font-weight: 700; overflow-wrap: anywhere; }
+.jd-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.jd-facts div { min-width: 0; } .jd-facts dt { font-size: 12px; color: var(--color-text-muted); } .jd-facts dd { margin: 2px 0 0; font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.jd-steps { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; font-size: 12.5px; color: var(--color-text-muted); }
+.jd-pills { display: flex; gap: 4px; flex-wrap: wrap; } .jd-pills i { width: 16px; height: 6px; border-radius: 99px; background: var(--color-border-strong); }
+.jd-pills i.done { background: var(--color-brand-secondary); } .jd-pills i.now { width: 26px; background: var(--color-brand-primary); }
+.jd-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.jd-actions .btn { gap: 8px; } .jd-actions .btn-primary kbd { background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.45); color: inherit; }
+.jd-skip { background: none; border-color: transparent; color: var(--color-brand-primary); } .jd-skip:hover { background: var(--color-row-hover); }
+@media (hover: none), (pointer: coarse) { .jd-actions kbd { display: none; } }
+.jf-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+.jf-head h3 { font-size: 14px; font-weight: 600; } .jf-head p { margin: 2px 0 0; font-size: 12.5px; color: var(--color-text-subtle); }
+.jf-badge { padding: 4px 10px; border-radius: 99px; font-size: 12.5px; font-weight: 600; white-space: nowrap; color: var(--fg-accent); background: color-mix(in srgb, var(--color-brand-accent) 13%, transparent); }
+.jf-box { min-height: 230px; margin-top: 4px; } .jf-box svg { display: block; width: 100%; height: auto; overflow: visible; }
+.jf-rib { fill: var(--color-brand-primary); opacity: .13; }
+.jf-bar { fill: var(--color-brand-primary); transform-box: fill-box; transform-origin: center; } .jf-bar.slow { fill: #f59323; } .jf-bar.last { fill: var(--color-brand-secondary); }
+.jf-stage { cursor: pointer; outline: none; } .jf-stage:hover .jf-bar { filter: brightness(1.15); }
+.jf-stage[aria-pressed="true"] .jf-bar { stroke: var(--color-text); stroke-width: 2.5; }
+.jf-hit { fill: transparent; stroke: none; } .jf-stage:focus-visible .jf-hit { stroke: var(--color-brand-primary); stroke-width: 2; }
+.jf-n { font-size: 22px; font-weight: 700; fill: var(--color-text); } .jf-name { font-size: 13px; font-weight: 700; fill: var(--color-text); } .jf-t { font-size: 12px; fill: var(--color-text-muted); } .jf-t.slow { fill: var(--fg-accent); font-weight: 700; } .jf-sm .jf-name { font-size: 11px; }
+svg.jf-anim .jf-bar { transition: transform .8s cubic-bezier(.2,.7,.2,1); } svg.jf-anim .jf-rib { transition: opacity .4s .8s; }
+svg.jf-pre .jf-bar { transform: scaleY(0); } svg.jf-pre .jf-rib { opacity: 0; }
+.jf-strip { display: flex; gap: 10px; align-items: flex-start; margin: 6px 0 14px; padding: 10px 12px; border-radius: 8px; font-size: 13px; border: 1px solid color-mix(in srgb, var(--color-brand-accent) 40%, transparent); background: color-mix(in srgb, var(--color-brand-accent) 9%, transparent); }
+.jf-strip svg { flex: none; width: 18px; height: 18px; margin-top: 1px; color: var(--fg-accent); }
+.jq-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; min-height: 30px; font-size: 12.5px; color: var(--color-text-muted); }
+.jq-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 4px 4px 12px; border-radius: 99px; font-size: 13px; font-weight: 600; background: var(--color-brand-primary); color: #fff; }
+.jq-chip button { width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; font: inherit; line-height: 1; cursor: pointer; background: rgba(255,255,255,.25); color: inherit; }
+.jq-scroll { overflow-x: auto; margin: 8px 0 12px; border: 1px solid var(--color-border); border-radius: 10px; }
+.jq-scroll table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.jq-scroll th { padding: 10px 14px; text-align: left; font-size: 13px; font-weight: 700; white-space: nowrap; background: var(--color-surface-2); }
+.jq-scroll td { padding: 10px 14px; border-top: 1px solid var(--color-border); vertical-align: middle; }
+.jq-scroll tbody tr { animation: jqFade .25s ease both; } @keyframes jqFade { from { opacity: 0; } }
+.jq-scroll tbody tr:hover { background: color-mix(in srgb, var(--color-brand-primary) 7%, transparent); }
+.jq-scroll .jq-amt { text-align: right; white-space: nowrap; } .jq-id { font-weight: 700; white-space: nowrap; } .jq-id a { color: inherit; }
+.jq-st { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 12.5px; font-weight: 600; white-space: nowrap; background: color-mix(in srgb, var(--c) 14%, transparent); color: color-mix(in srgb, var(--c) 72%, var(--color-text)); }
+.jq-sk { padding: 12px 14px; } .jq-sk + .jq-sk { border-top: 1px solid var(--color-border); }
+.jq-sk i { display: block; height: 14px; border-radius: 6px; background: linear-gradient(90deg, var(--color-border) 25%, var(--color-surface-2) 50%, var(--color-border) 75%); background-size: 200% 100%; animation: jqShim 1.2s linear infinite; }
+@keyframes jqShim { to { background-position: -200% 0; } }
+@media (max-width: 560px) { .jd-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .jd-title { font-size: 20px; } }
 @media (prefers-reduced-motion: reduce) {
   .aurora, .grad-name, .portal-card::before { animation: none !important; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
@@ -2911,7 +2962,99 @@ const Smart = {
 console.assert(Smart.similar('Winter blankets')?.id === 'PO-2611-0142' && !Smart.similar('Laptop bags'), 'duplicate check broken');
 console.assert(Smart.budget('disaster').used === 7120000, 'budget calc broken');
 
+/* ---------- Home, three parts on the same live data (core_my_today): the request waiting for me, one at a time; where my
+   requests stand, stage by stage; and the My requests table. Approving stays where it was (HR quick approve, or in the portal). ---------- */
+const MyDesk = {
+  STAGE: { approval: ['Approval', 'Approval', '--color-brand-accent'], purchase: ['Purchasing', 'Purchase', '--color-brand-primary'], store: ['Store', 'Store', '--color-brand-primary'],
+    receive: ['Receiving', 'Receive', '--color-brand-secondary'], back: ['Sent back for correction', 'Back', '--color-danger'], open: ['In progress', 'Open', '--color-neutral'] },
+  days: s => { const d = Math.floor((Date.now() - new Date(s).getTime()) / 864e5); return isFinite(d) && d > 0 ? d : 0; },
+  // the next step decides the stage; requests whose portal does not name its steps here (vehicles, HR) show as "In progress"
+  stageOf: m => m.back ? 'back' : m.key === 'closed' ? 'receive' : ['rfq', 'committee', 'po'].includes(m.key) ? 'purchase' : ['checked', 'grn', 'issued'].includes(m.key) ? 'store' : m.kind === 'approval' ? 'approval' : 'open',
+  stages(M) {
+    const by = {}; M.forEach(m => { const k = this.stageOf(m); (by[k] = by[k] || []).push(this.days(m.since)); });
+    const path = M.some(m => m.key);   // the four steps of the path show even when empty, once the data names the steps
+    return Object.keys(this.STAGE).filter(k => by[k] || (path && k !== 'back' && k !== 'open')).map(k => { const d = by[k] || [];
+      return { key: k, name: this.STAGE[k][0], short: this.STAGE[k][1], count: d.length, days: d.length ? Math.round(d.reduce((x, y) => x + y, 0) / d.length * 10) / 10 : null }; });
+  },
+  slowest: st => st.filter(x => x.days > 0).reduce((a, b) => (!a || b.days > a.days ? b : a), null),
+  barH: (count, max, maxH) => Math.max(12, count / Math.max(1, max) * maxH),
+  mine: () => (Live.today && Live.today.mine) || [],
+  deck() {
+    const A = (Live.today && Live.today.actions) || []; if (!A.length) return '';
+    const n = A.length, at = (Live.deckAt || 0) % n, a = A[at], p = Live.nav().find(x => x.id === a.portal), url = Live.link(a), r = Live.ref(a), d = this.days(a.since);
+    const quick = a.portal === 'hr' && a.kind === 'approve' && Live.QUICK.includes(a.k) && r, word = a.last ? 'Approve' : 'Recommend';   // the same rule as the list below
+    const facts = [['Request', r], ['Step', Live.words(a.sub)], ['Amount', a.amount ? 'Rs ' + Number(a.amount).toLocaleString('en-PK') : ''], ['Department', a.dept], ['Details', a.info]].filter(f => f[1]).slice(0, 4);
+    const step = +a.step, of = +a.steps, steps = step > 0 && of >= step && of <= 30;   // sent by the newer core_my_today(); without it the card has no step line
+    return `<section class="jd" id="deck" aria-label="Waiting for you, one at a time">
+      <article class="jd-card">
+        <div class="jd-meta"><span class="jd-tag">${esc(p ? p.name : a.portal)}</span><span${d > 2 ? ' class="jd-tag hot"' : ''}>Waiting for you ${d > 0 ? 'for ' + plural(d, 'day', 'days') : 'since today'}</span><span class="jd-count">${at + 1} of ${n}</span></div>
+        <h2 class="jd-title">${esc(a.title || a.ref)}</h2>
+        ${facts.length ? `<dl class="jd-facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>` : ''}
+        ${steps ? `<div class="jd-steps"><span class="jd-pills" aria-hidden="true">${Array.from({ length: of }, (_, i) => `<i${i + 1 < step ? ' class="done"' : i + 1 === step ? ' class="now"' : ''}></i>`).join('')}</span><span>Step ${step} of ${of}, ${a.kind === 'do' ? 'your step' : 'your approval'}</span></div>` : ''}
+        <div class="jd-actions">
+          ${quick ? `<button type="button" class="btn btn-primary" data-action="quick-approve" data-id="${esc(quick)}" data-word="${word}">${word}</button>` : ''}
+          ${url ? `<a class="btn ${quick ? 'btn-secondary' : 'btn-primary'} jd-open" href="${esc(url)}" aria-keyshortcuts="O">Open in ${esc(p ? p.name : 'the portal')}<kbd aria-hidden="true">O</kbd></a>` : ''}
+          ${n > 1 ? '<button type="button" class="btn jd-skip" data-action="deck-skip" aria-keyshortcuts="S">Skip for now<kbd aria-hidden="true">S</kbd></button>' : ''}
+        </div>
+      </article>${n > 2 ? '<div class="jd-edge"></div><div class="jd-edge"></div>' : n > 1 ? '<div class="jd-edge"></div>' : ''}
+    </section>`;
+  },
+  flow(W) {
+    const st = this.stages(this.mine()), n = st.length, H = 230, small = W < 520, bw = small ? 34 : 56, cy = 74, maxH = 120, slow = this.slowest(st), max = Math.max(...st.map(x => x.count));
+    const xs = st.map((_, i) => W * (i + .5) / n), hs = st.map(x => this.barH(x.count, max, maxH)), f = v => +v.toFixed(1);
+    let out = `<svg viewBox="0 0 ${W} ${H}"${small ? ' class="jf-sm"' : ''} role="group" aria-label="My open requests at each stage">`;
+    for (let i = 0; i < n - 1; i++) {   // the ribbon between two bars: its top and bottom edges are smooth curves
+      const x1 = f(xs[i] + bw / 2), x2 = f(xs[i + 1] - bw / 2), m = f((x1 + x2) / 2), t1 = f(cy - hs[i] / 2), b1 = f(cy + hs[i] / 2), t2 = f(cy - hs[i + 1] / 2), b2 = f(cy + hs[i + 1] / 2);
+      out += `<path class="jf-rib" d="M${x1},${t1} C${m},${t1} ${m},${t2} ${x2},${t2} L${x2},${b2} C${m},${b2} ${m},${b1} ${x1},${b1} Z"/>`;
+    }
+    st.forEach((s, i) => { const isSlow = slow && s.key === slow.key, cw = W / n, x = f(xs[i]), ty = cy + maxH / 2;
+      out += `<g class="jf-stage" role="button" tabindex="0" data-action="mine-stage" data-value="${s.key}" aria-pressed="${Live.mineStage === s.key}" aria-label="${s.name}, ${plural(s.count, 'request', 'requests')}. Select to list them.">
+        <rect class="jf-hit" x="${f(x - cw / 2 + 3)}" y="3" width="${f(cw - 6)}" height="${H - 6}" rx="8"/>
+        <rect class="jf-bar${isSlow ? ' slow' : s.key === 'receive' ? ' last' : ''}" x="${f(x - bw / 2)}" y="${f(cy - hs[i] / 2)}" width="${bw}" height="${f(hs[i])}" rx="${f(Math.min(10, hs[i] / 2))}"/>
+        <text class="jf-n" x="${x}" y="${ty + 32}" text-anchor="middle">${s.count}</text>
+        <text class="jf-name" x="${x}" y="${ty + 52}" text-anchor="middle">${small ? s.short : s.name}</text>
+        <text class="jf-t${isSlow ? ' slow' : ''}" x="${x}" y="${ty + 70}" text-anchor="middle">${s.days == null ? '' : s.days + (small ? ' d' : s.days === 1 ? ' day' : ' days')}</text></g>`; });
+    return out + '</svg>';
+  },
+  // draws the picture at the width of its box; again when the width changes (phone turned, menu opened) or a stage is selected
+  draw(force) {
+    const box = $('#mine-flow'); if (!box) return;
+    if (this.box !== box) { this.box = box; (this.ro = this.ro || new ResizeObserver(() => this.draw())).disconnect(); this.ro.observe(box); }
+    const w = box.clientWidth; if (!w || (!force && w === box._w)) return;
+    box._w = w; box.innerHTML = this.flow(w);
+    if (!Live.flowShown && !RM) {   // the entrance plays once: the bars grow from the centre line, then the ribbons fade in
+      const svg = box.firstChild; svg.classList.add('jf-anim', 'jf-pre');
+      requestAnimationFrame(() => requestAnimationFrame(() => svg.classList.remove('jf-pre')));
+      setTimeout(() => svg.classList.remove('jf-anim'), 1500);
+    }
+    Live.flowShown = true;
+  },
+  note() {
+    const st = this.stages(this.mine()), slow = this.slowest(st);
+    return { slow, text: slow ? `${slow.name} holds ${plural(slow.count, 'request', 'requests')}, waiting ${plural(slow.days, 'day', 'days')} on average${st.filter(x => x.count).length > 1 ? ', longer than any other stage' : ''}.` : 'No request has waited a full day yet.' };
+  },
+  table() {
+    const M = this.mine(), mineNow = new Set(((Live.today && Live.today.actions) || []).map(a => a.portal + '|' + a.ref));
+    const k = Live.mineStage, list = M.filter(m => !k || this.stageOf(m) === k), rows = list.slice(0, 30);
+    return `<div id="mine-tbl">
+      <div class="jq-bar"><span>${k ? plural(list.length, 'request', 'requests') + ' at this stage' : 'All stages, latest first'}${list.length > 30 ? ' · the first 30 are shown; the rest are in All my requests' : ''}</span>
+        ${k ? `<span class="jq-chip">${this.STAGE[k][0]}<button type="button" data-action="mine-stage" data-value="" aria-label="Clear the stage filter">×</button></span>` : ''}</div>
+      <div class="jq-scroll" tabindex="0" role="region" aria-label="My requests table"><table>
+        <thead><tr><th scope="col">Request</th><th scope="col">Description</th><th scope="col">Department</th><th scope="col">Stage</th><th scope="col">Waiting for</th><th scope="col" class="jq-amt">Amount (Rs)</th></tr></thead>
+        <tbody>${rows.length ? rows.map(m => { const [name, , c] = this.STAGE[this.stageOf(m)], url = Live.link(m), r = Live.ref(m) || m.ref, you = m.back || mineNow.has(m.portal + '|' + m.ref), d = this.days(m.since);
+          return `<tr><td class="jq-id">${url ? `<a href="${esc(url)}" aria-label="${m.back ? 'Correct and resubmit' : 'Track'} ${esc(r)}">${esc(r)}</a>` : esc(r)}</td><td>${esc(m.title && m.title !== m.ref ? m.title : '')}</td><td>${esc(m.dept || '—')}</td>
+            <td><span class="jq-st" style="--c:var(${c})">${name}</span></td>
+            <td>${you ? '<b>You</b>' : esc(Live.words(m.sub).replace(/^Waiting for:? /, ''))} <small>· ${d > 0 ? 'for ' + plural(d, 'day', 'days') : 'since today'}</small></td>
+            <td class="jq-amt">${m.amount ? Number(m.amount).toLocaleString('en-PK') : '—'}</td></tr>`; }).join('') : '<tr><td colspan="6">No requests at this stage.</td></tr>'}</tbody>
+      </table></div></div>`;
+  },
+  skeleton: () => `<div class="jq-scroll">${[92, 78, 86, 70, 82].map(w => `<div class="jq-sk"><i style="width:${w}%"></i></div>`).join('')}</div>`,
+};
+console.assert(MyDesk.stageOf({ back: true, key: 'po' }) === 'back' && MyDesk.stageOf({ key: 'po' }) === 'purchase' && MyDesk.stageOf({ key: 'budget', kind: 'approval' }) === 'approval' && MyDesk.stageOf({}) === 'open', 'MyDesk.stageOf');
+console.assert(MyDesk.slowest([{ key: 'a', days: 1 }, { key: 'b', days: 3 }, { key: 'c', days: null }]).key === 'b' && MyDesk.slowest([{ days: 0 }]) === null && MyDesk.barH(0, 9, 120) === 12 && MyDesk.barH(9, 9, 120) === 120, 'MyDesk flow maths');
+
 class HomeView {
+  mount() { MyDesk.draw(true); }
   // Live home: the same live data as the old main page's "Today" (core_my_today + hr_today), in the new design.
   // Old features with a new-design equivalent use it (banner numbers, tiles, list); the rest are kept as they were
   // (waiting-by-portal chart, My tasks panel, Approvals / To do tabs, late days, amounts).
@@ -2933,10 +3076,7 @@ class HomeView {
         actions: [...(quick ? [[a.last ? 'Approve' : 'Recommend', `data-action="quick-approve" data-id="${esc(quick)}" data-word="${a.last ? 'Approve' : 'Recommend'}"`, 1]] : []), ...(url ? [['Open', `href="${esc(url)}"`, quick ? 0 : 1]] : [])] }; });
     const D = Live.day, U = D && D.update, evs = (D && D.events) || [], team = (D && D.team) || [];
     // My requests: everything I raised that is still on its way, with the step it waits at (one list for all portals)
-    const mine = ((T && T.mine) || []).slice(0, 30).map(a => { const p = portalOf(a.portal), url = link(a), d = days(a.since);
-      return { sev: a.back ? 3 : 1, icon: Live.ICON[a.portal] || 'send', title: [ref(a), a.title && a.title !== a.ref ? a.title : ''].filter(Boolean).join(' · ') || a.ref,
-        meta: [p ? p.name : a.portal, Live.words(a.sub), d > 0 ? `for ${plural(d, 'day', 'days')}` : 'today'].filter(Boolean).join(' · '),
-        actions: url ? [[a.back ? 'Correct and resubmit' : 'Track', `href="${esc(url)}"`, a.back ? 1 : 0]] : [] }; });
+    const mine = MyDesk.mine(), flowNote = MyDesk.note();
     const rest = {}; show.slice(20).forEach(a => { const n = portalOf(a.portal)?.name || a.portal; rest[n] = (rest[n] || 0) + 1; });
     const restN = Math.max(0, (tab === 'all' ? (C.actions || 0) : show.length) - Math.min(show.length, 20)) - Object.values(rest).reduce((x, y) => x + y, 0);   // beyond the 50 per portal the list carries
     if (restN > 0) rest['your portals'] = restN;
@@ -2972,13 +3112,14 @@ class HomeView {
         </dl>` : ''}
       </section>
 
-      ${!T ? `<div class="brief-empty">${icon(Live.todayErr ? 'alert' : 'clock')}${Live.todayErr ? 'Live numbers unavailable right now. Your portals below still work.' : 'Loading your day…'}</div>` : `
+      ${!T ? `<div class="brief-empty">${icon(Live.todayErr ? 'alert' : 'clock')}${Live.todayErr ? 'Live numbers unavailable right now. Your portals below still work.' : 'Loading your day…'}</div>${Live.todayErr ? '' : `<section class="brief" aria-busy="true" aria-label="My requests, loading"><div class="brief-head"><div><h2>${icon('send')}My requests</h2><p>Loading requests</p></div></div>${MyDesk.skeleton()}</section>`}` : `
       <section class="status-row" aria-label="Your day">
         ${card('accent', 'inbox', C.actions, 'Waiting for you', C.late ? `<span class="pulse"></span>${C.late} waiting more than 2 days` : C.actions ? '<span class="pulse"></span>Approve, check or sign' : 'All clear', 'brief-h')}
         ${card('secondary', 'tasks', C.tasks_week, 'My tasks this week', 'Due in the next 7 days', 'tasks-h')}
         ${card('neutral', 'send', Math.max(C.my_open_requests || 0, mine.length), 'My requests', 'See where each one is', 'mine-h')}
       </section>
       <p class="live-help">${icon('bell')}<span>Three things do everything: <b>+ New request</b> = start any form you are allowed to send. <b>Waiting for you</b> = steps only you can take (approve, check, sign or receive). <b>My requests</b> = everything you sent and where it is now. <b>The bell</b> = news only.</span></p>
+      ${MyDesk.deck()}
 
 
       <div class="section-head" style="margin-top:8px"><h2>My work today</h2><span>Approvals, tasks, events and your daily update, in one place</span></div>
@@ -3018,7 +3159,10 @@ class HomeView {
       <section class="brief" aria-labelledby="mine-h">
         <div class="brief-head"><div><h2 id="mine-h">${icon('send')}My requests</h2>
           <p>${mine.length ? 'Everything you sent that is still on its way, and who it is waiting for.' : 'You have no request on its way right now.'}</p></div><a class="btn btn-xs btn-secondary" href="#/requests">All my requests</a></div>
-        ${mine.length ? Smart.list(mine) : `<div class="brief-empty">${icon('checkCircle')}Nothing is waiting. A new request will show here as soon as you send it.</div>`}
+        ${mine.length ? `<div class="jf-head"><div><h3>Where my requests are right now</h3><p>My open requests at each stage. Select a stage to list its requests.</p></div>${flowNote.slow ? `<span class="jf-badge">Slowest stage: ${flowNote.slow.name}</span>` : ''}</div>
+        <div class="jf-box" id="mine-flow"></div>
+        <div class="jf-strip">${icon('clock')}<span>${flowNote.text}</span></div>
+        ${MyDesk.table()}` : `<div class="brief-empty">${icon('checkCircle')}Nothing is waiting. A new request will show here as soon as you send it.</div>`}
       </section>`}
 
       <div class="section-head"><h2>Programmes</h2><span>Alkhidmat Islamabad service areas</span></div>
@@ -4397,6 +4541,17 @@ const App = {
       if (r.error) { toast(Live.fail('Not saved', r.error)); return; }
       toast('Daily work update saved.'); el.blur(); t.blur(); Live.loadToday();
     },
+    'deck-skip': () => {   // the next waiting request; nothing is saved, the request stays in the list below
+      const box = $('#deck'); if (!box || box.dataset.busy) return;
+      const had = box.contains(document.activeElement); box.dataset.busy = 1; box.firstElementChild.classList.add('out'); Live.deckAt = (Live.deckAt || 0) + 1;
+      setTimeout(() => { if (!box.isConnected) return; box.outerHTML = MyDesk.deck(); if (had) $('#deck .jd-skip')?.focus({ preventScroll: true }); }, RM ? 0 : 280);
+    },
+    'mine-stage': el => {   // select a stage to list its requests; select it again (or the chip's x) to clear
+      const v = MyDesk.STAGE[el.dataset.value] ? el.dataset.value : null;
+      Live.mineStage = v && Live.mineStage !== v ? v : null;
+      const t = $('#mine-tbl'); if (t) t.outerHTML = MyDesk.table();
+      MyDesk.draw(true); $(v ? `.jf-stage[data-value="${v}"]` : '.jf-stage')?.focus({ preventScroll: true });
+    },
     'live-tab': el => { Live.tab = el.dataset.value; Router.render(false); $(`[data-action="live-tab"][data-value="${Live.tab}"]`)?.focus(); },
     'open-href': el => { if (/^(https:\/\/|\/(?!\/))/.test(el.dataset.href || '')) location.href = el.dataset.href; },   // same rule as Live.href
     'scroll-to': (el, e) => { e.preventDefault(); document.getElementById(el.dataset.target)?.scrollIntoView({ behavior: RM ? 'auto' : 'smooth', block: 'start' }); },
@@ -4512,6 +4667,12 @@ const App = {
         return;
       }
       if (Auth.isOpen()) return; // portal shortcuts are off while signed out
+      // My requests picture: a stage answers Enter/Space (an SVG shape has no click() of its own)
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('.jf-stage')) { e.preventDefault(); this.actions['mine-stage'](e.target); return; }
+      // The waiting request card: O opens it, S skips it. Never while typing, and never under an open menu or search.
+      if (/^[os]$/i.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey && !e.repeat && !$('#palette.open, #notifs.open, #appear.open, #fab.open, #drawer.open') && !e.target.closest?.('input, textarea, select, [contenteditable], [role="dialog"], [role="menu"]')) {
+        const t = $('#deck ' + (e.key.toLowerCase() === 'o' ? '.jd-open' : '.jd-skip')); if (t) { e.preventDefault(); t.click(); return; }
+      }
       // Card-style buttons (role="button") respond to Enter/Space like real buttons.
       if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[role="button"][data-action]')) { e.preventDefault(); e.target.click(); return; }
       // Alt+1…8 jumps to Home / a module; arrow keys move within the menu.
