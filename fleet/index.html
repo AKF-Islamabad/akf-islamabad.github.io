@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-fleet.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-Ef4UmpbEdbaTGcArcnbZSlwsYGcezAN5LIlVfBISGas='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-9J2exbF7uTS8pt7t6Ry5B0Mc6sYcmA9KUpIolFd797c='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1617,7 +1617,7 @@ const visOpts=u=>{const P=PQ.people||[],mine=P.filter(p=>p.dept_name&&p.dept_nam
 async function rsubmit(){const g=x=>$(x).value.trim(),pd=g('nq_pd'),rd=g('nq_rd'),vd=g('nq_vd'),pt=tget('nq_pt'),rt=tget('nq_rt'),prog=g('nq_prog')=='Other'?g('nq_prog2'):g('nq_prog'),vis=g('nq_vis')=='__other'?g('nq_vis2'):g('nq_vis'),mn=pd2(NOTICE());
  if(vis.length<3)return toast('Select the employee who is visiting (or Other and type the name)');
  const miss=[['Program',prog],['Visit Date',vd],['Pick up Date',pd],['Return Date',rd],['Place of Visit',g('nq_place')],['City',g('nq_city')],['Reason of Visit',g('nq_reason')]].filter(x=>!x[1]).map(x=>x[0]);if(miss.length)return toast('Please fill: '+miss.join(', '));if(vd<mn||pd<mn)return toast(NDAYS()+' notice is required - earliest date is '+dmy(mn));if(rd+' '+rt<=pd+' '+pt)return toast('Return must be after pick-up');
- needSig(async()=>{toast('Submitting…');const docs=[];for(const f of PQ.docs||[])docs.push(await upl(f));const r=await api('req',{op:'submit',f:{des:g('nq_des'),prog,vis,vd,pt,rt,pd,rd,place:g('nq_place'),city:g('nq_city'),reason:g('nq_reason'),docs}});if(!r.ok)return toast(r.err);PQ.docs=[];await rload();PQ.sel=r.req.no;PQ.view='det';render();rnotify(r.req,'submitted')})}
+ needSig(async()=>{toast('Submitting…');const docs=[];for(const f of PQ.docs||[])docs.push(await upl(f));const r=await api('req',{op:'submit',f:{des:g('nq_des'),prog,vis,vd,pt,rt,pd,rd,place:g('nq_place'),city:g('nq_city'),reason:g('nq_reason'),docs}});if(!r.ok)return toast(r.err);PQ.docs=[];PQ.nq={};await rload();PQ.sel=r.req.no;PQ.view='det';render();rnotify(r.req,'submitted')})}
 /* driver */
 function dHome(){const u=PQ.u,mine=PQ.reqs.filter(o=>RUN.includes(o.status)).sort((a,b)=>wS(a)>wS(b)?1:-1),h=PQ.reqs.filter(o=>DON.includes(o.status)).slice(0,5);
  if(!PQ.ckd)return `<div class="card text-center" style="border-color:#DC2626"><div class="text-red-600">${svg(P.al,48,'mx-auto')}</div><h2 class="text-xl font-extrabold mt-2">Daily checklist required</h2><p class="text-slate-600 text-sm">You must submit today's vehicle checklist (${dmy(pd2(0))}) before you can start any trip.</p><button class="btn g mt-4" style="min-height:52px" data-onclick="pgo('chk')">Start daily checklist</button></div>${mine.length?`<div class="card"><b>Your assignments (locked until checklist is done)</b><div class="grid md:grid-cols-2 gap-3 mt-2">${mine.map(rcard).join('')}</div></div>`:''}`;
@@ -2589,6 +2589,9 @@ function erpHash() {
 }
 /* quiet: a live update or the tab coming back. Charts keep their place instead of growing again, which looks like blinking */
 const settle = root => root.getAnimations({ subtree: true }).forEach(a => { if (a.effect && a.effect.getTiming().iterations !== Infinity) a.finish(); });
+// what is typed in the new-request form, kept in memory only (never saved in the browser); the dates and times are not kept
+const NQK = ['nq_des', 'nq_prog', 'nq_prog2', 'nq_vis', 'nq_vis2', 'nq_place', 'nq_city', 'nq_reason'];
+document.addEventListener('input', e => { if (NQK.includes(e.target.id)) (PQ.nq = PQ.nq || {})[e.target.id] = e.target.value; });
 function erpRender(quiet) {
   if (!ME) return;
   quiet = quiet === true;
@@ -2600,6 +2603,13 @@ function erpRender(quiet) {
   app.innerHTML = html;
   if (quiet) settle(app);
   gateControls(app);
+  if (PQ.view === 'new' && $('nq_reason')) {   // an unfinished request is kept while Fleet stays open; a fresh form starts at the program I used last time
+    const d = PQ.nq || {}, last = PQ.reqs.filter(o => o.email == PQ.u.e).sort((a, b) => b.created > a.created ? 1 : -1)[0];
+    if (d.nq_prog == null && last && last.prog) $('nq_prog').value = last.prog;
+    NQK.forEach(k => { if (d[k] != null) $(k).value = d[k]; });
+    ['nq_prog', 'nq_vis'].forEach(k => { if ($(k).selectedIndex < 0) $(k).selectedIndex = 0; });   // a kept choice that is no longer in the list
+    $('nq_prog2').style.display = $('nq_prog').value == 'Other' ? 'block' : 'none'; $('nq_vis2').style.display = $('nq_vis').value == '__other' ? '' : 'none';
+  }
   buildChrome();
   setTimeout(() => { try { if (window.Chart) Chart.defaults.animation.duration = quiet ? 0 : 1000; if (PQ.view === 'home' || PQ.view === 'admin') post(); if ($('g1')) cdraw(); } catch (e) { console.warn('[charts]', e); } }, 0);
 }

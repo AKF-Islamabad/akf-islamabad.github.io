@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-GeuCh03byCv9QOgDqxQhI1FBLjsCWiFS2FGP8MrJwsM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-kcOKGpdlcJQ1P5J1TvgUyLh+hm8QRPH7PL5oFgtskiU='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1344,6 +1344,12 @@ const VIEWS = {
     }
     const route = V.kind === "Document" ? null : ((pol.routes || {})[V.kind] || []);
     /* dates start at today (the Attendance date at the day picked on the Attendance page); the bill date and "needed by" stay empty */
+    /* an unfinished form is kept while HR360 stays open (in memory only, never saved in the browser), one per kind of request */
+    const dr = (V.drafts = V.drafts || {})[V.kind], fix = V.kind === "Attendance" && V.fixDate;   // a day picked on the Attendance page wins over the kept date
+    if (dr) { const ks = Object.keys(dr).filter(k => f[k] && !(fix && k === "date")); ks.forEach(k => { f[k].value = dr[k]; });
+      ks.forEach(k => { f[k].dispatchEvent(new Event("change")); f[k].dispatchEvent(new Event("input")); }); }   // the notes under the form follow the kept values
+    const keep = () => { const d = {}; Object.entries(f).forEach(([k, n]) => { if (!k.startsWith("_")) d[k] = n.value; }); V.drafts[V.kind] = d; };
+    form.addEventListener("input", keep); form.addEventListener("change", keep);
     const td = new Date().toLocaleDateString("en-CA");
     ["from", "to", "date"].forEach(k => { if (f[k] && f[k].type === "date" && !f[k].value) f[k].value = (V.kind === "Attendance" && V.fixDate) || td; });
     /* fields the server always asks for: marked with * and checked together before sending */
@@ -1374,7 +1380,7 @@ const VIEWS = {
             d.files.push(path); done[key] = path;
           }
         }
-        const id = await rpc("hr_submit", { p_kind: V.kind, p_data: d }, "The request was not saved"); toast("Request " + id + " sent for approval"); await reload(); go("mine"); }
+        const id = await rpc("hr_submit", { p_kind: V.kind, p_data: d }, "The request was not saved"); toast("Request " + id + " sent for approval"); delete V.drafts[V.kind]; await reload(); go("mine"); }
       catch (e) { toast(e.shown ? e.message : errText(e, "The request was not saved"), true); btn.disabled = false; }
     });
     box.append(card(KIND[V.kind], form, route ? el("p", { class: "small muted", text: "Approval path: " + route.join(" → ") + " (a step is skipped when nobody holds it or it is you; at least 2 different people approve)." }) : null, el("div", { class: "hr-actions" }, btn)));
