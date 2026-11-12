@@ -1,0 +1,11 @@
+# Gitleaks rules for this website (the "2 Secrets" job in .github/workflows/security.yml reads this file by itself).
+# All the standard rules stay on. ONE value is allowed: the PUBLIC key of our database project (role "anon").
+# Every browser needs that key to open the Career page, so it is public by design; Row-Level Security protects the data.
+# The pattern is the fixed start of that key: {"iss":"supabase","ref":"ubtwxpytaemswdcwvdtb","role":"anon"
+# A secret key (role "service_role") or a key of another project does not match, so it is still reported.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public (anon) key of the live database project"
+regexes = ['''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVidHd4cHl0YWVtc3dkY3d2ZHRiIiwicm9sZSI6ImFub24i''']
