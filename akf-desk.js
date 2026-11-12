@@ -62,7 +62,7 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
   // the same Jazba frame on every portal (Jazba Portal Standard): top strip + menu + Ctrl+K; the sticky note shows on every page
   if (document.documentElement.dataset.jzPage !== "hub" && !window.JAZBA_SHELL) {
     document.documentElement.dataset.jzShell = "on";
-    const js = document.createElement("script"); js.src = BASE + "jazba-shell.js?v=10"; js.defer = true; document.head.append(js);
+    const js = document.createElement("script"); js.src = BASE + "jazba-shell.js?v=11"; js.defer = true; document.head.append(js);
   }
   const cfg = window.AKF_SUPABASE;
   if (!cfg || !window.supabase || !cfg.url) { window.AKF_NOTIFY = function () {}; return; }

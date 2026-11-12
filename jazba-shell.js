@@ -105,7 +105,7 @@
       if (here) document.documentElement.style.setProperty("--jz-pc", dot.style.background);
       const s = el("a", "jz-ts-link" + (here ? " on" : "")); s.href = href; s.title = p.name; s.setAttribute("aria-label", p.name); if (here) s.setAttribute("aria-current", "page");
       // one tidy row: names without the word "Management" (full name on hover and for screen readers)
-      s.append(dot, el("span", "", p.name.replace(/s+Management$/i, "") || p.name)); stripLinks.append(s);
+      s.append(dot, el("span", "", p.name.replace(/ +Management$/i, "") || p.name)); stripLinks.append(s);
       if (here) requestAnimationFrame(() => { stripLinks.scrollLeft = Math.max(0, s.offsetLeft - 40); });   // phones: this portal visible in the one-row list
     });
     stripLinks.onwheel = e => { if (stripLinks.scrollWidth > stripLinks.clientWidth && e.deltaY && !e.deltaX) { stripLinks.scrollLeft += e.deltaY; e.preventDefault(); } };   // mouse wheel moves the row sideways when it does not fit
