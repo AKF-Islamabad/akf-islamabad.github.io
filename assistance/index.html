@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-assistance.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-HZEWBQvd1GfndtgW5+pk7ZrQaOqqItuhn4u7PPGVODc='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-kNzdf2q5qjAEes6ulw/BbPN7QuRNDlNB74C6vmNyBhY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1898,13 +1898,13 @@ function actionPanel(a) {
       </fieldset>
       <div class="as-f" id="skipWrap" ${dir ? "hidden" : ""}><label for="skipReason">Reason for skipping<span class="req">*</span></label>
         <select class="select" id="skipReason">${dir ? `<option value="">Choose a reason</option>` : ""}${SKIP_REASONS.map(x => `<option ${!dir && x === SKIP_REASONS[0] ? "selected" : ""}>${esc(x)}</option>`).join("")}</select><span class="msg">Choose a reason, and add remarks for “Other”</span></div>
-      <div class="as-btns"><button class="btn btn-primary btn-lg" type="button" data-act="do" data-do="forward" id="fwdBtn">${ic("send", "i-sm")}<span>${dir ? "Send to Director" : "Skip Director and send on"}</span></button>${retRej()}</div>`);
+      <div class="as-btns"><button class="btn btn-success btn-lg" type="button" data-act="do" data-do="forward" id="fwdBtn">${ic("send", "i-sm")}<span>${dir ? "Send to Director" : "Skip Director and send on"}</span></button>${retRej()}</div>`);
   }
   if (a.status === "rm") return wrap("Recommendation", `
       <div class="as-f"><span class="lbl">Your recommendation</span><div class="as-seg"><label><input type="radio" name="rec" value="yes" checked>Recommend</label><label><input type="radio" name="rec" value="no">Do not recommend</label></div></div>
       ${a.type === "financial" ? amountBox("Recommended amount", a.request.amount) : ""}
       ${remarks(false)}
-      <div class="as-btns"><button class="btn btn-primary btn-lg" type="button" data-act="do" data-do="recommend">${ic("send", "i-sm")}Send to ${esc((nx || {}).who || "next step")}</button>${retRej(false)}</div>`);
+      <div class="as-btns"><button class="btn btn-success btn-lg" type="button" data-act="do" data-do="recommend">${ic("send", "i-sm")}Send to ${esc((nx || {}).who || "next step")}</button>${retRej(false)}</div>`);
   if (st && st.final) {
     const rec = a.rm ? (a.rm.recommend ? "Recommended" + (a.type === "financial" ? " · " + rs(a.rm.amount) : "") : "Not recommended") : "No recommendation step";
     return wrap("Final approval", `<div class="as-note ${!a.rm || a.rm.recommend ? "n-ok" : "n-warn"}">${ic(!a.rm || a.rm.recommend ? "check" : "alert")}<span><b>Regional Manager:</b> ${esc(rec)}${a.rm && a.rm.note ? " – " + esc(a.rm.note) : ""}</span></div>
@@ -1933,7 +1933,7 @@ function actionPanel(a) {
   }
   // Department Head (no director step), Director and any extra approval step of the matrix
   const title = a.status === "dept" ? "Department review" : a.status === "director" ? "Director review" : esc(st.label + " – " + st.who);
-  return wrap(title, `${remarks(false)}<div class="as-btns"><button class="btn btn-primary btn-lg" type="button" data-act="do" data-do="forward">${ic("send", "i-sm")}Forward to ${esc((nx || {}).who || "next step")}</button>${retRej()}</div>`);
+  return wrap(title, `${remarks(false)}<div class="as-btns"><button class="btn btn-success btn-lg" type="button" data-act="do" data-do="forward">${ic("send", "i-sm")}Forward to ${esc((nx || {}).who || "next step")}</button>${retRej()}</div>`);
 }
 /* keep typed values in the action form when it re-renders after an upload */
 function snapshotAction() {

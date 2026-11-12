@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Foundation Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-lJnKh/HRM9P4f3TknaJ6DejCiA/01uDqJrMpy4Twkpo='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-T90btnCc+AFSbzm3vco/m5MFDSJJY3+eYL5wc7LA0DA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -2642,7 +2642,7 @@ VIEWS.donations = {
       <div class="cards-m">${items.map(x => `<div class="m-card" data-act="receipt" data-id="${esc(x.id)}" tabindex="0" role="button">
         <div class="m-top"><div><div class="m-name">${esc(donorName(donorById(x.donorId)))}</div><div class="m-meta mono">${esc(x.receipt)} · ${fmtDate(x.date)}</div></div>${statusBadge(x.status)}</div>
         <div class="m-row">${catBadge(x.category)}<b class="num">${esc(money(x.amount))}</b></div>
-        ${x.status === 'Pending' && canVerifyX(x) ? `<div class="m-row"><button class="btn btn-success btn-sm" data-act="don-verify" data-id="${esc(x.id)}">${ic('check')}Verify</button><button class="btn btn-secondary btn-sm" data-act="don-reject" data-id="${esc(x.id)}">Reject</button></div>` : ''}</div>`).join('')}</div>
+        ${x.status === 'Pending' && canVerifyX(x) ? `<div class="m-row"><button class="btn btn-success btn-sm" data-act="don-verify" data-id="${esc(x.id)}">${ic('check')}Verify</button><button class="btn btn-ghost btn-sm" style="color:var(--danger)" data-act="don-reject" data-id="${esc(x.id)}">Reject</button></div>` : ''}</div>`).join('')}</div>
       ${pager('donations', page, list.length)}` : emptyState('receipt', 'No donations found', 'Adjust the filters or record a new donation.', can('donation.create') ? `<button class="btn btn-primary" data-act="don-add">${ic('plus')}Record donation</button>` : '')}
     </div>`;
   },
@@ -3920,7 +3920,7 @@ function correctionDetail(id) {
       <div class="alert alert-info">${ic('info')}<span><b>${esc(c.reason)}</b><br>${esc(c.note)}${c.decisionNote ? `<br><br><b>Finance note:</b> ${esc(c.decisionNote)}` : ''}</span></div>
       <div class="tbl-wrap"><table class="tbl compact"><thead><tr><th>Field</th><th>Before</th><th>After</th><th></th></tr></thead><tbody>${c.changes.map(z => `<tr><td>${esc(z.label)}</td><td class="muted"><s>${esc(z.from || '—')}</s></td><td><b>${esc(z.to || '—')}</b></td><td>${z.fin ? '<span class="badge b-bad">Financial</span>' : '<span class="badge b-info">Detail</span>'}</td></tr>`).join('')}</tbody></table></div>
       ${c.profile ? '<p class="small muted" style="margin-top:10px">The donor profile is corrected too.</p>' : ''}`,
-    foot: canDecide ? `<button class="btn btn-secondary" data-act="cor-reject" data-id="${esc(c.id)}">Reject</button><button class="btn btn-success" data-act="cor-approve" data-id="${esc(c.id)}">${ic('check')}Approve</button>` : `<button class="btn btn-primary" data-act="modal-close">Close</button>`
+    foot: canDecide ? `<button class="btn btn-success" data-act="cor-approve" data-id="${esc(c.id)}">${ic('check')}Approve</button><button class="btn btn-ghost" style="color:var(--danger)" data-act="cor-reject" data-id="${esc(c.id)}">Reject</button>` : `<button class="btn btn-primary" data-act="modal-close">Close</button>`
   });
 }
 VIEWS.corrections = {
@@ -4195,7 +4195,7 @@ async function showReceipt(id) {
       <img class="rc-img" src="${esc(src)}" alt="Receipt ${esc(x.receipt)} for ${esc(sn.name || '')}, ${esc(money(x.amount))}">`,
     foot: `${x.status === 'Verified' && can('donation.void') ? `<button class="btn btn-ghost left" style="color:var(--danger)" data-act="don-void" data-id="${esc(x.id)}">${ic('ban')}Void</button>` : ''}
       ${['Pending', 'Verified'].includes(x.status) && can('donation.create') && !openCorrection(x) && !mask ? `<button class="btn btn-secondary ${x.status === 'Verified' && can('donation.void') ? '' : 'left'}" data-act="cor-request" data-id="${esc(x.id)}">${ic('fix')}${x.status === 'Pending' ? 'Correct entry' : 'Request correction'}</button>` : ''}
-      ${x.status === 'Pending' && canVerifyX(x) ? `<button class="btn btn-secondary" data-act="don-reject" data-id="${esc(x.id)}">Reject</button><button class="btn btn-success" data-act="don-verify" data-id="${esc(x.id)}">${ic('check')}Verify</button>` : ''}
+      ${x.status === 'Pending' && canVerifyX(x) ? `<button class="btn btn-success" data-act="don-verify" data-id="${esc(x.id)}">${ic('check')}Verify</button><button class="btn btn-ghost" style="color:var(--danger)" data-act="don-reject" data-id="${esc(x.id)}">Reject</button>` : ''}
       <button class="btn btn-secondary" data-act="receipt-print" data-id="${esc(x.id)}">${ic('printer')}Print</button><button class="btn btn-primary" data-act="modal-close">Done</button>`
   });
 }

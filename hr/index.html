@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-ryqdXFQMd8PKRSqSUhZl+QRAp8v3JYsG6cyuD8eoMPc='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-uvXeOc5gDcbuPRhkflrdmS/w9yHLQV5sQncBar5qNuc='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1779,7 +1779,7 @@ async function openReq(id) {
         catch (e) { toast(e.message, true); send.disabled = false; } });
       body.push(el("h4", { text: "Correct and resubmit" }), form, el("div", { class: "hr-actions" }, send));
     }
-  } else if ((ME.super || r.myStep) && r.status === "pending") {   // the approver whose step it is, or the Super Admin
+  } else if (ME.super && !r.myStep && r.status === "pending") {   // the Super Admin on someone else's step; the approver's own Send back button sits in "Your decision"
     const why = el("textarea", { class: "textarea", rows: 2, maxlength: 500, placeholder: "What must be corrected (required)" }), restart = el("input", { type: "checkbox" });
     const go_ = el("button", { class: "btn btn-outline", type: "button", text: "Send back to " + (r.name || "the requester") });
     go_.addEventListener("click", async () => { if (why.value.trim().length < 5) return toast("Write what must be corrected", true); go_.disabled = true;
@@ -1789,12 +1789,18 @@ async function openReq(id) {
       ME.super ? el("label", { style: "display:flex;gap:8px;align-items:center;margin:6px 0" }, restart, el("span", { text: "Restart approvals from the first step after the correction" })) : el("p", { class: "small muted", text: "After the correction it continues at this step." }), el("div", { class: "hr-actions" }, go_)));
   }
   if (r.myStep) {
-    const rem = el("textarea", { class: "textarea", rows: 2, maxlength: 500, placeholder: "Remarks (required to reject)" });
+    const rem = el("textarea", { class: "textarea", rows: 2, maxlength: 500, placeholder: "Remarks (needed to send back or reject)" });
     const last = r.step >= (r.route || []).length - 1;
     const act = async (a, b) => { b.disabled = true; try { const res = await rpc("hr_act", { p_id: r.id, p_action: a, p_remarks: rem.value }, "Not saved"); toast(r.id + ": " + (res.status === "pending" ? "sent to the next step" : res.status)); closeModal(); await reload(); render(); } catch (e) { toast(e.message, true); b.disabled = false; } };
     const ok = el("button", { class: "btn btn-success", type: "button", text: last ? "Approve" : "Recommend" }), no = el("button", { class: "btn btn-danger-o", type: "button", text: "Reject" });
     ok.addEventListener("click", () => act("approve", ok)); no.addEventListener("click", () => act("reject", no));
-    body.push(el("h4", { text: "Your decision" }), rem, el("div", { class: "hr-actions" }, ok, no));
+    const back = el("button", { class: "btn btn-outline", type: "button", text: "Send back", title: "Back to the requester for correction" }), restart = el("input", { type: "checkbox" });
+    back.addEventListener("click", async () => { if (rem.value.trim().length < 5) return toast("Write in Remarks what must be corrected", true); back.disabled = true;
+      try { await rpc("hr_sendback", { p_id: r.id, p_reason: rem.value.trim(), p_restart: restart.checked }, "Not sent back"); toast(r.id + " sent back for correction"); closeModal(); await reload(); render(); }
+      catch (e) { toast(e.message, true); back.disabled = false; } });
+    const pend = r.status === "pending";
+    body.push(el("h4", { text: "Your decision" }), rem, el("div", { class: "hr-actions" }, ok, pend ? back : null, no));
+    if (pend) body.push(ME.super ? el("label", { style: "display:flex;gap:8px;align-items:center;margin:6px 0" }, restart, el("span", { text: "Send back: restart approvals from the first step after the correction" })) : el("p", { class: "small muted", text: "Send back: after the correction it continues at this step." }));
   } else if (r.mine && r.status === "pending") {
     const w = el("button", { class: "btn btn-outline", type: "button", text: "Cancel request" });
     w.addEventListener("click", async () => { if (!confirm("Cancel " + r.id + "?")) return; w.disabled = true; try { await rpc("hr_cancel", { p_id: r.id, p_reason: "Cancelled by the requester" }, "Not cancelled"); toast(r.id + " cancelled"); closeModal(); await reload(); render(); } catch (e) { toast(e.message, true); w.disabled = false; } });
