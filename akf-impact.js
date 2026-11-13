@@ -29,7 +29,7 @@
     + ".ip-h{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:15px;font-weight:800}.ip-h img{flex:none;width:26px;height:26px;object-fit:contain;background:#fff;border-radius:7px}"
     + ".ip-g{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin:0}.ip-g div{min-width:0}.ip-g dt{font-size:19px;font-weight:800;line-height:1.1}.ip-g dd{margin:1px 0 0;font-size:10.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;opacity:.95}"
     + ".ip-b{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:5px 12px 5px 5px;border-radius:10px;background:rgba(255,255,255,.2);font-size:21px;font-weight:800}"
-    + ".ip-b span{padding:5px 9px;border-radius:7px;background:#fff;color:#16222e;font-size:11px;letter-spacing:.05em}"
+    + ".ip-n{font-variant-numeric:tabular-nums}.ip-b span{padding:5px 9px;border-radius:7px;background:#fff;color:#16222e;font-size:11px;letter-spacing:.05em}"
     + ".ip-pop{position:fixed;z-index:9990;pointer-events:none;transform-origin:50% 100%;animation:ip-flip .38s cubic-bezier(.2,.8,.3,1.15) both}"
     + "@keyframes ip-flip{from{transform:perspective(700px) rotateX(-92deg);opacity:0}to{transform:perspective(700px) rotateX(0);opacity:1}}"
     + "dialog.ip-dlg{padding:0;border:0;border-radius:16px;background:transparent;overflow:visible;max-width:none}dialog.ip-dlg::backdrop{background:rgba(8,25,45,.5)}"
@@ -49,9 +49,24 @@
     h.append(name);
     if (withClose) { const x = el("button", "ip-x", "×"); x.type = "button"; x.setAttribute("aria-label", "Close"); h.append(x); }
     const g = el("dl", "ip-g");
-    d.slice(1).forEach(([n, what]) => { const w = el("div"); w.append(el("dt", "", n), el("dd", "", what)); g.append(w); });
-    const b = el("div", "ip-b"); b.append(el("span", "", "BENEFICIARIES"), d[0]);
+    d.slice(1).forEach(([n, what]) => { const w = el("div"); w.append(el("dt", "ip-n", n), el("dd", "", what)); g.append(w); });
+    const b = el("div", "ip-b"); b.append(el("span", "", "BENEFICIARIES"), el("data", "ip-n", d[0]));
     c.append(h, g, b); return c;
+  }
+  // count-up: the figure at part e (0..1) of its way; commas, decimals and signs (+, %, million) stay as published
+  const at = (s, e) => s.replace(/[\d,]+(\.\d+)?/, m => { const dec = (m.split(".")[1] || "").length, v = parseFloat(m.replace(/,/g, "")) * e; return dec ? v.toFixed(dec) : Math.round(v).toLocaleString("en-US"); });
+  console.assert(Object.values(DATA).every(d => at(d[0], 1) === d[0] && d.slice(1).every(s => at(s[0], 1) === s[0])) && at("866 million", .5) === "433 million" && at("97%", 0) === "0%" && at("1.2 M+", .5) === "0.6 M+",
+    "akf-impact: the count-up ends on the exact published figure");
+  // every figure of a card on screen runs from 0 to its final value in about a second; no motion when the computer asks for none
+  function count(c) {
+    if (matchMedia("(prefers-reduced-motion:reduce)").matches) return;
+    const els = [...c.querySelectorAll(".ip-n")], fin = els.map(x => x.textContent), t0 = performance.now();
+    (function step(t) {
+      if (!c.isConnected) return;
+      const p = Math.min(1, (t - t0) / 1100), e = 1 - Math.pow(1 - p, 3);
+      els.forEach((x, i) => { x.textContent = p < 1 ? at(fin[i], e) : fin[i]; });
+      if (p < 1) requestAnimationFrame(step);
+    })(t0);
   }
 
   let pop, cur;
@@ -63,6 +78,7 @@
     const r = chip.getBoundingClientRect(), w = pop.offsetWidth;   // sits just above the programme, kept inside the screen
     pop.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + "px";
     pop.style.bottom = (innerHeight - r.top + 8) + "px";
+    count(pop);
   }
   function open(chip) {
     hide(); if (!DATA[nameOf(chip)]) return;
@@ -71,7 +87,7 @@
     let done = 0; const shut = () => { if (done++) return; if (dlg.open) dlg.close(); dlg.remove(); if (chip.isConnected) chip.focus(); };
     dlg.addEventListener("click", e => { if (e.target === dlg || e.target.closest(".ip-x")) shut(); });   // the empty side is the dialog itself (its backdrop)
     dlg.addEventListener("close", shut); dlg.addEventListener("cancel", shut);   // Esc
-    document.body.append(dlg); dlg.showModal();
+    document.body.append(dlg); dlg.showModal(); count(dlg);
   }
   const chipOf = e => e.target && e.target.closest ? e.target.closest(SEL) : null;
   document.addEventListener("mouseover", e => { const c = chipOf(e); if (c) show(c); });
