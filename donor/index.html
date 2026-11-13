@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Foundation Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-mRo4/r4d4j2n0rDCBlJz6f5PY3M2E5Bfo3p1eUIKF2c='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-upek2JMcZ6LZqML95TR1a1hTWPad+3zwgqhTXUN2h5g='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -4057,7 +4057,7 @@ function receiptData(x, mask) {
   const isOrg = sn.type === 'Organization';
   const m = (v, f) => mask && v ? f(v) : v;
   return {
-    serial: pad(x.serial || 0, 5), no: x.bookNo || x.receipt, date: x.date, isOrg,
+    donorNo: x.donorId || '', no: x.bookNo || x.receipt, date: x.date, isOrg,
     name: `${sn.title || ''} ${sn.name || ''}`.trim(), addr1: mask && sn.address ? 'Hidden for your role' : sn.address, addr2: sn.city,
     mobile: m(sn.phone, maskPhone), id: isOrg ? sn.ntn : m(sn.cnic, maskCNIC), email: m(sn.email, maskEmail),
     coName: x.co ? x.co.name : '', coMobile: x.co ? m(x.co.mobile, maskPhone) : '', coEmail: x.co ? m(x.co.email, maskEmail) : '',
@@ -4089,7 +4089,8 @@ async function drawReceipt(canvas, x, { mask = false } = {}) {
   ctx.fillStyle = NAVY; ctx.font = RF(600, 27); ctx.fillText('Donor Copy', 1427, 308);
   const tag = x.replacedBy ? `CANCELLED · see ${x.replacedBy}` : x.rev ? `REVISED · Rev ${x.rev}` : x.replaces ? `Replaces ${x.replaces}` : '';
   if (tag) { ctx.fillStyle = '#C0262D'; ctx.font = RF(800, 22); ctx.fillText(rfit(ctx, tag, 330, 800, 22, 14), 1427, 342); }
-  ctx.fillStyle = '#111'; ctx.font = '700 76px Consolas, "Courier New", monospace'; ctx.fillText(d.serial, 1010, 300);
+  // the donor's own number (the receipt number is on the "No." line below); 500 wide = the gap between the name block and the RECEIPT box
+  if (d.donorNo) { ctx.fillStyle = NAVY; ctx.font = RF(600, 24); ctx.fillText('Donor No.', RMID, 248); ctx.fillStyle = '#111'; ctx.fillText(rfit(ctx, d.donorNo, 500, 700, 50, 24), RMID, 306); }
   rfield(ctx, 'No.', 820, 1172, 395, d.no); rfield(ctx, 'Date', 1190, RR, 395, fmtDate(d.date));
   // donor block
   const Y = [478, 553, 628, 703, 778, 853, 928];
