@@ -541,6 +541,11 @@ textarea.input { height: auto; min-height: 80px; padding: 8px 10px; resize: vert
 .sev-1 { --sev: var(--color-brand-primary); --sev-fg: var(--fg-primary); }
 .bi-ic { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: color-mix(in srgb, var(--sev) 12%, transparent); color: var(--sev-fg); }
 .bi-title { font-size: 13.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+a.bi-title { display: block; color: inherit; text-decoration: none; }
+a.bi-title:hover { color: var(--color-brand-primary); text-decoration: underline; }
+/* Programmes: one line at the foot of the main page, each in its official colour */
+.prog-foot { display: flex; gap: 8px; margin-top: 28px; padding: 14px 0 4px; border-top: 1px solid var(--color-border); overflow-x: auto; }
+.prog-foot span { flex: 1 1 0; min-width: 88px; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 8px 6px; text-align: center; line-height: 1.2; border: 1px solid var(--color-border); border-bottom: 3px solid var(--pc); border-radius: 10px; background: var(--color-surface); font-size: 11.5px; font-weight: 600; }
 .bi-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 3px; font-size: 12px; color: var(--color-text-subtle); }
 .sev-tag { padding: 0 6px; border-radius: 4px; font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; background: color-mix(in srgb, var(--sev) 12%, transparent); color: var(--sev-fg); }
 .bi-actions { display: flex; gap: 6px; }
@@ -2020,7 +2025,9 @@ const Live = {
     return ['P0001', '42501', '22023'].includes(e && e.code) && e.message ? what + ': ' + e.message : what + '. Please try again.'; },
   // Fleet stores "Pending X"; show it in the same words as every other portal
   words: s => String(s || '').replace(/^Pending Correction$/, 'Sent back for correction').replace(/^Pending /, 'Waiting for '),
-  link(a) { const p = this.nav().find(x => x.id === a.portal); if (!p || p.href === '#') return ''; const r = this.ref(a);
+  // Procurement and Store are one app on the same requests: a person who has only one of the two opens the request there
+  gate(a) { const n = this.nav(), ok = k => n.find(x => x.id === k && x.href !== '#'); return ok(a.portal) || ok({ procurement: 'store', store: 'procurement' }[a.portal]); },
+  link(a) { const p = this.gate(a); if (!p) return ''; const r = this.ref(a);
     return p.href + (r && ['procurement', 'store', 'fleet'].includes(a.portal) ? '#track=' + r : r && a.portal === 'hr' ? '#req=' + r : r && a.portal === 'assistance' ? '#case=' + r
       : a.portal === 'tasks' && /^EV-\d+$/.test(r) ? '#task=ev:' + r : a.portal === 'tasks' && /^EN-\d+$/.test(r) ? '#task=view:engagements' : ''); },
   async loadReqs() {
@@ -2925,7 +2932,7 @@ const Smart = {
       : `<button class="btn btn-xs ${primary ? 'btn-primary' : 'btn-secondary'}" ${attr}>${label}</button>`;
     return `<ol class="brief-list">${items.map(it => `<li class="brief-item sev-${it.sev}">
         <span class="bi-ic">${icon(it.icon)}</span>
-        <div class="bi-body"><div class="bi-title">${esc(it.title)}</div>
+        <div class="bi-body">${it.url ? `<a class="bi-title" href="${esc(it.url)}">${esc(it.title)}</a>` : `<div class="bi-title">${esc(it.title)}</div>`}
           <div class="bi-meta"><span class="sev-tag">${SEV[it.sev]}</span>${it.prog ? badge(it.prog, 14) : ''}<span>${esc(it.meta)}</span></div></div>
         <div class="bi-actions">${it.actions.map(btn).join('')}</div>
       </li>`).join('')}</ol>`;
@@ -2981,7 +2988,7 @@ const MyDesk = {
   mine: () => (Live.today && Live.today.mine) || [],
   deck() {
     const A = (Live.today && Live.today.actions) || []; if (!A.length) return '';
-    const n = A.length, at = (Live.deckAt || 0) % n, a = A[at], p = Live.nav().find(x => x.id === a.portal), url = Live.link(a), r = Live.ref(a), d = this.days(a.since);
+    const n = A.length, at = (Live.deckAt || 0) % n, a = A[at], p = Live.gate(a), url = Live.link(a), r = Live.ref(a), d = this.days(a.since);
     const quick = a.portal === 'hr' && a.kind === 'approve' && Live.QUICK.includes(a.k) && r, word = a.last ? 'Approve' : 'Recommend';   // the same rule as the list below
     const facts = [['Request', r], ['Step', Live.words(a.sub)], ['Amount', a.amount ? 'Rs ' + Number(a.amount).toLocaleString('en-PK') : ''], ['Department', a.dept], ['Details', a.info]].filter(f => f[1]).slice(0, 4);
     const step = +a.step, of = +a.steps, steps = step > 0 && of >= step && of <= 30;   // sent by the newer core_my_today(); without it the card has no step line
@@ -3053,6 +3060,7 @@ const MyDesk = {
 console.assert(MyDesk.stageOf({ back: true, key: 'po' }) === 'back' && MyDesk.stageOf({ key: 'po' }) === 'purchase' && MyDesk.stageOf({ key: 'budget', kind: 'approval' }) === 'approval' && MyDesk.stageOf({}) === 'open', 'MyDesk.stageOf');
 console.assert(MyDesk.slowest([{ key: 'a', days: 1 }, { key: 'b', days: 3 }, { key: 'c', days: null }]).key === 'b' && MyDesk.slowest([{ days: 0 }]) === null && MyDesk.barH(0, 9, 120) === 12 && MyDesk.barH(9, 9, 120) === 120, 'MyDesk flow maths');
 
+console.assert((() => { const L = Object.create(Live); L.nav = () => [{ id: 'store', href: '/store/' }]; return L.link({ portal: 'procurement', ref: 'AKF-MR-1' }) === '/store/#track=AKF-MR-1' && L.link({ portal: 'hr', ref: 'X' }) === ''; })(), 'Live.gate: a Procurement step must open in Store when that is the only one the person has');
 class HomeView {
   mount() { MyDesk.draw(true); }
   // Live home: the same live data as the old main page's "Today" (core_my_today + hr_today), in the new design.
@@ -3070,8 +3078,8 @@ class HomeView {
     const isLate = s => Date.now() - new Date(s).getTime() > 2 * 864e5;   // the same rule as the "waiting more than 2 days" count (013_today.sql)
     const ref = Live.ref, link = a => Live.link(a);
     const tab = Live.tab || 'all', show = A.filter(a => tab === 'all' || (tab === 'approve' ? a.kind !== 'do' : a.kind === 'do'));
-    const items = show.slice(0, 20).map(a => { const p = portalOf(a.portal), late = isLate(a.since), url = link(a), quick = a.portal === 'hr' && a.kind === 'approve' && Live.QUICK.includes(a.k) && ref(a);
-      return { sev: late ? 3 : a.kind === 'do' ? 1 : 2, icon: Live.ICON[a.portal] || 'inbox', title: a.title || a.ref,
+    const items = show.slice(0, 20).map(a => { const p = Live.gate(a), late = isLate(a.since), url = link(a), quick = a.portal === 'hr' && a.kind === 'approve' && Live.QUICK.includes(a.k) && ref(a);
+      return { sev: late ? 3 : 2, url, icon: Live.ICON[a.portal] || 'inbox', title: a.title || a.ref,
         meta: [p ? p.name : a.portal, a.info, Live.words(a.sub), late ? `waiting ${plural(Math.max(days(a.since), 2), 'day', 'days')}` : '', a.amount ? 'Rs ' + Number(a.amount).toLocaleString('en-PK') : ''].filter(Boolean).join(' · '),
         actions: [...(quick ? [[a.last ? 'Approve' : 'Recommend', `data-action="quick-approve" data-id="${esc(quick)}" data-word="${a.last ? 'Approve' : 'Recommend'}"`, 1]] : []), ...(url ? [['Open', `href="${esc(url)}"`, quick ? 0 : 1]] : [])] }; });
     const D = Live.day, U = D && D.update, evs = (D && D.events) || [], team = (D && D.team) || [];
@@ -3081,7 +3089,7 @@ class HomeView {
     const restN = Math.max(0, (tab === 'all' ? (C.actions || 0) : show.length) - Math.min(show.length, 20)) - Object.values(rest).reduce((x, y) => x + y, 0);   // beyond the 50 per portal the list carries
     if (restN > 0) rest['your portals'] = restN;
     const tasksP = portalOf('tasks'), day = d => { const x = new Date(d); return isNaN(x) ? d : x.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); };
-    const byPortal = {}; A.forEach(a => { byPortal[a.portal] = (byPortal[a.portal] || 0) + 1; });
+    const byPortal = {}; A.forEach(a => { const k = (Live.gate(a) || { id: a.portal }).id; byPortal[k] = (byPortal[k] || 0) + 1; });   // counted on the portal it opens in
     const chart = T && A.length && window.AKF_CHARTS ? AKF_CHARTS.donut({ id: 'today-portals', center: 'waiting',
       items: Object.keys(byPortal).map(k => { const p = portalOf(k); return { key: k, label: p ? p.name : k, value: byPortal[k], color: p ? p.color : '' }; }) }) : '';
     const card = (tone, ic, n, label, foot, target) => `
@@ -3165,11 +3173,6 @@ class HomeView {
         ${MyDesk.table()}` : `<div class="brief-empty">${icon('checkCircle')}Nothing is waiting. A new request will show here as soon as you send it.</div>`}
       </section>`}
 
-      <div class="section-head"><h2>Programmes</h2><span>Alkhidmat Islamabad service areas</span></div>
-      <section class="prog-grid">
-        ${PROGRAMS.map(pg => `<div class="prog-tile" style="--pc:${pg.color}"><div class="pt-head">${badge(pg.id, 40)}<b>${pg.name}</b></div></div>`).join('')}
-      </section>
-
       <div class="section-head"><h2>Your portals</h2><span>${plural(nav.length, 'portal', 'portals')} you can open</span></div>
       ${nav.length ? `<section class="portal-grid">
         ${nav.map(p => { const n = byPortal[p.id] || 0; return `
@@ -3183,7 +3186,8 @@ class HomeView {
               <span class="btn btn-xs pc-open" aria-hidden="true">Open ${icon('arrowUpRight')}</span>
             </div>
           </a>`; }).join('')}
-      </section>` : `<div class="brief-empty">${icon('shield')}You have no portals yet. Ask the Super Admin to give you access.</div>`}`;
+      </section>` : `<div class="brief-empty">${icon('shield')}You have no portals yet. Ask the Super Admin to give you access.</div>`}
+      <footer class="prog-foot" aria-label="Programmes of Alkhidmat Foundation Islamabad">${PROGRAMS.map(pg => `<span style="--pc:${pg.color}">${badge(pg.id, 22)}${pg.name}</span>`).join('')}</footer>`;
   }
   html() {
     if (Live.on) return Live.me ? this.live() : '';
