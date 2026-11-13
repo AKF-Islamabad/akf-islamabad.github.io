@@ -154,7 +154,7 @@
     const m = document.querySelector(".main"); if (!m) return;   // no page frame yet (sign-in screen)
     if (!foot) { foot = el("footer", "jz-prog-foot"); foot.setAttribute("aria-label", "Programmes of Alkhidmat Foundation Islamabad");
       PROGS.forEach(([id, name, c]) => { const s = el("span"), i = el("img"); i.src = BASE + "home/svc-" + id + ".png"; i.alt = ""; i.width = i.height = 22; i.loading = "lazy";
-        s.style.setProperty("--pc", c); s.append(i, name); foot.append(s); }); }
+        s.style.setProperty("--pc", c); s.tabIndex = 0; s.setAttribute("role", "button"); s.append(i, name); foot.append(s); }); }
     if (m.lastElementChild !== foot) m.append(foot);   // the portal redraws its page: keep the line last
     const b = document.querySelector(".bnav");   // phones: the line sits just above the portal's bottom menu, when it has one
     document.documentElement.style.setProperty("--jz-nav-h", (b ? b.offsetHeight : 0) + "px");
