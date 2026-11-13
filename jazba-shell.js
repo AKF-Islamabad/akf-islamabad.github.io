@@ -156,10 +156,12 @@
       PROGS.forEach(([id, name, c]) => { const s = el("span"), i = el("img"); i.src = BASE + "home/svc-" + id + ".png"; i.alt = ""; i.width = i.height = 22; i.loading = "lazy";
         s.style.setProperty("--pc", c); s.append(i, name); foot.append(s); }); }
     if (m.lastElementChild !== foot) m.append(foot);   // the portal redraws its page: keep the line last
+    const b = document.querySelector(".bnav");   // phones: the line sits just above the portal's bottom menu, when it has one
+    document.documentElement.style.setProperty("--jz-nav-h", (b ? b.offsetHeight : 0) + "px");
   }
 
   function start() {
-    build(); paintMine(); paintFoot();
+    build(); paintMine(); paintFoot(); addEventListener("resize", paintFoot);
     // the portal re-renders its menu often: repaint the copy on the next frame after any change
     let raf = 0; new MutationObserver(recs => { if (recs.every(r => rail.contains(r.target) || r.target === rail)) return;   // our own repaint is not a portal change
       cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { paintMine(); paintFoot(); }); })

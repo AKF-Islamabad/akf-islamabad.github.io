@@ -544,15 +544,18 @@ textarea.input { height: auto; min-height: 80px; padding: 8px 10px; resize: vert
 a.bi-title { display: block; color: inherit; text-decoration: none; }
 a.bi-title:hover { color: var(--color-brand-primary); text-decoration: underline; }
 /* Programmes: one line at the foot of the main page, each in its official colour */
-.prog-foot { display: flex; gap: 6px; padding: 7px 16px; border-top: 1px solid var(--color-border); background: var(--color-surface); overflow-x: auto; }
-.prog-foot span { flex: 1 0 auto; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 5px 8px; line-height: 1.15; border: 1px solid var(--color-border); border-bottom: 3px solid var(--pc); border-radius: 9px; background: var(--color-surface); font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.prog-foot { position: sticky; bottom: 0; z-index: 15; display: flex; gap: 6px; margin-top: auto; height: 46px; box-sizing: border-box; padding: 6px 10px; border-top: 1px solid var(--color-border); background: var(--color-surface); overflow-x: auto; scrollbar-width: none; }
+.prog-foot span { flex: none; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 5px 8px; line-height: 1.15; border: 1px solid var(--color-border); border-bottom: 3px solid var(--pc); border-radius: 9px; background: var(--color-surface); font-size: 11.5px; font-weight: 600; white-space: nowrap; }
 @media print { .prog-foot { display: none; } }
-/* wide screens: the line stays at the bottom of the screen on every page; the round buttons move up so they do not cover it */
+/* the line stays at the bottom of the screen on every screen and every size; on a phone it slides left and right. The round buttons and the note sit above it */
+.main-col { display: flex; flex-direction: column; min-height: 100vh; }
+html .akd, html .fab { bottom: 62px; }
+html.locked .prog-foot { position: fixed; left: 0; right: 0; z-index: 101; } html.locked .login { bottom: 46px; }   /* sign-in screen: the line shows under it */
+@media (min-width: 641px) { html .kai-fab { bottom: 74px; } html .kai-panel { bottom: 74px; height: min(640px, calc(100vh - 94px)); } html:root.live .fab { bottom: 142px; } }
 @media (min-width: 821px) {
-  .main-col { display: flex; flex-direction: column; min-height: 100vh; }
-  .prog-foot { position: sticky; bottom: 0; z-index: 15; margin-top: auto; min-height: 46px; box-sizing: border-box; padding: 6px 32px; overflow: hidden; }
+  .prog-foot { height: 54px; padding: 6px 32px; overflow: hidden; }
   .prog-foot span { flex: 1 1 0; min-width: 0; white-space: normal; text-align: center; }
-  html .kai-fab { bottom: 66px; } html .kai-panel { bottom: 66px; height: min(640px, calc(100vh - 86px)); } html:root.live .fab { bottom: 134px; }
+  html .akd, html .fab { bottom: 70px; } html.locked .login { bottom: 54px; }
 }
 .bi-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 3px; font-size: 12px; color: var(--color-text-subtle); }
 .sev-tag { padding: 0 6px; border-radius: 4px; font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; background: color-mix(in srgb, var(--sev) 12%, transparent); color: var(--sev-fg); }
