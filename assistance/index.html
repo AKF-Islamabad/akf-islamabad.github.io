@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-assistance.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-kVkCOycTbv2cvFelnz/EHaj9sGmZOrJiLP2QggfC3rs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-1z+wFFBGBX0cDrP6fHN3gSZevdlrNSZQ4je/Q3Ml3PU='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1342,6 +1342,13 @@ const BUCKET = "assistance-docs", MAX_FILE = 5 * 1024 * 1024, FILE_TYPES = { "ap
 const DAY = 864e5;
 const SKIP_REASONS = ["Director is unavailable", "Director review not needed for this case", "Urgent case", "Other (explain in remarks)"];
 const MARITAL = ["Single", "Married", "Widowed", "Divorced"], EDUCATION = ["None", "Primary", "Middle", "Matric", "Intermediate", "Graduate", "Postgraduate"];
+const ZONES = ["Zone 01", "Zone 02", "Zone 03", "Zone 04", "Zone 05", "Zone 06", "Zone 07", "Zone 08", "Zone 09", "Other"];
+// UC numbers already saved (from the database and from the applications on screen), offered again in the form and the list filter
+const ucOptions = () => [...new Set([...A.ucs, ...A.apps.map(a => a.uc)].filter(Boolean))].sort((x, y) => x.localeCompare(y, "en", { numeric: true }));
+// report rows come per zone + UC: add them up per zone for the chart
+const zoneTotals = rows => Object.values((rows || []).reduce((m, x) => { const z = m[x.zone] || (m[x.zone] = { zone: x.zone, total: 0, disbursedPKR: 0 }); z.total += x.total || 0; z.disbursedPKR += x.disbursedPKR || 0; return m; }, {}));
+console.assert((() => { const z = zoneTotals([{ zone: "Zone 01", uc: "1", total: 2, disbursedPKR: 500 }, { zone: "Zone 01", uc: "2", total: 1, disbursedPKR: 0 }, { zone: "Other", uc: "", total: 4 }]);
+  return z.length === 2 && z[0].total === 3 && z[0].disbursedPKR === 500 && z[1].total === 4 && !zoneTotals().length; })(), "zoneTotals: one line per zone, UC rows added up");
 const NOTIFY_EVENTS = { submitted: "Application registered", assigned: "Case arrives in an inbox", returned: "Sent back for correction", approved: "Approved by President",
   rejected: "Rejected", completed: "Assistance delivered", overdue: "Past the time limit" };
 const WIDGETS = {
@@ -1353,8 +1360,8 @@ const WIDGETS = {
 const DEFAULT_DASH = ["banner", "kpis", "overdue", "pipeline", "stagetime", "recent", "depts", "mynotes"];
 const THEME_KEY = "akf_asst_theme", SIDE_KEY = "akf_asst_side", DASH_KEY = "akf_asst_dash";   // no personal data in the browser: only these three
 let SB = null, ME = null, GRID = {}, NAME = "Assistance Management", SET = null;
-const A = { apps: [], pii: {}, notes: [], seen: { at: "", ids: [] }, audit: [], summary: null };
-const V = { view: "dashboard", id: null, filter: { q: "", status: "", type: "", dept: "" }, trackQ: "", noteTab: "mine", msgTab: "tosend", editDash: false,
+const A = { apps: [], pii: {}, notes: [], seen: { at: "", ids: [] }, audit: [], summary: null, ucs: [] };
+const V = { view: "dashboard", id: null, filter: { q: "", status: "", type: "", dept: "", zone: "", uc: "" }, trackQ: "", noteTab: "mine", msgTab: "tosend", editDash: false,
   draft: null, editId: null, proof: null, dup: [], flowPrev: null, busy: false };
 const can = (tab, act) => !!ME && (ME.isSuper || (GRID[tab] || []).includes(act || "view"));
 const roleKey = () => ME.isSuper ? "super" : ME.role;
@@ -1481,6 +1488,7 @@ async function loadAll() {
   A.apps = []; A.pii = {}; A.notes = []; A.audit = []; A.seen = { at: "", ids: [] };
   rows.forEach(r => applyRow(r.collection, r.id, r.data));
   A.notes.sort((x, y) => String(y.at).localeCompare(String(x.at)));
+  if (can("applications", "add")) SB.rpc("assistance_uc_list").then(r => { if (Array.isArray(r.data)) A.ucs = r.data; }, () => {});   // only suggestions: the form works without them
 }
 async function reloadSettings() {
   try { const s = await rpc("assistance_settings_public", {}, "The settings could not be loaded"); if (s) SET = s; } catch (e) { toast(e.message, "error"); }
@@ -1635,7 +1643,7 @@ function filtered() {
   const f = V.filter, q = f.q.trim().toLowerCase();
   return A.apps.filter(a => { const p = piiOf(a) || {};
     return (!q || [a.id, a.name, p.cnic, p.phone, String(p.cnic || "").replace(/-/g, ""), String(p.phone || "").replace(/-/g, "")].join(" ").toLowerCase().includes(q))
-      && (!f.status || (f.status === "other" ? !STATUS_KEYS.includes(a.status) : a.status === f.status)) && (!f.type || a.type === f.type) && (!f.dept || a.department === f.dept); })
+      && (!f.status || (f.status === "other" ? !STATUS_KEYS.includes(a.status) : a.status === f.status)) && (!f.type || a.type === f.type) && (!f.dept || a.department === f.dept) && (!f.zone || (a.zone || "Not set") === f.zone) && (!f.uc || a.uc === f.uc); })
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 }
 function viewAll() {
@@ -1648,14 +1656,16 @@ function viewAll() {
       <label class="sr-only" for="fs">Status</label><select class="select" id="fs" data-filter="status">${opt("", "All statuses", f.status)}${STATUS_KEYS.map(k => opt(k, stageLabel({ type: "financial" }, k).replace("Finance – disbursement", "Finance / Store"), f.status)).join("")}${opt("other", "Other approvals", f.status)}</select>
       <label class="sr-only" for="ft">Type</label><select class="select" id="ft" data-filter="type">${opt("", "All types", f.type)}${opt("financial", "Financial", f.type)}${opt("inkind", "In-kind", f.type)}</select>
       <label class="sr-only" for="fd">Department</label><select class="select" id="fd" data-filter="dept">${opt("", "All departments", f.dept)}${depts.map(d => opt(d, d, f.dept)).join("")}</select>
+      <label class="sr-only" for="fz">Zone</label><select class="select" id="fz" data-filter="zone">${opt("", "All zones", f.zone)}${ZONES.concat("Not set").map(z => opt(z, z, f.zone)).join("")}</select>
+      <label class="sr-only" for="fu">UC number</label><select class="select" id="fu" data-filter="uc">${opt("", "All UCs", f.uc)}${ucOptions().map(u => opt(u, "UC " + u, f.uc)).join("")}</select>
     </div><div id="allTable">${appTable(filtered(), "No applications match")}</div></div>`;
 }
 /* CSV of the list as filtered (Applications → Export); CNIC / mobile only with the Applicant details tick */
 function downloadCsv() {
   if (!can("applications", "export")) return toast("You need Applications → Export", "error");
   const pii = can("applicant"), cell = v => { let s = String(v == null ? "" : v); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
-  const rows = [["Tracking ID", "Applicant", ...(pii ? ["CNIC", "Mobile"] : []), "Department", "Category", "Type", "Requested (Rs)", "Items", "Recommended (Rs)", "Approved (Rs)", "Paid (Rs)", "Status", "Registered", "Days at stage"]]
-    .concat(filtered().map(a => { const p = piiOf(a) || {}; return [a.id, a.name, ...(pii ? [p.cnic || "", p.phone || ""] : []), a.department, a.category, a.type === "inkind" ? "In-kind" : "Financial",
+  const rows = [["Tracking ID", "Applicant", ...(pii ? ["CNIC", "Mobile"] : []), "Zone", "UC number", "Department", "Category", "Type", "Requested (Rs)", "Items", "Recommended (Rs)", "Approved (Rs)", "Paid (Rs)", "Status", "Registered", "Days at stage"]]
+    .concat(filtered().map(a => { const p = piiOf(a) || {}; return [a.id, a.name, ...(pii ? [p.cnic || "", p.phone || ""] : []), a.zone || "", a.uc || "", a.department, a.category, a.type === "inkind" ? "In-kind" : "Financial",
       a.request.amount || "", a.request.items || "", (a.rm && a.rm.amount) || "", a.approvedAmount || "", (a.execution && a.execution.amount) || "", stageLabel(a), String(a.createdAt || "").slice(0, 10), isOpen(a) ? daysWaiting(a) : ""]; }));
   const blob = new Blob(["﻿" + rows.map(r => r.map(cell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "Alkhidmat_Assistance_" + todayPK() + ".csv"; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
@@ -1716,6 +1726,11 @@ function viewNew() {
         ${field("applicant.address", "Full address", { req: true, ur: "مکمل ایڈریس", attrs: 'maxlength="300"' })}
         ${field("applicant.phone", "Mobile number", { ph: "0300-0000000", help: "Optional. Used for the messages to the applicant.", attrs: 'inputmode="tel" maxlength="12" data-mask="phone" autocomplete="off"', msg: "Enter an 11-digit mobile number" })}
       </div>
+      <div class="as-fgrid as-c2" style="margin-top:16px">
+        ${field("applicant.zone", "Zone", { req: true, type: "select", options: ZONES })}
+        ${field("applicant.uc", "UC number", { ph: "For example 12", help: "Optional. UC numbers saved before are suggested as you type.", attrs: 'maxlength="20" list="ucList" autocomplete="off"' })}
+        <datalist id="ucList">${ucOptions().map(u => `<option value="${esc(u)}"></option>`).join("")}</datalist>
+      </div>
       <div class="as-fgrid as-c3" style="margin-top:16px">
         ${seg("household.housing", "House", [["Own", "Own"], ["Rented", "Rented"]], "مکان ذاتی / کرایہ پر")}
         ${field("household.area", "House area (marla)", { type: "number", ur: "گھر کا رقبہ (مرلہ)", attrs: 'min="0" step="0.5"' })}
@@ -1772,7 +1787,7 @@ function validateForm() {
 const num = v => v === "" || v == null ? null : Number(v);
 async function submitForm() {
   const d = V.draft; if (V.busy) return;
-  const p_app = { name: d.applicant.name, age: num(d.applicant.age), marital: d.applicant.marital || "", education: d.applicant.education || "", type: d.request.type,
+  const p_app = { name: d.applicant.name, age: num(d.applicant.age), marital: d.applicant.marital || "", education: d.applicant.education || "", zone: d.applicant.zone || "", uc: d.applicant.uc || "", type: d.request.type,
     department: d.request.department, category: d.request.category, amount: d.request.type === "financial" ? num(d.request.amount) : null,
     items: d.request.type === "inkind" ? d.request.items : "", value: d.request.type === "inkind" ? num(d.request.value) : null, fund: d.request.fund || "", description: d.request.description,
     docs: d.docs.map(f => ({ slot: f.slot, path: f.path, name: f.name })) };
@@ -1865,8 +1880,8 @@ function viewCase(id) {
     ${a.erased ? `<div class="as-note n-info">${ic("shield")}<span>The personal data of this application was erased. The number, amounts and history are kept for the accounts.</span></div>` : ""}
     ${card("Request", `<div class="as-cb">${kv([["Request for", a.category], [a.type === "inkind" ? "Items requested" : "Amount requested", a.type === "inkind" ? r.items : rs(r.amount)], ...(a.type === "inkind" && r.value ? [["Estimated value", rs(r.value)]] : []), ["Fund", r.fund], ["Department", a.department], ["Reason", r.description, 1]])}</div>
       ${a.type === "financial" ? `<div class="as-amounts"><div><small>Requested</small><b>${esc(rs(r.amount))}</b></div><div><small>Recommended by RM</small><b>${a.rm ? (a.rm.recommend ? esc(rs(a.rm.amount)) : "Not recommended") : "—"}</b></div><div><small>Approved by President</small><b>${esc(rs(a.approvedAmount))}</b></div><div><small>Disbursed</small><b>${esc(rs((a.execution || {}).amount))}</b></div></div>` : ""}`, typeTag(a))}
-    ${card("Applicant", `<div class="as-cb">${p ? kv([["Father / husband", p.guardian], ["Age", a.age], ["CNIC", p.cnic], ["Mobile", p.phone], ["Marital status", a.marital], ["Education", a.education], ["Address", p.address, 1]])
-      : kv([["Age", a.age], ["Marital status", a.marital], ["Education", a.education]]) + `<p class="small muted" style="margin-top:12px">${ic("shield", "i-sm")} CNIC, mobile, address and income need the <b>Applicant details</b> tick.</p>`}</div>`)}
+    ${card("Applicant", `<div class="as-cb">${p ? kv([["Father / husband", p.guardian], ["Age", a.age], ["CNIC", p.cnic], ["Mobile", p.phone], ["Marital status", a.marital], ["Education", a.education], ["Zone", a.zone], ["UC number", a.uc], ["Address", p.address, 1]])
+      : kv([["Age", a.age], ["Marital status", a.marital], ["Education", a.education], ["Zone", a.zone], ["UC number", a.uc]]) + `<p class="small muted" style="margin-top:12px">${ic("shield", "i-sm")} CNIC, mobile, address and income need the <b>Applicant details</b> tick.</p>`}</div>`)}
     ${p ? card("Household & income", `<div class="as-cb">${kv([["Household", plural(h.members || 0, "member")], ["Men / women / children", `${h.men || 0} / ${h.women || 0} / ${h.children || 0}`], ["House", (h.housing || "—") + (h.area ? ` · ${h.area} marla` : "")], ["Rent", h.housing === "Rented" ? rs(h.rent) : "—"], ["Source of income", h.incomeSource], ["Monthly income", rs(h.income)], ["Monthly expenses", rs(h.expenses)], ["Income per person", h.members ? rs(Math.round((h.income || 0) / h.members)) : "—"]])}</div>`) : ""}
     ${can("applicant") ? card("Documents", `<div class="as-cb" style="display:grid;gap:16px">${docsBy.length ? docsBy.map(x => `<div><div style="font-size:13px;font-weight:600;margin-bottom:8px">${esc(x.s.l)}</div><div class="as-files">${x.files.map(f => fileChip(f, false)).join("")}</div></div>`).join("") : '<span class="muted">No documents</span>'}</div>`, `<span class="small muted">${plural((a.docs || []).length, "file")}</span>`) : ""}
     ${a.execution ? card(a.type === "inkind" ? "Items issued" : "Payment", `<div class="as-cb">${a.type === "inkind" ? kv([["Items issued", a.execution.items, 1], ["Issue voucher (GIN) no.", a.execution.ref], ["Issued on", fmtDate(a.execution.date)], ["Received by", a.execution.receiver], ["Issued by", a.execution.by]])
@@ -2042,17 +2057,20 @@ function viewReports() {
     + `<div class="kpis">${k("list", "Applications", s.total, s.registeredThisMonth + " registered this month", "accent")}${k("clock", "In progress", s.open, s.overdue + " past the time limit", s.overdue ? "warn" : "")}${k("check", "Completed this month", s.completedThisMonth, "Support delivered")}${k("wallet", "Disbursed this month", esc(rs(s.disbursedThisMonthPKR)), esc(rs(s.disbursedPKR)) + " in total")}</div>
     <div class="as-widgets">${window.AKF_CHARTS ? card("By stage", `<div class="as-cb">${AKF_CHARTS.bars({ id: "as-stage", empty: "No applications yet.", items: keys.map(st => ({ key: STATUS_KEYS.includes(st) ? st : "other", label: stageLabel({ type: "financial", flow: [] }, st).replace("Finance – disbursement", "Finance / Store"), value: by[st] })) })}</div>`)
       + card("By type", `<div class="as-cb">${AKF_CHARTS.donut({ id: "as-type", center: "applications", items: Object.entries(s.byType || {}).map(([t, n]) => ({ key: t, label: t === "inkind" ? "In-kind" : "Financial", value: n, color: t === "inkind" ? "#16A34A" : "#0A74C9" })) })}</div>`)
-      + `<section class="as-w-full">${card("Disbursed by department", `<div class="as-cb">${AKF_CHARTS.bars({ id: "as-dept", money: true, empty: "Nothing disbursed yet.", items: (s.byDepartment || []).map(x => ({ key: x.department, label: x.department, value: x.disbursedPKR, note: x.total + " applications" })) })}</div>`)}</section>` : ""}${window.AKF_CHARTS ? "" : card("By stage", `<div class="as-cb as-pipe">${keys.map(st => `<div class="as-pipe-row"><span>${esc(stageLabel({ type: "financial", flow: [] }, st).replace("Finance – disbursement", "Finance / Store"))}</span><span class="bar"><i style="width:${by[st] / Math.max(1, ...Object.values(by)) * 100}%"></i></span><b>${by[st]}</b></div>`).join("") || '<span class="muted">No applications yet</span>'}</div>`)}
+      + `<section class="as-w-full">${card("Disbursed by department", `<div class="as-cb">${AKF_CHARTS.bars({ id: "as-dept", money: true, empty: "Nothing disbursed yet.", items: (s.byDepartment || []).map(x => ({ key: x.department, label: x.department, value: x.disbursedPKR, note: x.total + " applications" })) })}</div>`)}</section>`
+      + `<section class="as-w-full">${card("Applications by zone", `<div class="as-cb">${AKF_CHARTS.bars({ id: "as-zone", empty: "No applications yet.", items: zoneTotals(s.byArea).map(x => ({ key: x.zone, label: x.zone, value: x.total, note: rs(x.disbursedPKR) + " disbursed" })) })}</div>`)}</section>` : ""}${window.AKF_CHARTS ? "" : card("By stage", `<div class="as-cb as-pipe">${keys.map(st => `<div class="as-pipe-row"><span>${esc(stageLabel({ type: "financial", flow: [] }, st).replace("Finance – disbursement", "Finance / Store"))}</span><span class="bar"><i style="width:${by[st] / Math.max(1, ...Object.values(by)) * 100}%"></i></span><b>${by[st]}</b></div>`).join("") || '<span class="muted">No applications yet</span>'}</div>`)}
     ${window.AKF_CHARTS ? "" : card("By type", `<div class="as-cb">${Object.entries(s.byType || {}).map(([t, n]) => `<p>${t === "inkind" ? "In-kind" : "Financial"}: <b>${n}</b></p>`).join("") || '<span class="muted">—</span>'}</div>`)}
-    <section class="as-w-full">${card("By department", `<div class="as-cb"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Department</th><th>Total</th><th>In progress</th><th>Completed</th><th>Rejected</th><th>Disbursed</th></tr></thead><tbody>${(s.byDepartment || []).map(x => `<tr><td class="t-name">${esc(x.department)}</td><td>${x.total}</td><td>${x.open}</td><td>${x.completed}</td><td>${x.rejected}</td><td>${esc(rs(x.disbursedPKR))}</td></tr>`).join("")}</tbody></table></div></div>`)}</section></div>`;
+    <section class="as-w-full">${card("By department", `<div class="as-cb"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Department</th><th>Total</th><th>In progress</th><th>Completed</th><th>Rejected</th><th>Disbursed</th></tr></thead><tbody>${(s.byDepartment || []).map(x => `<tr><td class="t-name">${esc(x.department)}</td><td>${x.total}</td><td>${x.open}</td><td>${x.completed}</td><td>${x.rejected}</td><td>${esc(rs(x.disbursedPKR))}</td></tr>`).join("")}</tbody></table></div></div>`)}</section>
+    <section class="as-w-full">${card("By zone and UC", `<div class="as-cb"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Zone</th><th>UC number</th><th>Total</th><th>In progress</th><th>Completed</th><th>Rejected</th><th>Disbursed</th></tr></thead><tbody>${(s.byArea || []).map(x => `<tr><td class="t-name">${esc(x.zone)}</td><td>${esc(x.uc || "—")}</td><td>${x.total}</td><td>${x.open}</td><td>${x.completed}</td><td>${x.rejected}</td><td>${esc(rs(x.disbursedPKR))}</td></tr>`).join("") || '<tr><td colspan="7" class="muted">No applications yet</td></tr>'}</tbody></table></div></div>`)}</section></div>`;
 }
 async function loadSummary() { try { A.summary = await rpc("assistance_summary", {}, "The figures could not be loaded"); } catch (e) { A.summary = { total: 0, open: 0, overdue: 0, byStatus: {}, byDepartment: [], byType: {}, disbursedPKR: 0, disbursedThisMonthPKR: 0, completedThisMonth: 0, registeredThisMonth: 0 }; toast(e.message, "error"); } if (V.view === "reports") render(); }
 function summaryCsv() {
   const s = A.summary; if (!s || !can("reports", "export")) return;
-  const rows = [["Department", "Total", "In progress", "Completed", "Rejected", "Disbursed (Rs)"], ...(s.byDepartment || []).map(x => [x.department, x.total, x.open, x.completed, x.rejected, x.disbursedPKR])];
+  const rows = [["Department", "Total", "In progress", "Completed", "Rejected", "Disbursed (Rs)"], ...(s.byDepartment || []).map(x => [x.department, x.total, x.open, x.completed, x.rejected, x.disbursedPKR]),
+    [], ["Zone", "UC number", "Total", "In progress", "Completed", "Rejected", "Disbursed (Rs)"], ...(s.byArea || []).map(x => [x.zone, x.uc, x.total, x.open, x.completed, x.rejected, x.disbursedPKR])];
   const cell = v => { let t = String(v == null ? "" : v); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return '"' + t.replace(/"/g, '""') + '"'; };
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + rows.map(r => r.map(cell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" })); a.download = "Alkhidmat_Assistance_Report_" + todayPK() + ".csv"; document.body.append(a); a.click(); a.remove();
-  audit("EXPORTED", "report", "by department");
+  audit("EXPORTED", "report", "by department, zone and UC");
 }
 function viewAudit() {
   if (!can("audit")) return noAccess("The audit trail needs the Audit Trail tick.");
@@ -2193,8 +2211,8 @@ function moveNavInd() {
 /* in-page navigation: the view lives in history.state (no case numbers or names in the address bar) */
 /* Jazba charts: a click on a bar or slice opens All applications filtered to it */
 document.addEventListener("akf-chart-pick", e => {
-  const f = { "as-stage": "status", "as-dept": "dept", "as-type": "type" }[e.detail.chart]; if (!f || !can("applications")) return;
-  V.filter = { q: "", status: "", type: "", dept: "" }; V.filter[f] = e.detail.key; go("all");
+  const f = { "as-stage": "status", "as-dept": "dept", "as-type": "type", "as-zone": "zone" }[e.detail.chart]; if (!f || !can("applications")) return;
+  V.filter = { q: "", status: "", type: "", dept: "", zone: "", uc: "" }; V.filter[f] = e.detail.key; go("all");
 });
 function go(view, id, replace) {
   if (view === "case") V.from = V.view === "case" ? V.from : V.view;
@@ -2259,13 +2277,13 @@ document.addEventListener("click", async e => {
   if (act === "note") { markRead(t.dataset.note); if (getApp(id)) go("case", id); return; }
   if (act === "read-all") { markAllRead(); render(); return; }
   if (act === "fill-last") { const a = lastCase(), p = a && piiOf(a); if (!p || !V.draft) return; collectForm();   // the request and the documents are new each time: not copied
-    Object.assign(V.draft.applicant, { name: a.name, age: a.age, marital: a.marital, education: a.education, guardian: p.guardian, phone: p.phone, address: p.address });
+    Object.assign(V.draft.applicant, { name: a.name, age: a.age, marital: a.marital, education: a.education, zone: a.zone, uc: a.uc, guardian: p.guardian, phone: p.phone, address: p.address });
     V.draft.household = JSON.parse(JSON.stringify(p.household || { housing: "Own" })); render(); toast("Details filled from " + a.id + ". Please check them with the person.", "success"); return; }
   if (act === "discard") { if (confirm("Clear everything entered in this form? Uploaded files are removed too.")) { (V.draft ? V.draft.docs : []).forEach(f => { if (f.path.startsWith(ME.id + "/")) SB.storage.from(BUCKET).remove([f.path]).then(() => {}, () => {}); }); V.draft = null; V.editId = null; V.dup = []; V.flowPrev = null; render(); } return; }
   if (act === "do") return doAction(t.dataset.do);
   if (act === "edit-returned") {
     const a = getApp(id), p = a && piiOf(a); if (!a || !p) return toast("The applicant details are needed to correct the application", "error");
-    V.draft = JSON.parse(JSON.stringify({ applicant: { name: a.name, age: a.age, marital: a.marital, education: a.education, guardian: p.guardian, cnic: p.cnic, phone: p.phone, address: p.address },
+    V.draft = JSON.parse(JSON.stringify({ applicant: { name: a.name, age: a.age, marital: a.marital, education: a.education, zone: a.zone, uc: a.uc, guardian: p.guardian, cnic: p.cnic, phone: p.phone, address: p.address },
       household: p.household || { housing: "Own" }, request: { type: a.type, department: a.department, category: a.category, amount: a.request.amount, items: a.request.items, value: a.request.value, fund: a.request.fund, description: a.request.description },
       docs: (a.docs || []).filter(f => f.slot !== "proof").map(f => ({ slot: f.slot, path: f.path, name: f.name, type: f.type, size: f.size })) }));
     V.editId = a.id; V.dup = []; V.flowPrev = null; go("new"); return;
