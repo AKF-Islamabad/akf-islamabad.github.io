@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Foundation Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-UEHw9PuHi5Axg2vhflCaC1OPkt+zUMmO3K0cVAIBUd0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-ldE9hNnHa+qu6OVDJC3VypYxRGKDjQ8G1BEsgBu454I='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -2506,7 +2506,7 @@ function donorForm(existing, prefill = {}) {
       </div>
       <div class="grid-2">
         <div class="field"><label for="fd-father"><span data-father-lbl>${isOrg ? 'Contact person' : 'Father / husband name'}</span></label><input class="input" id="fd-father" name="father" maxlength="100" value="${esc(d.father)}"><div class="err" data-err="father"></div></div>
-        <div class="field ${isOrg ? 'hidden' : ''}" data-ind><label for="fd-cnic">CNIC <span class="req">*</span></label><input class="input mono" id="fd-cnic" name="cnic" inputmode="numeric" placeholder="35202-1234567-8" maxlength="15" value="${esc(d.cnic)}"><div class="hint">13 digits — dashes are added automatically</div><div class="err" data-err="cnic"></div></div>
+        <div class="field ${isOrg ? 'hidden' : ''}" data-ind><label for="fd-cnic">CNIC</label><input class="input mono" id="fd-cnic" name="cnic" inputmode="numeric" placeholder="35202-1234567-8" maxlength="15" value="${esc(d.cnic)}"><div class="hint">Optional. 13 digits — dashes are added automatically</div><div class="err" data-err="cnic"></div></div>
         <div class="field ${isOrg ? '' : 'hidden'}" data-org><label for="fd-ntn">NTN / registration no.</label><input class="input mono" id="fd-ntn" name="ntn" maxlength="20" value="${esc(d.ntn)}"><div class="err" data-err="ntn"></div></div>
         <div class="field"><label for="fd-phone">Mobile / phone <span class="req">*</span></label><input class="input" id="fd-phone" name="phone" inputmode="tel" placeholder="0300-1234567" maxlength="16" value="${esc(d.phone)}"><div class="err" data-err="phone"></div></div>
         <div class="field"><label for="fd-email">Email</label><input class="input" id="fd-email" name="email" type="email" maxlength="120" value="${esc(d.email)}"><div class="err" data-err="email"></div></div>
@@ -2541,7 +2541,7 @@ function donorForm(existing, prefill = {}) {
     let bad = false;
     if (!validName(p.name)) { setErr(f, 'name', 'Enter a valid name (2–100 letters).'); bad = true; }
     if (p.father && !validName(p.father)) { setErr(f, 'father', 'Use letters only.'); bad = true; }
-    if (p.type === 'Individual' && !validCNIC(p.cnic)) { setErr(f, 'cnic', 'Enter a valid 13-digit CNIC (e.g. 35202-1234567-8).'); bad = true; }
+    if (p.cnic && !validCNIC(p.cnic)) { setErr(f, 'cnic', 'This CNIC is not complete. Enter all 13 digits (e.g. 35202-1234567-8) or leave it empty.'); bad = true; }
     if (p.ntn && !/^[A-Za-z0-9\-\/]{4,20}$/.test(p.ntn)) { setErr(f, 'ntn', 'Letters, digits and dashes only.'); bad = true; }
     if (!validPhone(p.phone)) { setErr(f, 'phone', 'Enter a valid Pakistani number (e.g. 0300-1234567).'); bad = true; }
     if (p.email && !validEmail(p.email)) { setErr(f, 'email', 'Enter a valid email address.'); bad = true; }
@@ -3249,7 +3249,7 @@ function bindNewReceipt() {
     if (donor) {
       const s = donorStatsMap()[donor.id] || { total: 0, count: 0 };
       const pledges = S.pledges.filter(p => p.donorId === donor.id && p.status === 'Active');
-      const miss = []; if (!donor.address) miss.push('address'); if (!donor.phone) miss.push('mobile'); if (donor.type !== 'Organization' && !donor.cnic) miss.push('CNIC');
+      const miss = []; if (!donor.address) miss.push('address'); if (!donor.phone) miss.push('mobile');
       dBox.innerHTML = `<div class="donor-sel"><span class="avatar lg">${esc(initials(donor.name))}</span><div class="ds-main"><b>${esc((donor.title || '') + ' ' + donor.name)}</b><span class="muted small mono">${esc(donor.id)}</span>
           <div class="donor-print"><div><span class="k">Address</span>${esc([donor.address, donor.city].filter(Boolean).join(', ') || '—')}</div><div><span class="k">Mobile</span>${esc(donor.phone || '—')}</div><div><span class="k">${donor.type === 'Organization' ? 'NTN' : 'CNIC'}</span>${esc(donor.type === 'Organization' ? (donor.ntn || '—') : maskCNIC(donor.cnic))}</div><div><span class="k">E-mail</span>${esc(donor.email || '—')}</div></div></div>
           ${pl ? '' : `<div class="ds-acts"><button type="button" class="btn btn-secondary btn-sm" id="ds-change">${ic('swap')}Change</button>${can('donor.edit') ? `<button type="button" class="btn btn-ghost btn-sm" id="ds-edit">${ic('edit')}Edit details</button>` : ''}</div>`}</div>
@@ -3273,7 +3273,7 @@ function bindNewReceipt() {
           <div class="field"><label for="nd-title">Title</label><select class="select" id="nd-title" name="ndTitle">${TITLES_NAME.map(v => `<option>${v}</option>`).join('')}</select></div>
           <div class="field"><label for="nd-name">Full name (as on CNIC) <span class="req">*</span></label><input class="input" id="nd-name" name="ndName" maxlength="100"><div class="err" data-err="ndName"></div></div>
           <div class="field"><label for="nd-father" id="nd-father-l">Father / husband name</label><input class="input" id="nd-father" name="ndFather" maxlength="100"></div>
-          <div class="field"><label for="nd-cnic" id="nd-cnic-l">CNIC <span class="req">*</span></label><input class="input mono" id="nd-cnic" name="ndCnic" inputmode="numeric" maxlength="20" placeholder="35202-1234567-8"><div class="err" data-err="ndCnic"></div></div>
+          <div class="field"><label for="nd-cnic" id="nd-cnic-l">CNIC (optional)</label><input class="input mono" id="nd-cnic" name="ndCnic" inputmode="numeric" maxlength="20" placeholder="35202-1234567-8"><div class="err" data-err="ndCnic"></div></div>
           <div class="field"><label for="nd-phone">Mobile <span class="req">*</span></label><input class="input" id="nd-phone" name="ndPhone" inputmode="tel" maxlength="16" placeholder="0300-1234567"><div class="err" data-err="ndPhone"></div></div>
           <div class="field"><label for="nd-email">E-mail</label><input class="input" id="nd-email" name="ndEmail" type="email" maxlength="120" placeholder="For e-mailing the receipt"><div class="err" data-err="ndEmail"></div></div>
           <div class="field"><label for="nd-city">City <span class="req">*</span></label><input class="input" id="nd-city" name="ndCity" list="city-list" maxlength="60" value="Islamabad"><datalist id="city-list">${CITIES.map(c => `<option value="${esc(c)}">`).join('')}</datalist><div class="err" data-err="ndCity"></div></div>
@@ -3313,7 +3313,7 @@ function bindNewReceipt() {
     if (!newDonor) setTimeout(() => q.focus(), 50);
     /* new donor inline behaviour */
     const ndType = $('#nd-type');
-    ndType.addEventListener('change', () => { const org = ndType.value === 'Organization'; $('#nd-title').value = org ? 'M/s' : 'Mr.'; $('#nd-father-l').textContent = org ? 'Contact person' : 'Father / husband name'; $('#nd-cnic-l').innerHTML = org ? 'NTN / registration no.' : 'CNIC <span class="req">*</span>'; $('#nd-cnic').placeholder = org ? 'e.g. 1234567-8' : '35202-1234567-8'; });
+    ndType.addEventListener('change', () => { const org = ndType.value === 'Organization'; $('#nd-title').value = org ? 'M/s' : 'Mr.'; $('#nd-father-l').textContent = org ? 'Contact person' : 'Father / husband name'; $('#nd-cnic-l').innerHTML = org ? 'NTN / registration no.' : 'CNIC (optional)'; $('#nd-cnic').placeholder = org ? 'e.g. 1234567-8' : '35202-1234567-8'; });
     $('#nd-cnic').addEventListener('input', e => { if (ndType.value === 'Individual') e.target.value = fmtCNIC(e.target.value); dupCheck(); });
     $('#nd-phone').addEventListener('input', dupCheck);
     $('#nd-phone').addEventListener('blur', e => { if (validPhone(e.target.value)) e.target.value = fmtPhone(e.target.value); });
@@ -3426,7 +3426,7 @@ function bindNewReceipt() {
       const isOrg = v('ndType') === 'Organization';
       nd = { type: isOrg ? 'Organization' : 'Individual', title: v('ndTitle'), name: v('ndName').replace(/\s+/g, ' '), father: v('ndFather').replace(/\s+/g, ' '), cnic: isOrg ? '' : fmtCNIC(v('ndCnic')), ntn: isOrg ? v('ndCnic') : '', phone: fmtPhone(v('ndPhone')), email: v('ndEmail').toLowerCase(), city: v('ndCity'), address: v('ndAddr'), channel: v('ndChannel'), consent: f.ndConsent.checked, preferred: 'Zakat', status: 'Active', notes: '' };
       if (!validName(nd.name)) fail('ndName', 'Enter the donor’s full name.');
-      if (!isOrg && !validCNIC(nd.cnic)) fail('ndCnic', 'Enter a valid 13-digit CNIC.');
+      if (nd.cnic && !validCNIC(nd.cnic)) fail('ndCnic', 'This CNIC is not complete. Enter all 13 digits or leave it empty.');
       if (isOrg && nd.ntn && !/^[A-Za-z0-9\-\/]{4,20}$/.test(nd.ntn)) fail('ndCnic', 'Letters, digits and dashes only.');
       if (!validPhone(nd.phone)) fail('ndPhone', 'Enter a valid mobile number, e.g. 0300-1234567.');
       if (nd.email && !validEmail(nd.email)) fail('ndEmail', 'Enter a valid e-mail.');
