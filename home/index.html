@@ -1715,6 +1715,12 @@ a.portal-link:active { transform: translateY(0); }
 .jd-pills { display: flex; gap: 4px; flex-wrap: wrap; } .jd-pills i { width: 16px; height: 6px; border-radius: 99px; background: var(--color-border-strong); }
 .jd-pills i.done { background: var(--color-brand-secondary); } .jd-pills i.now { width: 26px; background: var(--color-brand-primary); }
 .jd-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+/* Send back: the remarks box */
+.sb-dlg { width: min(440px, calc(100vw - 32px)); padding: 20px; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface); color: var(--color-text); box-shadow: 0 20px 50px rgba(0,0,0,.25); }
+.sb-dlg::backdrop { background: rgba(10,20,40,.45); }
+.sb-dlg h2 { margin: 0 0 4px; font-size: 16px; } .sb-dlg p { margin: 0 0 12px; font-size: 12.5px; color: var(--color-text-muted); }
+.sb-dlg label { display: block; margin-bottom: 6px; font-size: 12.5px; font-weight: 500; } .sb-dlg textarea { width: 100%; }
+.sb-act { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .jd-actions .btn { gap: 8px; } .jd-actions .btn-primary kbd { background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.45); color: inherit; }
 .jd-skip { background: none; border-color: transparent; color: var(--color-brand-primary); } .jd-skip:hover { background: var(--color-row-hover); }
 @media (hover: none), (pointer: coarse) { .jd-actions kbd { display: none; } }
@@ -1941,6 +1947,13 @@ svg.jf-pre .jf-bar { transform: scaleY(0); } svg.jf-pre .jf-rib { opacity: 0; }
 </div>
 
 <input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" hidden>
+<dialog id="sb-dlg" class="sb-dlg" aria-labelledby="sb-h"><form method="dialog">
+  <h2 id="sb-h">Send back</h2>
+  <p>The request goes back to the person who raised it, for correction. After they correct and resubmit, it comes back to this step.</p>
+  <label for="sb-why">Remarks</label>
+  <textarea id="sb-why" class="input" required maxlength="500" placeholder="What must be corrected?"></textarea>
+  <div class="sb-act"><button class="btn btn-secondary" value="" formnovalidate>Cancel</button><button class="btn btn-primary" value="ok">Send back</button></div>
+</form></dialog>
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 
 <script>
@@ -2021,6 +2034,12 @@ const Live = {
   // "My requests" page: every request I raised, any status, all portals (052_my_requests.sql). Loaded when the page is opened.
   ref: a => /^[\w.-]+$/.test(a.ref || '') ? a.ref : '',
   QUICK: ['Leave', 'Attendance', 'Shift', 'Expense', 'Overtime'],   // HR requests that can be approved from the main page; every other kind opens the request
+  // Procurement / Store: an approval step can be decided on the main page. "Items confirmed" needs the stock screen, so it opens the request.
+  reqCan: a => /^(procurement|store)$/.test(a.portal) && a.kind === 'approve' ? Live.ref(a) : '',
+  reqWord: a => /^items confirmed/i.test(a.sub || '') ? '' : /^recommend/i.test(a.sub || '') ? 'Recommend' : 'Approve',
+  // the step a request waits at (its stage is the last finished step), only when it is an approval of an active request
+  reqNext(r) { const f = r && Array.isArray(r.flow) ? r.flow : [], i = f.findIndex(s => s && s.key === r.stage), n = i >= 0 && f[i + 1];
+    return n && r.status === 'active' && !r.correction && n.kind === 'approval' && n.key !== 'checked' ? n : null; },
   fail(what, e) { if (navigator.onLine === false) return what + '. You are offline. Check your internet and try again.';
     return ['P0001', '42501', '22023'].includes(e && e.code) && e.message ? what + ': ' + e.message : what + '. Please try again.'; },
   // Fleet stores "Pending X"; show it in the same words as every other portal
@@ -2990,6 +3009,7 @@ const MyDesk = {
     const A = (Live.today && Live.today.actions) || []; if (!A.length) return '';
     const n = A.length, at = (Live.deckAt || 0) % n, a = A[at], p = Live.gate(a), url = Live.link(a), r = Live.ref(a), d = this.days(a.since);
     const quick = a.portal === 'hr' && a.kind === 'approve' && Live.QUICK.includes(a.k) && r, word = a.last ? 'Approve' : 'Recommend';   // the same rule as the list below
+    const rq = Live.reqCan(a), rw = rq && Live.reqWord(a);
     const facts = [['Request', r], ['Step', Live.words(a.sub)], ['Amount', a.amount ? 'Rs ' + Number(a.amount).toLocaleString('en-PK') : ''], ['Department', a.dept], ['Details', a.info]].filter(f => f[1]).slice(0, 4);
     const step = +a.step, of = +a.steps, steps = step > 0 && of >= step && of <= 30;   // sent by the newer core_my_today(); without it the card has no step line
     return `<section class="jd" id="deck" aria-label="Waiting for you, one at a time">
@@ -3000,7 +3020,9 @@ const MyDesk = {
         ${steps ? `<div class="jd-steps"><span class="jd-pills" aria-hidden="true">${Array.from({ length: of }, (_, i) => `<i${i + 1 < step ? ' class="done"' : i + 1 === step ? ' class="now"' : ''}></i>`).join('')}</span><span>Step ${step} of ${of}, ${a.kind === 'do' ? 'your step' : 'your approval'}</span></div>` : ''}
         <div class="jd-actions">
           ${quick ? `<button type="button" class="btn btn-primary" data-action="quick-approve" data-id="${esc(quick)}" data-word="${word}">${word}</button>` : ''}
-          ${url ? `<a class="btn ${quick ? 'btn-secondary' : 'btn-primary'} jd-open" href="${esc(url)}" aria-keyshortcuts="O">Open in ${esc(p ? p.name : 'the portal')}<kbd aria-hidden="true">O</kbd></a>` : ''}
+          ${rw ? `<button type="button" class="btn btn-primary" data-action="req-approve" data-id="${esc(rq)}" data-word="${rw}">${rw}</button>` : ''}
+          ${rq ? `<button type="button" class="btn btn-secondary" data-action="req-back" data-id="${esc(rq)}">Send back</button>` : ''}
+          ${url ? `<a class="btn ${quick || rw ? 'btn-secondary' : 'btn-primary'} jd-open" href="${esc(url)}" aria-keyshortcuts="O">Open in ${esc(p ? p.name : 'the portal')}<kbd aria-hidden="true">O</kbd></a>` : ''}
           ${n > 1 ? '<button type="button" class="btn jd-skip" data-action="deck-skip" aria-keyshortcuts="S">Skip for now<kbd aria-hidden="true">S</kbd></button>' : ''}
         </div>
       </article>${n > 2 ? '<div class="jd-edge"></div><div class="jd-edge"></div>' : n > 1 ? '<div class="jd-edge"></div>' : ''}
@@ -3061,6 +3083,10 @@ console.assert(MyDesk.stageOf({ back: true, key: 'po' }) === 'back' && MyDesk.st
 console.assert(MyDesk.slowest([{ key: 'a', days: 1 }, { key: 'b', days: 3 }, { key: 'c', days: null }]).key === 'b' && MyDesk.slowest([{ days: 0 }]) === null && MyDesk.barH(0, 9, 120) === 12 && MyDesk.barH(9, 9, 120) === 120, 'MyDesk flow maths');
 
 console.assert((() => { const L = Object.create(Live); L.nav = () => [{ id: 'store', href: '/store/' }]; return L.link({ portal: 'procurement', ref: 'AKF-MR-1' }) === '/store/#track=AKF-MR-1' && L.link({ portal: 'hr', ref: 'X' }) === ''; })(), 'Live.gate: a Procurement step must open in Store when that is the only one the person has');
+console.assert((() => { const f = [{ key: 'submitted' }, { key: 'budget', kind: 'approval' }, { key: 'rfq', kind: 'fixed' }], r = s => ({ status: 'active', stage: s, flow: f });
+  return Live.reqNext(r('submitted')).key === 'budget' && !Live.reqNext(r('budget')) && !Live.reqNext({ ...r('submitted'), correction: {} }) && !Live.reqNext({ ...r('submitted'), status: 'rejected' }) && !Live.reqNext({ status: 'active', stage: 'submitted' })
+    && Live.reqWord({ sub: 'Recommended · RM' }) === 'Recommend' && !Live.reqWord({ sub: 'Items confirmed · Store Officer' }) && !Live.reqCan({ portal: 'fleet', kind: 'approve', ref: 'X' }) && Live.reqCan({ portal: 'store', kind: 'approve', ref: 'AKF-SR-1' }) === 'AKF-SR-1'; })(),
+  'Live.reqNext: only the next approval step of an active request can be approved from the main page');
 class HomeView {
   mount() { MyDesk.draw(true); }
   // Live home: the same live data as the old main page's "Today" (core_my_today + hr_today), in the new design.
@@ -3078,10 +3104,10 @@ class HomeView {
     const isLate = s => Date.now() - new Date(s).getTime() > 2 * 864e5;   // the same rule as the "waiting more than 2 days" count (013_today.sql)
     const ref = Live.ref, link = a => Live.link(a);
     const tab = Live.tab || 'all', show = A.filter(a => tab === 'all' || (tab === 'approve' ? a.kind !== 'do' : a.kind === 'do'));
-    const items = show.slice(0, 20).map(a => { const p = Live.gate(a), late = isLate(a.since), url = link(a), quick = a.portal === 'hr' && a.kind === 'approve' && Live.QUICK.includes(a.k) && ref(a);
+    const items = show.slice(0, 20).map(a => { const p = Live.gate(a), late = isLate(a.since), url = link(a), quick = a.portal === 'hr' && a.kind === 'approve' && Live.QUICK.includes(a.k) && ref(a), rq = Live.reqCan(a), rw = rq && Live.reqWord(a);
       return { sev: late ? 3 : 2, url, icon: Live.ICON[a.portal] || 'inbox', title: a.title || a.ref,
         meta: [p ? p.name : a.portal, a.info, Live.words(a.sub), late ? `waiting ${plural(Math.max(days(a.since), 2), 'day', 'days')}` : '', a.amount ? 'Rs ' + Number(a.amount).toLocaleString('en-PK') : ''].filter(Boolean).join(' · '),
-        actions: [...(quick ? [[a.last ? 'Approve' : 'Recommend', `data-action="quick-approve" data-id="${esc(quick)}" data-word="${a.last ? 'Approve' : 'Recommend'}"`, 1]] : []), ...(url ? [['Open', `href="${esc(url)}"`, quick ? 0 : 1]] : [])] }; });
+        actions: [...(quick ? [[a.last ? 'Approve' : 'Recommend', `data-action="quick-approve" data-id="${esc(quick)}" data-word="${a.last ? 'Approve' : 'Recommend'}"`, 1]] : []), ...(rw ? [[rw, `data-action="req-approve" data-id="${esc(rq)}" data-word="${rw}"`, 1]] : []), ...(rq ? [['Send back', `data-action="req-back" data-id="${esc(rq)}"`, 0]] : []), ...(url ? [['Open', `href="${esc(url)}"`, quick || rw ? 0 : 1]] : [])] }; });
     const D = Live.day, U = D && D.update, evs = (D && D.events) || [], team = (D && D.team) || [];
     // My requests: everything I raised that is still on its way, with the step it waits at (one list for all portals)
     const mine = MyDesk.mine(), flowNote = MyDesk.note();
@@ -4536,6 +4562,35 @@ const App = {
       if (r.error) { el.disabled = false; delete el.dataset.sure; el.textContent = el.dataset.word; toast(Live.fail('Not saved', r.error)); return; }
       toast(el.dataset.id + ': ' + (r.data && r.data.status === 'pending' ? 'sent to the next step' : 'approved')); el.blur(); Live.loadToday();
     },
+    // Approve / Recommend a Procurement or Store request: the same signed step the portal writes. The database checks the person, the step and the signature again.
+    'req-approve': async el => {
+      if (!el.dataset.sure) { el.dataset.sure = 1; el.textContent = 'Confirm'; setTimeout(() => { if (el.isConnected && !el.disabled) { delete el.dataset.sure; el.textContent = el.dataset.word; } }, 4000); return; }
+      el.disabled = true;
+      const back = m => { el.disabled = false; delete el.dataset.sure; el.textContent = el.dataset.word; toast(m); };
+      try {
+        const sb = Live.sb, id = el.dataset.id, rows = () => sb.from('portal_rows');
+        const [m, q] = await Promise.all([sb.rpc('portal_me'), rows().select('data').eq('collection', 'requests').eq('id', id).maybeSingle()]);
+        if (m.error || q.error) return back(Live.fail('Not saved', m.error || q.error));
+        const me = m.data, r = q.data && q.data.data, n = Live.reqNext(r);
+        if (!me || !me._id || !n) return back('Please open the request to do this step.');
+        const at = new Date().toISOString(), who = { by: me.name, role: me.role, uid: me._id, desig: me.designation || '' };
+        const action = { budget: 'Budget approved', rec_hr: 'Recommended', rec_rm: 'Recommended', approved: 'Approved' }[n.key] || n.label || 'Approved';
+        // only if the request still stands at the step that was read: two people cannot both sign it
+        const u = await rows().update({ data: { ...r, stage: n.key, timeline: [...(r.timeline || []), { at, stage: n.key, action, comment: '', ...who }] } })
+          .eq('collection', 'requests').eq('id', id).eq('data->>stage', r.stage).select('id');
+        if (u.error) return back(Live.fail('Not saved', u.error));
+        if (!u.data || !u.data.length) { back('This request was changed just now. Please look again.'); Live.loadToday(); return; }
+        const lid = crypto.randomUUID().replace(/-/g, '').slice(0, 12);   // activity log line, as the portal writes it
+        await rows().insert({ collection: 'audit', id: lid, data: { id: lid, at, doc: id, action, comment: '', dept: r.dept || '', ...who } }).then(x => x, () => 0);
+        toast(id + ': ' + action.toLowerCase() + ', sent to the next step'); Live.loadToday();
+      } catch (e) { back(Live.fail('Not saved', e)); }
+    },
+    'req-back': el => { const d = $('#sb-dlg'); d.dataset.id = el.dataset.id; $('#sb-h').textContent = 'Send back ' + el.dataset.id; $('#sb-why').value = ''; $('#sb-why').setCustomValidity(''); d.showModal(); },
+    'req-back-send': async d => {   // the database does it and signs it (portal_sendback): only the person the request waits for
+      const r = await Live.sb.rpc('portal_sendback', { p_id: d.dataset.id, p_reason: $('#sb-why').value.trim(), p_restart: false }).then(x => x, e => ({ error: e }));
+      if (r.error) return toast(Live.fail('Not sent back', r.error));
+      toast(d.dataset.id + ': sent back for correction'); Live.loadToday();
+    },
     'daily-update': async el => {
       const t = $('#du-text'), v = t.value.trim();
       if (v.length < 3) { toast('Please fill what you did today.'); t.focus(); return; }
@@ -4622,6 +4677,12 @@ const App = {
     $('#kbd-hint').textContent = IS_MAC ? '⌘K' : 'Ctrl K';
     Sidebar.initLayout();
 
+    $('#sb-dlg form').addEventListener('submit', e => {   // Cancel closes the box; Send back needs real remarks (spaces do not count)
+      if (!e.submitter || e.submitter.value !== 'ok') return;
+      if ($('#sb-why').value.trim().length < 5) { e.preventDefault(); $('#sb-why').setCustomValidity('Please fill the remarks.'); $('#sb-why').reportValidity(); return; }
+      this.actions['req-back-send']($('#sb-dlg'));
+    });
+    $('#sb-why').addEventListener('input', e => e.target.setCustomValidity(''));
     document.addEventListener('click', e => {
       const el = e.target.closest('[data-action]');
       if (Notifs.isOpen() && !e.target.closest('.notif-wrap')) Notifs.toggle(false);

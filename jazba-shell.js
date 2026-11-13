@@ -146,11 +146,23 @@
   }
   addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && (e.key || "").toLowerCase() === "k" && rail && innerWidth >= 821) { e.preventDefault(); openPalette(); } });
 
+  // Programmes of Alkhidmat Foundation Islamabad: one line at the foot of every portal page, as on the main page
+  const PROGS = [["disaster", "Disaster Management", "#ff5e22"], ["health", "Health Services", "#ff301a"], ["education", "Education Program", "#cd3099"], ["wash", "WASH", "#04a0de"],
+    ["orphan", "Orphan Care Program", "#a2cd44"], ["community", "Community Services", "#23c2cb"], ["microfinance", "Islamic Microfinance", "#0460b3"], ["banoqabil", "Bano Qabil", "#1f6b33"]];
+  let foot;
+  function paintFoot() {
+    const m = document.querySelector(".main"); if (!m) return;   // no page frame yet (sign-in screen)
+    if (!foot) { foot = el("footer", "jz-prog-foot"); foot.setAttribute("aria-label", "Programmes of Alkhidmat Foundation Islamabad");
+      PROGS.forEach(([id, name, c]) => { const s = el("span"), i = el("img"); i.src = BASE + "home/svc-" + id + ".png"; i.alt = ""; i.width = i.height = 22; i.loading = "lazy";
+        s.style.setProperty("--pc", c); s.append(i, name); foot.append(s); }); }
+    if (m.lastElementChild !== foot) m.append(foot);   // the portal redraws its page: keep the line last
+  }
+
   function start() {
-    build(); paintMine();
+    build(); paintMine(); paintFoot();
     // the portal re-renders its menu often: repaint the copy on the next frame after any change
     let raf = 0; new MutationObserver(recs => { if (recs.every(r => rail.contains(r.target) || r.target === rail)) return;   // our own repaint is not a portal change
-      cancelAnimationFrame(raf); raf = requestAnimationFrame(paintMine); })
+      cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { paintMine(); paintFoot(); }); })
       .observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["class"] });
     // the sign-in may still be loading on the first try: ask again a few times until the list arrives
     const load = n => window.AKF_DESK && AKF_DESK.portals && AKF_DESK.portals().then(p => { portals = p || []; paintPortals(); if (!portals.length && n) setTimeout(() => load(n - 1), 3000); })
