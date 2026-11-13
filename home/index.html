@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by tools/csp-hash.js (inline scripts by hash). Fonts, the background library and images are all served from this site. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-B1YorqWOi3n76/616LLUWVQjany+cX8lj1pHynFdPjg='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-MTSk6c/0Dqy5G7a1EF8OlzYC4n7BF6xcDXt3sBeHAN8='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1966,6 +1966,14 @@ svg.jf-pre .jf-bar { transform: scaleY(0); } svg.jf-pre .jf-rib { opacity: 0; }
   <textarea id="sb-why" class="input" required maxlength="500" placeholder="What must be corrected?"></textarea>
   <div class="sb-act"><button class="btn btn-secondary" value="" formnovalidate>Cancel</button><button class="btn btn-primary" value="ok">Send back</button></div>
 </form></dialog>
+<dialog id="fl-dlg" class="sb-dlg" aria-labelledby="fl-h"><form method="dialog">
+  <h2 id="fl-h">Recommend</h2>
+  <p>Tick each check you have done. The request then goes on for the final approval.</p>
+  <label><input type="checkbox" required> Entitlement verified</label>
+  <label><input type="checkbox" required> Budget available</label>
+  <label><input type="checkbox" required> Justification valid</label>
+  <div class="sb-act"><button class="btn btn-secondary" value="" formnovalidate>Cancel</button><button class="btn btn-primary" value="ok">Recommend</button></div>
+</form></dialog>
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 
 <script>
@@ -2049,6 +2057,34 @@ const Live = {
   // Procurement / Store: an approval step can be decided on the main page. "Items confirmed" needs the stock screen, so it opens the request.
   reqCan: a => /^(procurement|store)$/.test(a.portal) && a.kind === 'approve' ? Live.ref(a) : '',
   reqWord: a => /^items confirmed/i.test(a.sub || '') ? '' : /^recommend/i.test(a.sub || '') ? 'Recommend' : 'Approve',
+  // Fleet / Assistance: the server names the step that needs no entry in a.act; every other step (assign a vehicle, an amount, a receipt) opens the request
+  ACT: { approve: 'Approve', recommend: 'Recommend', forward: 'Forward' },
+  actCan: a => /^(fleet|assistance)$/.test(a.portal) && Object.hasOwn(Live.ACT, a.act || '') ? Live.ref(a) : '',
+  // the approval step a vehicle request waits at (never the first step: the Transport Officer assigns in the portal)
+  fleetNext(o) { const f = o && Array.isArray(o.flow) ? o.flow : [], i = f.findIndex(s => s && s.key === o.stage), n = i > 0 && f[i + 1];
+    return n && /^Pending (?!Correction$)/.test(o.status || '') && n.kind === 'approval' ? n : null; },
+  // Do that step. Fleet: the same signed step the portal writes (fleet-app.html, api 'approve' / 'recommend' / 'xstep'); Assistance: its server function.
+  // The database checks the person, the step, maker-checker and the signature again. Returns '' when done, or the message to show.
+  async actRun(portal, act, id) {
+    try {
+      if (portal === 'assistance') { const r = await Live.sb.rpc('assistance_act', { p_id: id, p_action: act, p_data: {} }); if (r.error) return Live.fail('Not saved', r.error); }
+      else {
+        const rows = () => Live.sb.from('fleet_rows'), q = await rows().select('data').eq('collection', 'requests').eq('id', id).maybeSingle();
+        if (q.error) return Live.fail('Not saved', q.error);
+        const o = q.data && q.data.data, n = Live.fleetNext(o), rec = !!n && n.key === 'rec_hr';
+        if (!n || rec !== (act === 'recommend')) return 'Please open the request to do this step.';
+        const after = o.flow[o.flow.indexOf(n) + 1];
+        // only if the request still stands at the step that was read: two people cannot both sign it
+        const u = await rows().update({ data: { ...o, stage: n.key, status: n.final || !after ? 'Approved' : 'Pending ' + after.who,
+          ...(rec ? { sopMG: { ent: true, bud: true, just: true }, mgRem: '' } : n.final ? { rmRem: '' } : { xs: { ...(o.xs || {}), [n.key]: { rem: '' } } }),
+          log: [...(o.log || []), { a: rec ? 'Recommended for approval' : n.final ? 'Approved' : n.label + ' (' + n.who + ')', m: '' }] } })
+          .eq('collection', 'requests').eq('id', id).eq('data->>stage', o.stage).select('id');
+        if (u.error) return Live.fail('Not saved', u.error);
+        if (!u.data || !u.data.length) { Live.loadToday(); return 'This request was changed just now. Please look again.'; }
+      }
+      toast(id + ': ' + { approve: 'approved', recommend: 'recommended', forward: 'sent to the next step' }[act]); Live.loadToday(); return '';
+    } catch (e) { return Live.fail('Not saved', e); }
+  },
   // the step a request waits at (its stage is the last finished step), only when it is an approval of an active request
   reqNext(r) { const f = r && Array.isArray(r.flow) ? r.flow : [], i = f.findIndex(s => s && s.key === r.stage), n = i >= 0 && f[i + 1];
     return n && r.status === 'active' && !r.correction && n.kind === 'approval' && n.key !== 'checked' ? n : null; },
@@ -3021,7 +3057,7 @@ const MyDesk = {
     const A = (Live.today && Live.today.actions) || []; if (!A.length) return '';
     const n = A.length, at = (Live.deckAt || 0) % n, a = A[at], p = Live.gate(a), url = Live.link(a), r = Live.ref(a), d = this.days(a.since);
     const quick = a.portal === 'hr' && a.kind === 'approve' && Live.QUICK.includes(a.k) && r, word = a.last ? 'Approve' : 'Recommend';   // the same rule as the list below
-    const rq = Live.reqCan(a), rw = rq && Live.reqWord(a);
+    const rq = Live.reqCan(a), rw = rq && Live.reqWord(a), ac = Live.actCan(a);
     const facts = [['Request', r], ['Step', Live.words(a.sub)], ['Amount', a.amount ? 'Rs ' + Number(a.amount).toLocaleString('en-PK') : ''], ['Department', a.dept], ['Details', a.info]].filter(f => f[1]).slice(0, 4);
     const step = +a.step, of = +a.steps, steps = step > 0 && of >= step && of <= 30;   // sent by the newer core_my_today(); without it the card has no step line
     return `<section class="jd" id="deck" aria-label="Waiting for you, one at a time">
@@ -3034,7 +3070,8 @@ const MyDesk = {
           ${quick ? `<button type="button" class="btn btn-primary" data-action="quick-approve" data-id="${esc(quick)}" data-word="${word}">${word}</button>` : ''}
           ${rw ? `<button type="button" class="btn btn-primary" data-action="req-approve" data-id="${esc(rq)}" data-word="${rw}">${rw}</button>` : ''}
           ${rq ? `<button type="button" class="btn btn-secondary" data-action="req-back" data-id="${esc(rq)}">Send back</button>` : ''}
-          ${url ? `<a class="btn ${quick || rw ? 'btn-secondary' : 'btn-primary'} jd-open" href="${esc(url)}" aria-keyshortcuts="O">Open in ${esc(p ? p.name : 'the portal')}<kbd aria-hidden="true">O</kbd></a>` : ''}
+          ${ac ? `<button type="button" class="btn btn-primary" data-action="act-go" data-portal="${a.portal}" data-act="${a.act}" data-id="${esc(ac)}" data-word="${Live.ACT[a.act]}">${Live.ACT[a.act]}</button>` : ''}
+          ${url ? `<a class="btn ${quick || rw || ac ? 'btn-secondary' : 'btn-primary'} jd-open" href="${esc(url)}" aria-keyshortcuts="O">Open in ${esc(p ? p.name : 'the portal')}<kbd aria-hidden="true">O</kbd></a>` : ''}
           ${n > 1 ? '<button type="button" class="btn jd-skip" data-action="deck-skip" aria-keyshortcuts="S">Skip for now<kbd aria-hidden="true">S</kbd></button>' : ''}
         </div>
       </article>${n > 2 ? '<div class="jd-edge"></div><div class="jd-edge"></div>' : n > 1 ? '<div class="jd-edge"></div>' : ''}
@@ -3100,6 +3137,10 @@ console.assert((() => { const f = [{ key: 'submitted' }, { key: 'budget', kind: 
     && Live.reqWord({ sub: 'Recommended · RM' }) === 'Recommend' && !Live.reqWord({ sub: 'Items confirmed · Store Officer' }) && !Live.reqCan({ portal: 'fleet', kind: 'approve', ref: 'X' }) && Live.reqCan({ portal: 'store', kind: 'approve', ref: 'AKF-SR-1' }) === 'AKF-SR-1'; })(),
   'Live.reqNext: only the next approval step of an active request can be approved from the main page');
 $('#prog-foot').innerHTML = PROGRAMS.map(pg => `<span style="--pc:${pg.color}">${badge(pg.id, 20)}${pg.name}</span>`).join('');   // fixed names and colours from the list above
+console.assert((() => { const f = [{ key: 'submitted' }, { key: 'to_check' }, { key: 'rec_hr', kind: 'approval' }, { key: 'approved', kind: 'approval', final: true }], r = (s, st) => ({ status: st || 'Pending X', stage: s, flow: f });
+  return !Live.fleetNext(r('submitted')) && Live.fleetNext(r('to_check')).key === 'rec_hr' && Live.fleetNext(r('rec_hr')).final && !Live.fleetNext(r('rec_hr', 'Pending Correction')) && !Live.fleetNext(r('rec_hr', 'Rejected')) && !Live.fleetNext(r('approved', 'Approved')) && !Live.fleetNext(null)
+    && Live.actCan({ portal: 'fleet', act: 'approve', ref: 'REQ-1' }) === 'REQ-1' && !Live.actCan({ portal: 'fleet', ref: 'REQ-1' }) && !Live.actCan({ portal: 'fleet', act: 'toString', ref: 'REQ-1' }) && !Live.actCan({ portal: 'donor', act: 'approve', ref: 'X' }); })(),
+  'Live.fleetNext / actCan: only an approval step that needs no entry can be done from the main page');
 class HomeView {
   mount() { MyDesk.draw(true); }
   // Live home: the same live data as the old main page's "Today" (core_my_today + hr_today), in the new design.
@@ -3117,10 +3158,10 @@ class HomeView {
     const isLate = s => Date.now() - new Date(s).getTime() > 2 * 864e5;   // the same rule as the "waiting more than 2 days" count (013_today.sql)
     const ref = Live.ref, link = a => Live.link(a);
     const tab = Live.tab || 'all', show = A.filter(a => tab === 'all' || (tab === 'approve' ? a.kind !== 'do' : a.kind === 'do'));
-    const items = show.slice(0, 20).map(a => { const p = Live.gate(a), late = isLate(a.since), url = link(a), quick = a.portal === 'hr' && a.kind === 'approve' && Live.QUICK.includes(a.k) && ref(a), rq = Live.reqCan(a), rw = rq && Live.reqWord(a);
+    const items = show.slice(0, 20).map(a => { const p = Live.gate(a), late = isLate(a.since), url = link(a), quick = a.portal === 'hr' && a.kind === 'approve' && Live.QUICK.includes(a.k) && ref(a), rq = Live.reqCan(a), rw = rq && Live.reqWord(a), ac = Live.actCan(a);
       return { sev: late ? 3 : 2, url, icon: Live.ICON[a.portal] || 'inbox', title: a.title || a.ref,
         meta: [p ? p.name : a.portal, a.info, Live.words(a.sub), late ? `waiting ${plural(Math.max(days(a.since), 2), 'day', 'days')}` : '', a.amount ? 'Rs ' + Number(a.amount).toLocaleString('en-PK') : ''].filter(Boolean).join(' · '),
-        actions: [...(quick ? [[a.last ? 'Approve' : 'Recommend', `data-action="quick-approve" data-id="${esc(quick)}" data-word="${a.last ? 'Approve' : 'Recommend'}"`, 1]] : []), ...(rw ? [[rw, `data-action="req-approve" data-id="${esc(rq)}" data-word="${rw}"`, 1]] : []), ...(rq ? [['Send back', `data-action="req-back" data-id="${esc(rq)}"`, 0]] : []), ...(url ? [['Open', `href="${esc(url)}"`, quick || rw ? 0 : 1]] : [])] }; });
+        actions: [...(quick ? [[a.last ? 'Approve' : 'Recommend', `data-action="quick-approve" data-id="${esc(quick)}" data-word="${a.last ? 'Approve' : 'Recommend'}"`, 1]] : []), ...(rw ? [[rw, `data-action="req-approve" data-id="${esc(rq)}" data-word="${rw}"`, 1]] : []), ...(rq ? [['Send back', `data-action="req-back" data-id="${esc(rq)}"`, 0]] : []), ...(ac ? [[Live.ACT[a.act], `data-action="act-go" data-portal="${a.portal}" data-act="${a.act}" data-id="${esc(ac)}" data-word="${Live.ACT[a.act]}"`, 1]] : []), ...(url ? [['Open', `href="${esc(url)}"`, quick || rw || ac ? 0 : 1]] : [])] }; });
     const D = Live.day, U = D && D.update, evs = (D && D.events) || [], team = (D && D.team) || [];
     // My requests: everything I raised that is still on its way, with the step it waits at (one list for all portals)
     const mine = MyDesk.mine(), flowNote = MyDesk.note();
@@ -4597,6 +4638,15 @@ const App = {
         toast(id + ': ' + action.toLowerCase() + ', sent to the next step'); Live.loadToday();
       } catch (e) { back(Live.fail('Not saved', e)); }
     },
+    // Approve / Recommend / Forward a vehicle request or an Assistance case. Two taps; Recommend in Fleet asks for its three checks instead.
+    'act-go': async el => {
+      const { portal, act, id, word } = el.dataset;
+      if (portal === 'fleet' && act === 'recommend') { const d = $('#fl-dlg'); d.dataset.id = id; $('#fl-h').textContent = 'Recommend ' + id; d.querySelector('form').reset(); d.showModal(); return; }
+      if (!el.dataset.sure) { el.dataset.sure = 1; el.textContent = 'Confirm'; setTimeout(() => { if (el.isConnected && !el.disabled) { delete el.dataset.sure; el.textContent = word; } }, 4000); return; }
+      el.disabled = true;
+      const m = await Live.actRun(portal, act, id);
+      if (m) { el.disabled = false; delete el.dataset.sure; el.textContent = word; toast(m); }
+    },
     'req-back': el => { const d = $('#sb-dlg'); d.dataset.id = el.dataset.id; $('#sb-h').textContent = 'Send back ' + el.dataset.id; $('#sb-why').value = ''; $('#sb-why').setCustomValidity(''); d.showModal(); },
     'req-back-send': async d => {   // the database does it and signs it (portal_sendback): only the person the request waits for
       const r = await Live.sb.rpc('portal_sendback', { p_id: d.dataset.id, p_reason: $('#sb-why').value.trim(), p_restart: false }).then(x => x, e => ({ error: e }));
@@ -4695,6 +4745,9 @@ const App = {
       this.actions['req-back-send']($('#sb-dlg'));
     });
     $('#sb-why').addEventListener('input', e => e.target.setCustomValidity(''));
+    $('#fl-dlg form').addEventListener('submit', e => {   // the browser lets it through only with all three checks ticked
+      if (e.submitter && e.submitter.value === 'ok') Live.actRun('fleet', 'recommend', $('#fl-dlg').dataset.id).then(m => m && toast(m));
+    });
     document.addEventListener('click', e => {
       const el = e.target.closest('[data-action]');
       if (Notifs.isOpen() && !e.target.closest('.notif-wrap')) Notifs.toggle(false);
