@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-91H2e4cYkGKydyNEPMhQ1UJuCNqmZINmkbdC0DOdmEM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-cvNNDjCjkW3vG71dIOnG8w240is7xUBRAu5O8qVl/1A='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1917,6 +1917,8 @@ function eligv(a, job) {   // within the post's gender, age, experience and qual
 }
 const panelAvg = a => { const p = (a.panel || []).map(x => +x.total); return p.length ? p.reduce((s, v) => s + v, 0) / p.length : null; };
 const LATE = ["Shortlisted", "Interview Done", "Selected"];
+const cvPick = (list, status) => list.filter(a => a.cv && (!status || a.stage === status));   // CVs of one status only
+console.assert((() => { const l = [{ cv: 1, stage: "Shortlisted" }, { cv: 1, stage: "Selected" }, { cv: 0, stage: "Shortlisted" }]; return cvPick(l, "Shortlisted").length === 1 && cvPick(l, "").length === 2 && !cvPick(l, "Regret").length; })(), "cvPick: only the chosen status, only with a CV");
 const escH = s => String(s ?? "").replace(/[&<>"']/g, c => "&#" + c.charCodeAt(0) + ";");
 const shown = m => Object.assign(new Error(m), { shown: true });
 const normPh = p => { let t = String(p || "").replace(/\D/g, ""); if (!t) return ""; if (t.startsWith("0")) t = t.slice(1); if (!t.startsWith("92")) t = "92" + t; return t; };
@@ -2137,15 +2139,16 @@ const RCV = {
   async CVs(box, b) {
     if (!b.jobs.length) return box.append(empty("No positions yet."));
     const id = V.rj || b.jobs[0].id, list = (await rpc("hr_applicants", { p_job: id }, "The applicants could not load")) || [], msg = el("p", { class: "small muted" });
-    const run = async (which, btn) => { const pick = list.filter(a => a.cv && (which === "all" || LATE.includes(a.stage))); if (!pick.length) return toast("No CVs to download", true);
+    // one status at a time: "Shortlisted" gives only the candidates who are Shortlisted now; empty = every status
+    const stSel = el("select", { class: "select", "aria-label": "Status" }, el("option", { value: "", text: "All statuses (" + cvPick(list, "").length + ")" }), STAGES.map(s => el("option", { value: s, text: s + " (" + cvPick(list, s).length + ")" })));
+    const run = async btn => { const which = stSel.value, pick = cvPick(list, which); if (!pick.length) return toast("No CVs to download for this status", true);
       btn.disabled = true; const files = [];
       try { for (const a of pick) { msg.textContent = "Getting CV " + (files.length + 1) + " of " + pick.length + "…"; const c = await rpc("hr_applicant_cv", { p_id: a.id }, "A CV could not load");
           if (c) files.push({ name: fileSafe(a.stage + " - " + a.name + " - " + a.id) + "." + (c.name.split(".").pop() || "pdf").toLowerCase(), data: b64u8(c.b64) }); }
-        const url = URL.createObjectURL(zipBlob(files)); el("a", { href: url, download: "CVs-" + id + "-" + (which === "all" ? "all" : "shortlisted") + ".zip" }).click(); setTimeout(() => URL.revokeObjectURL(url), 60000);
+        const url = URL.createObjectURL(zipBlob(files)); el("a", { href: url, download: "CVs-" + id + "-" + fileSafe(which || "all") + ".zip" }).click(); setTimeout(() => URL.revokeObjectURL(url), 60000);
         msg.textContent = files.length + " CVs downloaded ✓"; } catch (e) { msg.textContent = e.message; } btn.disabled = false; };
     box.append(card("Download CVs", el("div", { class: "hr-actions" }, jobPick(b)),
-      el("div", { class: "hr-actions" }, el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Shortlisted (ZIP)", onclick: e => run("sel", e.currentTarget) }),
-        el("button", { class: "btn btn-outline btn-sm", type: "button", text: "All applicants (ZIP)", onclick: e => run("all", e.currentTarget) })),
+      el("div", { class: "hr-actions" }, stSel, el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Download CVs (ZIP)", onclick: e => run(e.currentTarget) })),
       el("p", { class: "small muted", text: list.filter(a => a.cv).length + " CVs for this job." }), msg));
   },
   async Messages(box, b, st) {
