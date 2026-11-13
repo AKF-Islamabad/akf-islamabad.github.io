@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Foundation Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-ldE9hNnHa+qu6OVDJC3VypYxRGKDjQ8G1BEsgBu454I='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-mRo4/r4d4j2n0rDCBlJz6f5PY3M2E5Bfo3p1eUIKF2c='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -3962,11 +3962,31 @@ function cleanScan(img) {
   x.putImageData(d, 0, 0); return c;
 }
 const imgReady = img => img.complete && img.naturalWidth ? Promise.resolve(img) : new Promise((res, rej) => { img.onload = () => res(img); img.onerror = rej; });
+/* A signature for print, cut to its ink: signatures come in many shapes (the pad here, pads of other portals, imported photos) with empty space around the ink. */
+function sigInk(img) {
+  const c = document.createElement('canvas'); c.width = img.naturalWidth || img.width; c.height = img.naturalHeight || img.height;
+  const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+  const p = x.getImageData(0, 0, c.width, c.height).data;
+  let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
+  for (let y = 0; y < c.height; y++) for (let xx = 0; xx < c.width; xx++) {
+    const i = (y * c.width + xx) * 4;
+    if (p[i + 3] < 30 || .3 * p[i] + .59 * p[i + 1] + .11 * p[i + 2] > 235) continue;   // empty or white paper
+    if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  if (x1 < 0) return c;
+  const o = document.createElement('canvas'); o.width = x1 - x0 + 1; o.height = y1 - y0 + 1;
+  o.getContext('2d').drawImage(c, x0, y0, o.width, o.height, 0, 0, o.width, o.height); return o;
+}
+/* The size that keeps a w x h signature whole inside a box of mw x mh: it never grows over the lines above it. */
+const sigFit = (w, h, mw, mh) => { const s = Math.min(mw / w, mh / h); return [w * s, h * s]; };
+console.assert(sigFit(900, 260, 400, 118)[1] <= 118 && sigFit(900, 260, 400, 118)[0] <= 400 && sigFit(300, 600, 400, 118).map(Math.round).join() === '59,118' && sigFit(1200, 100, 400, 118).map(Math.round).join() === '400,33',
+  'sigFit: a signature of any shape stays inside its box');
+function drawSig(ctx, si, x, bottom, mw, mh, centre) { const [w, h] = sigFit(si.width, si.height, mw, mh); ctx.drawImage(si, x + (centre ? (mw - w) / 2 : 0), bottom - h, w, h); }
 async function art() {
   if (ART) return ART;
   const [logo, icons] = await Promise.all(['#logo-src', '#icons-src'].map(s => imgReady($(s))));
   const sigCache = {};
-  ART = { logo, icons: rawCanvas(icons), badges: badgeCanvas(), sig:async url => sigCache[url] || (sigCache[url] = await imgReady(Object.assign(new Image(), { src: url }))) };
+  ART = { logo, icons: rawCanvas(icons), badges: badgeCanvas(), sig:async url => sigCache[url] || (sigCache[url] = sigInk(await imgReady(Object.assign(new Image(), { src: url })))) };
   if (document.fonts && document.fonts.ready) await document.fonts.ready;
   return ART;
 }
@@ -4111,7 +4131,7 @@ async function drawReceipt(canvas, x, { mask = false } = {}) {
   const ys = yw + 185;
   ctx.fillStyle = NAVY; ctx.font = RF(500, 35); ctx.fillText('Received by: Sign.', RL, ys);
   const sx = RL + ctx.measureText('Received by: Sign.').width + 10; hl(ctx, sx, 790, ys + 6);
-  if (d.sig) { try { const si = await A.sig(d.sig); const bw = 790 - sx - 10, bh = bw * si.height / si.width; ctx.drawImage(si, sx + 5, ys - bh + 22, bw, bh); } catch {} }
+  if (d.sig) { try { drawSig(ctx, await A.sig(d.sig), sx + 5, ys + 14, 790 - sx - 10, 112, true); } catch {} }   // box ends below the second "amount in words" line (yw + 72 = ys - 113)
   ctx.fillStyle = NAVY; ctx.font = RF(500, 35); ctx.fillText('Name:', 285, ys + 88); hl(ctx, 395, 790, ys + 94);
   if (d.rbName) { ctx.fillStyle = PEN; ctx.fillText(rfit(ctx, d.rbName, 380, 600, 33, 20), 405, ys + 84); }
   // stamp
@@ -4239,7 +4259,7 @@ async function donorStatementCore(donorId, fyStart) {
   ctx.font = RF(500, 24); ctx.fillStyle = '#3B4A60';
   ['This statement lists donations received and verified by Alkhidmat Foundation Islamabad during the financial year shown.', 'Donations to Alkhidmat Foundation are exempted from income tax as per applicable law. Please retain this statement with your tax records.'].forEach((t, i) => ctx.fillText(rfit(ctx, t, RR - RL, 500, 24, 16), RL, y + 170 + i * 36));
   const sg = defaultSignatory(), sy = Math.min(y + 420, RH - 420);
-  if (sg && S.signatures[sg.sigId]) { try { const si = await A.sig(S.signatures[sg.sigId]); ctx.drawImage(si, RL, sy - 110, 360, 104); } catch {} }
+  if (sg && S.signatures[sg.sigId]) { try { drawSig(ctx, await A.sig(S.signatures[sg.sigId]), RL, sy - 6, 360, 104); } catch {} }
   hl(ctx, RL, RL + 420, sy, 2); ctx.fillStyle = NAVY; ctx.font = RF(600, 26); ctx.fillText(sg ? `${sg.name}, ${sg.designation}` : 'Authorised signatory', RL, sy + 36);
   ctx.save(); ctx.translate(1290, sy - 40); ctx.rotate(-0.035); ctx.strokeStyle = 'rgba(25,45,125,.9)'; ctx.lineWidth = 5; ctx.strokeRect(-212, -84, 424, 168); ctx.fillStyle = 'rgba(25,45,125,.92)'; ctx.textAlign = 'center'; ctx.font = RF(800, 40); ctx.fillText('Al Khidmat Foundation', 0, -22); ctx.fillText('Islamabad.', 0, 24); ctx.font = '700 38px Consolas, monospace'; ctx.fillText(o.stampPhone, 0, 66); ctx.restore();
   ctx.textAlign = 'center'; ctx.fillStyle = NAVY; ctx.font = RF(500, 26); RECEIPT_FOOTER(o.ntn).forEach((t, i) => ctx.fillText(rfit(ctx, t, RR - RL, 500, 26), RW / 2, RH - 330 + i * 38));
