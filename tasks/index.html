@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-CG4StMQgQ7JTfY3o4MxgMohNgOiuR4CHNdgjkWy9ZkQ='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-pq6tbzWTjRLXbd3lm9vd8H0rAEMPxNfK+BOMS8SfKo0='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -4606,6 +4606,16 @@ function Timeline({events}){
 
 /* a file over the limit: photos are made smaller automatically (AKF_shrinkImage in akf-desk.js); PDF and Word come back unchanged */
 const fitFile=async(f,lim)=>f&&f.size>lim&&window.AKF_shrinkImage?window.AKF_shrinkImage(f,1600,0.75,lim):f;
+/* shortcut: a request's files live inside its own database row, so 10 files of 400 KB each at most; upgrade to file storage (as Tasks use) when bigger files are needed */
+const ATT_MAX=10;
+/* one file for a request (photo or PDF): photos are made smaller first; answers null when it cannot be kept */
+const readAtt=async(file,label)=>{ const f=await fitFile(file,400*1024); if(!f) return null;
+  if(f.size>400*1024){ alert(`"${f.name}" is still over 400 KB. Photos are made smaller automatically; for a PDF, save it smaller or attach only the needed pages.`); return null; }
+  return new Promise(res=>{ const rd=new FileReader(); rd.onerror=()=>res(null);
+    rd.onload=()=>res({label,name:String(f.name).replace(/[<>"'`\\]/g,"").slice(0,120),type:f.type||"application/octet-stream",size:f.size,data:rd.result}); rd.readAsDataURL(f); }); };
+/* several files picked at once: reads them in turn and stops at the limit; have = files already there */
+const readAtts=async(inp,label,have,each)=>{ const fs=[...inp.files]; inp.value="";
+  for(const x of fs){ if(have>=ATT_MAX){ alert(`A request can hold ${ATT_MAX} files. Remove one first.`); break; } const a=await readAtt(x,label); if(a){ each(a); have++; } } };
 
 /* ---------- Items editor ---------- */
 /* a photo of the item on a purchase requisition: made smaller here (longest side 900 px, JPEG) so the request stays light */
@@ -4689,11 +4699,11 @@ function makeActions(commit, user, toast){
   const advance=(d,req,stageKey,action,comment)=>{ req.stage=stageKey; req.timeline.push({at:nowISO(),stage:stageKey,action,comment,...who()}); log(d,req.id,action,comment,req.dept); };
 
   return {
-    submitRequest(type, form){
+    submitRequest(type, form, files){
       let id; commit(d=>{
         id=nextNumber(d, type==="procurement"?`AKF-MR-${YEAR}-`:`AKF-SR-${YEAR}-`);
         const items=form.items.filter(i=>i.name&&i.qty>0);
-        const req={ id, type, createdAt:nowISO(), dept:form.dept==="OTHER"?(form.otherDept||"OTHER"):form.dept, requesterId:user.id, requester:user.name, purpose:form.purpose.trim(), donor:form.donor, projectCode:form.projectCode||"GEN-"+YEAR, urgency:form.urgency, status:"active", stage:"submitted", items, links:{}, timeline:[] };
+        const req={ id, type, createdAt:nowISO(), dept:form.dept==="OTHER"?(form.otherDept||"OTHER"):form.dept, requesterId:user.id, requester:user.name, purpose:form.purpose.trim(), donor:form.donor, projectCode:form.projectCode||"GEN-"+YEAR, urgency:form.urgency, status:"active", stage:"submitted", items, links:{}, timeline:[], attachments:(files||[]).slice(0,ATT_MAX).map(a=>({id:uid(),at:nowISO(),by:user.name,...a})) };
         req.flow=flowSnapshot(type,flowTotal(req));   /* this request's own approval path (the database sets the same) */
         req.timeline.push({at:nowISO(),stage:"submitted",action:"Request submitted",comment:form.note||"",...who()});
         d.requests.unshift(req); log(d,id,"Request submitted",form.note,req.dept);
@@ -5099,7 +5109,7 @@ function RequestModal({req,state,user,A,onClose,openDoc,readOnly}){
   const can=canAct(user,req);
   const [attLabel,setAttLabel]=useState("Quotation"); const fileRef=useRef();
   const canAttach=!READ_ONLY_ROLES.includes(user.role)&&req.status==="active"&&(user.role!=="hod"||req.dept===user.dept);
-  const onFile=async e=>{ const inp=e.target, f=await fitFile(inp.files[0],400*1024); inp.value=""; if(!f) return; if(f.size>400*1024){ alert("This file is still over 400 KB. Photos are made smaller automatically; for a PDF, save it smaller or attach only the needed pages."); return; } const rd=new FileReader(); rd.onload=()=>A.attach(req.id,{label:attLabel,name:f.name,type:f.type||"application/octet-stream",size:f.size,data:rd.result}); rd.readAsDataURL(f); };
+  const onFile=e=>readAtts(e.target,attLabel,(req.attachments||[]).length,a=>A.attach(req.id,a));
   const next=nextStage(req);
   const total=reqTotal(req);
   const rfq=state.rfqs.find(r=>r.id===req.links.rfq);
@@ -5165,7 +5175,7 @@ function RequestModal({req,state,user,A,onClose,openDoc,readOnly}){
           ${req.items.map(i=>html`<tr><td><b>${i.name}</b>${i.itemId&&html`<div class="xs faint id">${i.itemId}</div>`}${i.photo&&safeUrl(i.photo)&&html`<div><img src=${safeUrl(i.photo)} alt=${"Photo of "+i.name} loading="lazy" style="width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--line);margin-top:6px"/></div>`}${i.doc&&safeUrl(i.doc.data)!=="about:blank"&&html`<div class="xs" style="margin-top:4px"><button type="button" class="link-like" onClick=${()=>openStoredFile(i.doc.data,i.doc.name)}><${Icon} name="file"/> ${i.doc.name}</button></div>`}</td><td>${i.category}</td><td class="r num">${i.qty} ${i.uom}</td><td class="r num">${fmt(i.price)}</td><td class="r num bold">${fmt(i.qty*i.price)}</td></tr>`)}
           <tr><td colspan="4" class="r bold">Total</td><td class="r num bold">${pkr(total)}</td></tr></tbody></table></div>
         ${rfq&&html`<${RfqSummary} rfq=${rfq} state=${state}/>`}
-        <div class="card" style="box-shadow:none"><div class="card-b stack" style="gap:8px"><div class="row between wrap"><b>Attachments <span class="faint" style="font-weight:600">${(req.attachments||[]).length}</span></b>${canAttach&&html`<div class="row no-print"><select class="select" style="width:auto;padding:5px 28px 5px 9px;font-size:12px" value=${attLabel} onChange=${e=>setAttLabel(e.target.value)}>${["Quotation","Photo","Approval note","Invoice","Delivery challan","Other"].map(x=>html`<option>${x}</option>`)}</select><input type="file" ref=${fileRef} class="hidden" accept="image/*,.pdf" onChange=${onFile}/><button class="btn btn-ghost btn-sm" onClick=${()=>fileRef.current.click()}><${Icon} name="plus"/>Add file</button></div>`}</div>
+        <div class="card" style="box-shadow:none"><div class="card-b stack" style="gap:8px"><div class="row between wrap"><b>Attachments <span class="faint" style="font-weight:600">${(req.attachments||[]).length}</span></b>${canAttach&&html`<div class="row no-print"><select class="select" style="width:auto;padding:5px 28px 5px 9px;font-size:12px" value=${attLabel} onChange=${e=>setAttLabel(e.target.value)}>${["Quotation","Photo","Approval note","Invoice","Delivery challan","Other"].map(x=>html`<option>${x}</option>`)}</select><input type="file" multiple ref=${fileRef} class="hidden" accept="image/*,.pdf" onChange=${onFile}/><button class="btn btn-ghost btn-sm" onClick=${()=>fileRef.current.click()}><${Icon} name="plus"/>Add files</button></div>`}</div>
           ${(req.attachments||[]).length?html`<div class="list">${req.attachments.map(a=>html`<div class="row between sm item" style="padding:8px 10px"><div class="row grow" style="min-width:0">${(a.type||"").startsWith("image/")?html`<img src=${a.data} alt="" style="width:36px;height:36px;object-fit:cover;border-radius:6px;flex:none"/>`:html`<${Icon} name="file"/>`}<div class="grow" style="min-width:0"><div class="ellipsis"><b>${a.label}</b> · ${a.name}</div><div class="xs faint">${Math.round(a.size/1024)} KB · ${a.by} · ${fmtDT(a.at)}</div></div></div><div class="row"><button type="button" class="btn btn-ghost btn-sm" onClick=${()=>openStoredFile(a.data,a.name)}>Open</button>${canAttach&&html`<button class="iconbtn" style="width:28px;height:28px" title="Remove" onClick=${()=>A.removeAttachment(req.id,a.id)}><${Icon} name="trash"/></button>`}</div></div>`)}</div>`:html`<div class="xs faint">No files yet${canAttach?" — add a quotation, photo or approval note (image or PDF, under 400 KB).":"."}</div>`}</div></div>
         ${po&&html`<${PaymentSummary} po=${po} state=${state} openDoc=${openDoc}/>`}
         <${ApprovalSigns} req=${req} state=${state}/>
@@ -5482,6 +5492,7 @@ function NewRequest({type,user,state,A,onDone}){
   const dkey="akf-draft-"+type+"-"+user.id;   // half-filled request kept in this browser: items and purpose only, no personal data
   const [f,setF]=useState(()=>{ try{ const d=JSON.parse(localStorage.getItem(dkey)); if(d&&Array.isArray(d.items)&&d.items.length) return {...blank,...d,dept:user.role==="hod"?blank.dept:(d.dept||blank.dept)}; }catch(e){} return blank; });
   const set=(k,v)=>setF(x=>({...x,[k]:v}));
+  const [files,setFiles]=useState([]);   // documents for the whole request: kept on this page only, never in the saved half-filled form
   const dirty=JSON.stringify(f)!==JSON.stringify(blank);
   useEffect(()=>{ try{ dirty?localStorage.setItem(dkey,JSON.stringify(f)):localStorage.removeItem(dkey); }catch(e){} },[f]);
   const valid=f.purpose.trim().length>=8&&f.dept&&f.donor&&f.items.some(i=>i.name&&i.qty>0);
@@ -5496,7 +5507,10 @@ function NewRequest({type,user,state,A,onDone}){
         <${Field} label="Project code (the budget line this is paid from)"><input class="input" list=${"pc-"+type} placeholder="Pick from the list or type" value=${f.projectCode} onInput=${e=>set("projectCode",e.target.value)}/><datalist id=${"pc-"+type}>${state.budgets.map(b=>html`<option value=${b.code}>${b.dept} · ${b.donor}</option>`)}</datalist><//></div>
       <${Field} req label="Purpose (needed for donor audit)"><textarea class="textarea" placeholder="What is needed, for whom, and why…" value=${f.purpose} onInput=${e=>set("purpose",e.target.value)}/><//>
       <${ItemsEditor} items=${f.items} onChange=${v=>set("items",v)} stock=${state.stock.filter(s=>s.qty>0)} storeMode=${type==="store"}/>
-      <div class="row wrap"><span class="sm muted grow">${valid?"Ready to send. You can track every step.":"Please fill: Purpose (8+ characters) and at least one item."}${dirty?" Your half-filled form is kept on this computer until you submit or clear it.":""}</span>${dirty&&html`<button class="btn btn-ghost" onClick=${()=>setF(blank)}>Clear form</button>`}<button class="btn btn-primary" disabled=${!valid} onClick=${()=>{ const id=A.submitRequest(type,f); setF(blank); onDone(id); }}><${Icon} name="send"/>Send for approval</button></div>
+      <div class="stack" style="gap:6px"><div class="row wrap"><b class="sm">Documents <span class="faint">${files.length}</span></b><span class="xs faint grow">Quotations, approval notes, photos — as many as needed (photo or PDF, under 400 KB each, up to ${ATT_MAX}).</span>
+        <label class="btn btn-ghost btn-sm"><${Icon} name="plus"/>Add files<input type="file" multiple class="hidden" accept="image/*,.pdf" onChange=${e=>readAtts(e.target,"Document",files.length,a=>setFiles(x=>[...x,a]))}/></label></div>
+        ${files.map((a,i)=>html`<div class="row sm" style="gap:6px"><${Icon} name="file"/><b class="ellipsis">${a.name}</b><span class="faint">${Math.max(1,Math.round(a.size/1024))} KB</span><button class="btn btn-ghost btn-sm" onClick=${()=>setFiles(x=>x.filter((_,j)=>j!==i))}>Remove</button></div>`)}</div>
+      <div class="row wrap"><span class="sm muted grow">${valid?"Ready to send. You can track every step.":"Please fill: Purpose (8+ characters) and at least one item."}${dirty?" Your half-filled form is kept on this computer until you submit or clear it.":""}</span>${dirty&&html`<button class="btn btn-ghost" onClick=${()=>{ setF(blank); setFiles([]); }}>Clear form</button>`}<button class="btn btn-primary" disabled=${!valid} onClick=${()=>{ const id=A.submitRequest(type,f,files); setF(blank); setFiles([]); onDone(id); }}><${Icon} name="send"/>Send for approval</button></div>
     </div><//>`;
 }
 
