@@ -1,0 +1,5 @@
+# False alarms only. These three are one line of the open-source Supabase library that old commit 81bb08c (2026-10-29)
+# had inside the page. It is public library code, not a key. Never add a real key here: change the key instead.
+81bb08c67d39d6308cd9f27bf259821b559a4f35:procurement/index.html:generic-api-key:1061
+81bb08c67d39d6308cd9f27bf259821b559a4f35:tasks/index.html:generic-api-key:1061
+81bb08c67d39d6308cd9f27bf259821b559a4f35:store/index.html:generic-api-key:1061
