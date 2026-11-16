@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Foundation Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-2HHbFPHwcI8GBp35y3dzO/UrnjFoADOHZwgUwXhzn/I='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-hJRGhIvszCLSLwZXYooheSheer9q1P5TxJ6Wl9ylmM0='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -1683,6 +1683,8 @@ function donorStatsMap() {
   return m;
 }
 const showPII = () => can('revealPII');
+/* a downloaded donor list holds every donor at once: full personal data in the file is for the Super Admin only */
+const fullPII = () => showPII() && !!ME && ME.role === 'super';
 const donorName = d => d ? d.name : 'Unknown donor';
 /* numbers: offline they count up in this browser; in ERP mode they are reserved on the server first (erpNeed),
    so two officers can never issue the same receipt number */
@@ -2433,9 +2435,11 @@ async function revealCnic(id) {
   if (!guard('revealPII')) return;
   const d = donorById(id); if (!d) return;
   if (UI.reveal[id]) { delete UI.reveal[id]; updateCnicCells(id); return; }
+  await audit('PII_REVEALED', d.id, 'CNIC displayed on screen');
+  if (ERP) { const e = erpAuditNew.pop(), { error } = await erpSb.from('donor_rows').insert({ collection: 'audit', id: e.id, data: e });
+    if (error) { S.audit.pop(); toast(erpErr(error, 'The CNIC is not shown'), 'error', 9000); return; } } else persist();
   UI.reveal[id] = Date.now();
   updateCnicCells(id);
-  await audit('PII_REVEALED', d.id, 'CNIC displayed on screen'); persist();
   setTimeout(() => { if (UI.reveal[id] && Date.now() - UI.reveal[id] >= REVEAL_SEC * 1000 - 50) { delete UI.reveal[id]; updateCnicCells(id); } }, REVEAL_SEC * 1000);
 }
 function updateCnicCells(id) {
@@ -5006,7 +5010,7 @@ function donorRow(d, stats, pii) {
 async function exportDonorsXlsx(list) {
   if (!guard('export')) return;
   await withLoader('Building the Excel file…', async () => {
-    const stats = donorStatsMap(), pii = showPII();
+    const stats = donorStatsMap(), pii = fullPII();
     const head = ['Donor ID', 'Old donor ID / code', 'Title', 'Full name', 'Father / husband / contact', 'Type', 'CNIC', 'NTN', 'Mobile', 'E-mail', 'City', 'Address', 'Preferred fund', 'Preferred contact', 'Consent', 'Donor since', 'Assigned RMO', 'Status', 'Verified total (Rs)', 'Gifts', 'Last gift', 'Notes'];
     const rows = [head]; let k = 0;
     for (const d of list || S.donors) { rows.push(donorRow(d, stats, pii)); if (++k % 5000 === 0) { setLoader(Math.round(k / (list || S.donors).length * 100), `${NUM.format(k)} donors`); await yieldUI(); } }
@@ -5047,7 +5051,7 @@ VIEWS.import = {
         <div id="imp-result">${an ? importReviewHTML(an) : ''}</div>
       </div>
       <div class="card"><div class="card-h"><h3>${ic('download')}Export to Excel</h3></div>
-        <div class="exp-row"><div><b>All donors</b><span class="muted small">${NUM.format(S.donors.length)} donors, with totals and last gift${showPII() ? '' : ' · personal data masked for your role'}</span></div><button class="btn btn-primary btn-sm" data-act="exp-donors">${ic('download')}Donors .xlsx</button></div>
+        <div class="exp-row"><div><b>All donors</b><span class="muted small">${NUM.format(S.donors.length)} donors, with totals and last gift${fullPII() ? '' : ' · CNIC, mobile, e-mail and address are masked in the file (full file: Super Admin only)'}</span></div><button class="btn btn-primary btn-sm" data-act="exp-donors">${ic('download')}Donors .xlsx</button></div>
         <div class="exp-row"><div><b>Donations</b><span class="muted small">Every receipt in the period, money and goods in separate columns</span>
           <div class="exp-dates"><input class="input" type="date" id="exp-from" value="${todayISO().slice(0, 4)}-01-01" aria-label="From"><span>to</span><input class="input" type="date" id="exp-to" value="${todayISO()}" aria-label="To"></div></div><button class="btn btn-primary btn-sm" data-act="exp-donations">${ic('download')}Donations .xlsx</button></div>
         <h4 class="sec-title">Recent imports</h4>
@@ -5316,7 +5320,7 @@ VIEWS.account = {
    ===================================================================== */
 async function exportDonors() {
   if (!guard('export')) return;
-  const { list, stats } = filteredDonors(), pii = showPII();
+  const { list, stats } = filteredDonors(), pii = fullPII();
   downloadCSV(`alkhidmat-donors-${todayISO()}.csv`, ['Donor ID', 'Type', 'Name', 'Father/Contact', 'CNIC', 'NTN', 'Phone', 'Email', 'City', 'Address', 'Preferred', 'Channel', 'Consent', 'Status', 'Verified total (PKR)', 'Gifts', 'Last gift', 'Since'],
     list.map(d => { const s = stats[d.id] || {}; return [d.id, d.type, d.name, d.father, pii ? d.cnic : maskCNIC(d.cnic), d.ntn, pii ? d.phone : maskPhone(d.phone), pii ? d.email : maskEmail(d.email), d.city, pii ? d.address : '', d.preferred, d.channel, d.consent ? 'Yes' : 'No', d.status, s.total || 0, s.count || 0, s.last || '', d.since]; }));
   await audit('EXPORT_DONORS', `${list.length} rows`, pii ? 'Includes personal identifiers' : 'Masked identifiers'); persist();
@@ -5326,7 +5330,7 @@ async function exportDonations() {
   if (!guard('export')) return;
   const list = filteredDonations();
   downloadCSV(`alkhidmat-donations-${todayISO()}.csv`, ['Receipt', 'Serial', 'Book No.', 'Donation ID', 'Date', 'Donor ID', 'Donor', 'Total (PKR)', 'On account of (lines)', 'Mode', 'Cheque/Draft/Txn #', 'Bank', 'C/O name', 'C/O mobile', 'Status', 'Received by', 'Recorded by', 'Verified by', 'Reason'],
-    list.map(x => [x.receipt, x.serial || '', x.bookNo || '', x.id, x.date, x.donorId, donorName(donorById(x.donorId)), x.amount, linesOf(x).map(l => `${lineText(l)} = ${l.amount}`).join(' | '), x.mode, x.ref, x.bank || '', x.co ? x.co.name : '', x.co && showPII() ? x.co.mobile : '', x.status, x.receivedBy || '', x.createdBy, x.verifiedBy || '', x.reason || '']));
+    list.map(x => [x.receipt, x.serial || '', x.bookNo || '', x.id, x.date, x.donorId, donorName(donorById(x.donorId)), x.amount, linesOf(x).map(l => `${lineText(l)} = ${l.amount}`).join(' | '), x.mode, x.ref, x.bank || '', x.co ? x.co.name : '', x.co && fullPII() ? x.co.mobile : '', x.status, x.receivedBy || '', x.createdBy, x.verifiedBy || '', x.reason || '']));
   await audit('EXPORT_DONATIONS', `${list.length} rows`, ''); persist();
   toast(`Exported ${list.length} donations.`, 'success');
 }
