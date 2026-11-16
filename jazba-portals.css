@@ -209,3 +209,14 @@ html[data-jz-shell="on"] .topbar{top:var(--jz-strip-h,46px)!important}
 html[data-jz-family="app"] .overlay > .modal:has(.track){width:min(1120px,100vw)!important;max-width:none!important}
 
 .jz-ts-bell{position:relative} .jz-ts-badge{position:absolute;top:-5px;right:-6px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:#D23B3B;color:#fff;font:700 11px/18px Manrope,"Segoe UI",system-ui,sans-serif;text-align:center;box-shadow:0 0 0 2px #0B2A4A} .jz-ts-badge[hidden]{display:none}
+
+/* ---------- phones: every portal ---------- */
+@media (max-width:820px){
+  /* an iPhone zooms the whole page when a text box is smaller than 16px */
+  input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea{font-size:16px!important}
+  /* room at the end of each page, so the last rows are not hidden behind the bottom bar, the note and the assistant button */
+  html[data-jz-family="kit"] .content{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+  html[data-jz-family="app"] .content{padding-bottom:150px}
+}
+/* small phones: number tiles stay two in a row (they were one tall tile per row) */
+@media (max-width:420px){html[data-jz-family="kit"] .kpis{grid-template-columns:repeat(2,minmax(0,1fr))} html[data-jz-family="kit"] .kpi{padding:14px}}

@@ -60,7 +60,7 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
   // one date style everywhere (03-Oct-2026): akf-dates.js rewrites dates as they appear on screen
   if (!window.AKF_DATES && !document.querySelector('script[src*="akf-dates.js"]')) { const dj = document.createElement("script"); dj.src = BASE + "akf-dates.js"; document.head.append(dj); }
   // the Jazba look on every portal: maps the portal's own colour/font settings (never on the main page)
-  if (document.documentElement.dataset.jzPage !== "hub" && !document.querySelector('link[href*="jazba-portals.css"]')) { const jp = document.createElement("link"); jp.rel = "stylesheet"; jp.href = BASE + "jazba-portals.css?v=13"; document.head.append(jp); }
+  if (document.documentElement.dataset.jzPage !== "hub" && !document.querySelector('link[href*="jazba-portals.css"]')) { const jp = document.createElement("link"); jp.rel = "stylesheet"; jp.href = BASE + "jazba-portals.css?v=14"; document.head.append(jp); }
   // the same Jazba frame on every portal (Jazba Portal Standard): top strip + menu + Ctrl+K; the sticky note shows on every page
   if (document.documentElement.dataset.jzPage !== "hub" && !window.JAZBA_SHELL) {
     document.documentElement.dataset.jzShell = "on";
@@ -79,6 +79,27 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
   const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (_) { return d; } },
                   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} } };
   let me = null;                                                    // { id (sign-in), pid (Tasks person id) }
+
+  /* ---------- "Other" values (055_other_values.sql): what anyone types in an "Other" box is offered to everyone ----------
+     A portal lists them with AKF_OTHER.get("fleet.purpose"); a text box with data-other="fleet.purpose" saves what is typed
+     (when the box is left) and suggests the saved words (list="akf-oth-fleet.purpose"). List words only, never a person's name. */
+  const others = {};
+  const otherOk = v => v.length >= 2 && v.length <= 60 && !/\d{5,}|@/.test(v) && !/^other/i.test(v);
+  console.assert(otherOk("Flood relief") && !otherOk("03001234567") && !otherOk("a@b.pk") && !otherOk("Other") && !otherOk("x"), "otherOk");
+  function paintOther() {
+    for (const l in others) { const id = "akf-oth-" + l; let d = document.getElementById(id);
+      if (!d) { d = document.createElement("datalist"); d.id = id; document.body.append(d); }
+      d.replaceChildren(...others[l].map(v => { const o = document.createElement("option"); o.value = v; return o; })); }
+  }
+  async function loadOther() {
+    const { data: r, error } = await sb.from("core_other_values").select("list,value").order("value").limit(5000);
+    if (error) return;                                              // before 055 is applied: no saved words, the portals work as before
+    Object.keys(others).forEach(k => delete others[k]); (r || []).forEach(x => (others[x.list] = others[x.list] || []).push(x.value)); paintOther();
+  }
+  window.AKF_OTHER = { get: l => (others[l] || []).slice(),
+    add(l, v) { v = String(v || "").trim().replace(/\s+/g, " "); if (!otherOk(v) || (others[l] || []).some(x => x.toLowerCase() === v.toLowerCase())) return;
+      (others[l] = others[l] || []).push(v); paintOther(); sb.rpc("core_other_add", { p_list: l, p_value: v }).then(() => {}, () => {}); } };
+  document.addEventListener("change", e => { const t = e.target; if (t && t.tagName === "INPUT" && t.dataset.other) window.AKF_OTHER.add(t.dataset.other, t.value); });
 
   /* ---------- install as an app (needed for notifications on iPhone) ---------- */
   [["manifest", "manifest.webmanifest"], ["apple-touch-icon", "icon.jpg"]].forEach(([rel, f]) => {
@@ -579,6 +600,7 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
     enforce();
     load().catch(() => {});
     loadInbox().catch(() => {});
+    loadOther().catch(() => {});
     if (!saved && canPush && Notification.permission === "granted") { saved = true; subscribe().catch(() => { saved = false; }); }
   }
   // every 5 s until someone signs in, then every 2 minutes (only while the page is on screen)
