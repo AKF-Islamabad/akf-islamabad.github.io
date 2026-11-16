@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-cvNNDjCjkW3vG71dIOnG8w240is7xUBRAu5O8qVl/1A='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-7s36OCk8TBkXT3kqU9DYQgfCI2XM5xLDexnEMXU4bD4='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1915,6 +1915,17 @@ function eligv(a, job) {   // within the post's gender, age, experience and qual
   const p = a.app || {}, ag = ageOf(p.dob), x = job.x || [0, 99], xy = +p.xy || 0;
   return (job.g === "B" || !p.g || job.g === p.g) && (ag == null || (ag >= job.a[0] && ag <= job.a[1])) && xy >= x[0] && xy <= x[1] && qlv(eduTxt(a)) >= qlv(job.q);
 }
+/* fixed ranking weights (HR's rule): Education 25%, Experience 35%, Skills 40%. Not changeable on screen. */
+const RW = { q: 25, x: 35, k: 40 };
+const sortW = t => { const any = t.q || t.x || t.k; return { q: !any || t.q ? RW.q : 0, x: !any || t.x ? RW.x : 0, k: !any || t.k ? RW.k : 0 }; };   // only the ticked parts count for the order; none ticked = all
+console.assert(RW.q + RW.x + RW.k === 100 && sortW({}).q === 25 && sortW({ k: true }).q === 0 && sortW({ k: true }).k === 40 && sortW({ q: true, x: true }).k === 0, "ranking weights");
+const cvLink = a => a.cv && /^AKF-HR-\d{4}-\d{4,}$/.test(a.id) ? { link: location.origin + location.pathname + "#cv=" + a.id } : "";   // opens only for signed-in staff who may see applicants
+async function openCv(id) {
+  try { const c = await rpc("hr_applicant_cv", { p_id: id }, "The CV could not open"); const u8 = b64u8(c.b64);
+    const pdf = /\.pdf$/i.test(c.name), url = URL.createObjectURL(new Blob([u8], { type: pdf ? "application/pdf" : "application/octet-stream" }));
+    el("a", { href: url, download: c.name, target: pdf ? "_blank" : null, rel: "noopener" }).click(); setTimeout(() => URL.revokeObjectURL(url), 60000); }
+  catch (e) { toast(e.message, true); }
+}
 const panelAvg = a => { const p = (a.panel || []).map(x => +x.total); return p.length ? p.reduce((s, v) => s + v, 0) / p.length : null; };
 const LATE = ["Shortlisted", "Interview Done", "Selected"];
 const cvPick = (list, status) => list.filter(a => a.cv && (!status || a.stage === status));   // CVs of one status only
@@ -2075,8 +2086,8 @@ const RCV = {
     const fresh = list.filter(a => a.email && !(a.sent || {})["0"]);
     box.append(card("Applicants", el("div", { class: "hr-actions" }, jobPick(b, true), q, sel, count),
       b.editor ? el("div", { class: "hr-actions" },
-        list.length ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Download list (Excel)", onclick: () => csv("applicants" + (V.rj ? "-" + V.rj : ""), ["Application ID", "Job", "Name", "Father", "CNIC", "E-mail", "Phone", "City", "Gender", "Date of birth", "Qualification", "Experience (years)", "Expected salary", "Earliest joining", "Applied", "Stage", "Interview (35)", "Note"],
-          list.map(a => [a.id, a.title, a.name, a.app.father, a.cnic.replace(/^(\d{5})(\d{7})(\d)$/, "$1-$2-$3"), a.email, a.app.ph, a.app.city, a.app.g, a.app.dob, eduTxt(a), a.app.xy, a.app.es, a.app.avail, String(a.created_at).slice(0, 10), a.stage, panelAvg(a) ?? "", a.note])) }) : null,
+        list.length ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Download list (Excel)", onclick: () => csv("applicants" + (V.rj ? "-" + V.rj : ""), ["Application ID", "Job", "Name", "Father", "CNIC", "E-mail", "Phone", "City", "Gender", "Date of birth", "Qualification", "Experience (years)", "Expected salary", "Earliest joining", "Applied", "Stage", "Interview (35)", "Note", "CV"],
+          list.map(a => [a.id, a.title, a.name, a.app.father, a.cnic.replace(/^(\d{5})(\d{7})(\d)$/, "$1-$2-$3"), a.email, a.app.ph, a.app.city, a.app.g, a.app.dob, eduTxt(a), a.app.xy, a.app.es, a.app.avail, String(a.created_at).slice(0, 10), a.stage, panelAvg(a) ?? "", a.note, cvLink(a)])) }) : null,
         fresh.length ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "E-mail \"Application received\" to " + fresh.length + " new", onclick: async e => { const btn = e.currentTarget; btn.disabled = true; let n = 0;
           for (const a of fresh) { try { await rcSend(a, 0, "email"); n++; btn.textContent = "Sent " + n + " of " + fresh.length + "…"; } catch (x) { toast("Stopped after " + n + ": " + x.message, true); break; } }
           if (n) toast(n + " e-mailed ✓"); render(); } }) : null) : null,
@@ -2085,20 +2096,25 @@ const RCV = {
   async Ranking(box, b, st) {
     if (!b.jobs.length) return box.append(empty("No positions yet."));
     const job = jobOf(V.rj || b.jobs[0].id), list = (await rpc("hr_applicants", { p_job: V.rj || b.jobs[0].id }, "The applicants could not load")) || [];
-    const w = Object.assign({ q: 40, x: 40, k: 20 }, V.rw || st.w || {});
-    const r = list.map(a => ({ a, s: scv(a, job, w), ok: eligv(a, job) })).sort((x, y) => (y.ok - x.ok) || (Math.abs(y.s.tot - x.s.tot) > 5 ? y.s.tot - x.s.tot :
-      ((x.a.app.avail ? Date.parse(x.a.app.avail) : Infinity) - (y.a.app.avail ? Date.parse(y.a.app.avail) : Infinity)) || y.s.tot - x.s.tot));
-    const slider = (k, l) => { const i = el("input", { type: "range", min: 0, max: 100, value: String(w[k]), disabled: !b.editor }); i.addEventListener("change", () => { V.rw = Object.assign({}, w, { [k]: +i.value }); render(); }); return el("label", {}, l + ": " + w[k] + "%", i); };
+    const tick = Object.assign({ q: true, x: true, k: true }, V.rk || {}), sw = sortW(tick);
+    const all = list.map(a => ({ a, s: scv(a, job, RW), o: scv(a, job, sw).tot, ok: eligv(a, job) })).sort((x, y) => (y.ok - x.ok) || (Math.abs(y.o - x.o) > 5 ? y.o - x.o :
+      ((x.a.app.avail ? Date.parse(x.a.app.avail) : Infinity) - (y.a.app.avail ? Date.parse(y.a.app.avail) : Infinity)) || y.o - x.o));
+    all.forEach((x, i) => { x.rank = i + 1; x.v = x.ok ? x.s.tot >= 80 ? ["HIGHLY RECOMMENDED: SELECT", "b-ok"] : x.s.tot >= 65 ? ["RECOMMENDED: WAITLIST", "b-info"] : ["AVERAGE", "b-warn"] : ["NOT ELIGIBLE", "b-bad"]; });
+    const r = all.filter(x => (!V.rfs || x.a.stage === V.rfs) && (!V.rfv || x.v[0] === V.rfv) && (!V.rfc || x.a.cv));
+    const box1 = (k, l) => { const i = el("input", { type: "checkbox", checked: !!tick[k] }); i.addEventListener("change", () => { V.rk = Object.assign({}, tick, { [k]: i.checked }); render(); }); return el("label", {}, i, " " + l + " " + RW[k] + "%"); };
+    const pick = (key, label, opts) => { const o = el("select", { class: "select", "aria-label": label }, el("option", { value: "", text: label + ": all" }), opts.map(t => el("option", { value: t, text: t }))); o.value = V[key] || ""; o.addEventListener("change", () => { V[key] = o.value; render(); }); return o; };
     const blind = el("input", { type: "checkbox", checked: !!V.blind }); blind.addEventListener("change", () => { V.blind = blind.checked; render(); });
+    const cvOnly = el("input", { type: "checkbox", checked: !!V.rfc }); cvOnly.addEventListener("change", () => { V.rfc = cvOnly.checked; render(); });
     const fair = (g, f) => list.filter(a => a.app.g === g && f(a)).length;
     box.append(card("Suggested ranking", el("div", { class: "hr-actions" }, jobPick(b), el("label", {}, blind, " Blind review (hide names)")),
-      el("div", { class: "hr-form" }, slider("q", "Qualification"), slider("x", "Experience"), slider("k", "Skills match"),
-        b.editor && V.rw ? el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Save weights", onclick: async () => { try { await rpc("hr_rc_settings_save", { p: { w } }, "Not saved"); V.rw = null; toast("Saved ✓"); render(); } catch (e) { toast(e.message, true); } } }) : null),
-      r.length ? el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Rank", "Candidate", "Score", "Verdict", "Reasoning"].map(t => el("th", { text: t })))),
-        el("tbody", {}, r.map((x, i) => { const v = x.ok ? x.s.tot >= 80 ? ["HIGHLY RECOMMENDED: SELECT", "b-ok"] : x.s.tot >= 65 ? ["RECOMMENDED: WAITLIST", "b-info"] : ["AVERAGE", "b-warn"] : ["NOT ELIGIBLE", "b-bad"];
-          return el("tr", { style: "cursor:pointer", onclick: () => applicantModal(x.a, b.editor, st) }, el("td", { text: String(i + 1) }), el("td", { text: V.blind ? "Candidate " + (i + 1) : x.a.name }), el("td", {}, el("b", { text: x.s.tot.toFixed(0) + "%" })),
-            el("td", {}, el("span", { class: "badge " + v[1], text: v[0] })),
-            el("td", { text: "Qualification " + x.s.q.toFixed(0) + ", experience " + x.s.x.toFixed(0) + " (" + (+x.a.app.xy || 0) + " yrs), skills match " + x.s.k.toFixed(0) + "%." + (x.a.app.avail ? " Available " + fmtD(x.a.app.avail) + "." : "") + (x.ok ? "" : " Outside the age, gender, qualification or experience rule for this post.") })); })))) : empty("No applicants yet."),
+      el("p", { class: "small muted", text: "The score is fixed: Education " + RW.q + "%, Experience " + RW.x + "%, Skills " + RW.k + "%. Tick the parts to sort by; the score itself does not change." }),
+      el("div", { class: "hr-actions" }, el("b", { text: "Sort by:" }), box1("q", "Education"), box1("x", "Experience"), box1("k", "Skills")),
+      el("div", { class: "hr-actions" }, el("b", { text: "Filter:" }), pick("rfs", "Stage", STAGES), pick("rfv", "Verdict", ["HIGHLY RECOMMENDED: SELECT", "RECOMMENDED: WAITLIST", "AVERAGE", "NOT ELIGIBLE"]), el("label", {}, cvOnly, " With a CV only"), el("span", { class: "small muted", text: r.length + " of " + all.length })),
+      r.length ? el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Rank", "Candidate", "Stage", "Score", "Verdict", "Reasoning", "CV"].map(t => el("th", { text: t })))),
+        el("tbody", {}, r.map(x => el("tr", { style: "cursor:pointer", onclick: () => applicantModal(x.a, b.editor, st) }, el("td", { text: String(x.rank) }), el("td", { text: V.blind ? "Candidate " + x.rank : x.a.name }), el("td", { text: x.a.stage }), el("td", {}, el("b", { text: x.s.tot.toFixed(0) + "%" })),
+            el("td", {}, el("span", { class: "badge " + x.v[1], text: x.v[0] })),
+            el("td", { text: "Education " + x.s.q.toFixed(0) + ", experience " + x.s.x.toFixed(0) + " (" + (+x.a.app.xy || 0) + " yrs), skills match " + x.s.k.toFixed(0) + "%." + (x.a.app.avail ? " Available " + fmtD(x.a.app.avail) + "." : "") + (x.ok ? "" : " Outside the age, gender, qualification or experience rule for this post.") }),
+            el("td", {}, x.a.cv ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Open CV", onclick: e => { e.stopPropagation(); openCv(x.a.id); } }) : "")))))) : empty(all.length ? "No candidates match this filter." : "No applicants yet."),
       el("h4", { text: "Fairness check" }), el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["", "Applicants", "Eligible", "Shortlisted or later"].map(t => el("th", { text: t })))),
         el("tbody", {}, [["M", "Male"], ["F", "Female"]].map(([g, l]) => el("tr", {}, [l, fair(g, () => 1), fair(g, a => eligv(a, job)), fair(g, a => LATE.includes(a.stage))].map(t => el("td", { text: String(t) })))))))));
   },
@@ -2130,9 +2146,9 @@ const RCV = {
       el("div", { class: "hr-form" }, el("label", {}, "Interview date", d), el("label", {}, "Interview time", t), el("label", { class: "full" }, "Venue", v)),
       el("div", { class: "hr-actions" },
         el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Print interview sheets", onclick: () => printHtml(interviewSheets(job, list, cur())) }),
-        el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Print summary", onclick: () => printHtml(summarySheet(job, list, st.w || {})) }),
-        el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Summary (Excel)", onclick: () => csv("summary-" + id, ["Sr", "Name", "Qualification", "Age", "Experience (years)", "Experience type", "Marital status", "Available from", "Skills match (%)", "Interview (35)", "Ranking score (%)", "Remarks"],
-          list.map((a, i) => [i + 1, a.name, eduTxt(a), ageOf(a.app.dob) ?? "", a.app.xy, a.app.et, a.app.ms, a.app.avail, sklv(a, job).toFixed(0), panelAvg(a) == null ? "" : panelAvg(a).toFixed(1), scv(a, job, st.w || {}).tot.toFixed(0), a.note])) }),
+        el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Print summary", onclick: () => printHtml(summarySheet(job, list, RW)) }),
+        el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Summary (Excel)", onclick: () => csv("summary-" + id, ["Sr", "Name", "Qualification", "Age", "Experience (years)", "Experience type", "Marital status", "Available from", "Skills match (%)", "Interview (35)", "Ranking score (%)", "Remarks", "CV"],
+          list.map((a, i) => [i + 1, a.name, eduTxt(a), ageOf(a.app.dob) ?? "", a.app.xy, a.app.et, a.app.ms, a.app.avail, sklv(a, job).toFixed(0), panelAvg(a) == null ? "" : panelAvg(a).toFixed(1), scv(a, job, RW).tot.toFixed(0), a.note, cvLink(a)])) }),
         b.editor ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Save as the default interview", onclick: async () => { try { await rpc("hr_rc_settings_save", { p: { iv: cur() } }, "Not saved"); toast("Saved ✓"); } catch (e) { toast(e.message, true); } } }) : null),
       el("p", { class: "small muted", text: list.length + " shortlisted candidate(s). The interview sheet has 4 candidates a page with the 7 traits (35 marks); the summary has the ranking score and the panel's average." })));
   },
@@ -2194,13 +2210,11 @@ const RCV = {
   },
   async Settings(box, b, st) {
     const iv = st.iv || {}, d = el("input", { class: "input", type: "date", value: iv.d || "" }), t = el("input", { class: "input", maxlength: 20, value: iv.t || "" }), v = el("input", { class: "input", maxlength: 150, value: iv.v || "" });
-    const w = st.w || {}, n = k => el("input", { class: "input", type: "number", min: 0, max: 100, value: String(w[k] ?? "") }), q = n("q"), x = n("x"), k = n("k");
     const save = el("button", { class: "btn btn-primary", type: "button", text: "Save settings" });
     save.addEventListener("click", async () => { save.disabled = true;
-      try { await rpc("hr_rc_settings_save", { p: { iv: { d: d.value, t: t.value, v: v.value }, w: { q: +q.value || 0, x: +x.value || 0, k: +k.value || 0 } } }, "Not saved"); toast("Saved ✓"); render(); } catch (e) { toast(e.message, true); save.disabled = false; } });
+      try { await rpc("hr_rc_settings_save", { p: { iv: { d: d.value, t: t.value, v: v.value } } }, "Not saved"); toast("Saved ✓"); render(); } catch (e) { toast(e.message, true); save.disabled = false; } });
     box.append(card("Recruitment settings", el("h4", { text: "Default interview (used in messages and sheets when a candidate has none)" }),
       el("div", { class: "hr-form" }, el("label", {}, "Date", d), el("label", {}, "Time", t), el("label", { class: "full" }, "Venue", v)),
-      el("h4", { text: "Ranking weights (%)" }), el("div", { class: "hr-form" }, el("label", {}, "Qualification", q), el("label", {}, "Experience", x), el("label", {}, "Skills match", k)),
       el("div", { class: "hr-actions" }, save),
       el("h4", { text: "Career page" }), el("p", { class: "small muted", text: "Candidates open this link; no sign-in. Its front page also shows a QR code you can print on posters. Who may work here is set on the main page → People & access → HR → Recruitment." }),
       el("div", { class: "hr-actions" }, el("a", { class: "btn btn-outline btn-sm", href: CAREERS, text: CAREERS }),
@@ -2220,11 +2234,7 @@ function applicantModal(a, editor, st) {
   add("Current salary", p.cs); add("Expected salary", p.es); add("Earliest joining", fmtD(p.avail)); add("Experience", (+p.xy || 0) + " years" + (p.et ? "\n" + p.et : ""));
   add("Education", (p.edu || []).map(e => [e.d, e.u, e.b, e.y, e.c ? "CGPA " + e.c : e.om ? e.om + "/" + e.tm : ""].filter(Boolean).join(" · ")).join("\n")); add("Applied", fmtDT(a.created_at));
   const pa = panelAvg(a); add("Interview (panel average)", pa == null ? "" : pa.toFixed(1) + " / 35 from " + a.panel.length + " interviewer(s)");
-  const cv = a.cv ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Open CV", onclick: async () => {
-    try { const c = await rpc("hr_applicant_cv", { p_id: a.id }, "The CV could not open"); const u8 = b64u8(c.b64);
-      const pdf = /\.pdf$/i.test(c.name), url = URL.createObjectURL(new Blob([u8], { type: pdf ? "application/pdf" : "application/octet-stream" }));
-      el("a", { href: url, download: c.name, target: pdf ? "_blank" : null, rel: "noopener" }).click(); setTimeout(() => URL.revokeObjectURL(url), 60000); }
-    catch (e) { toast(e.message, true); } } }) : null;
+  const cv = a.cv ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Open CV", onclick: () => openCv(a.id) }) : null;
   const sc = el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Interview scorecard", onclick: () => { closeModal(); V.rj = a.job; V.rsel = a.id; V.rt = "Scoring"; go("recruit"); } });
   const st0 = el("select", { class: "select", disabled: !editor }, STAGES.map(x => el("option", { value: x, text: x }))); st0.value = a.stage;
   const iv = a.iv || {}, ivd = el("input", { class: "input", type: "date", value: iv.d || "", disabled: !editor }), ivt = el("input", { class: "input", maxlength: 20, value: iv.t || "", disabled: !editor });
@@ -2268,7 +2278,7 @@ function editPay(p) {
 }
 // CSV that Excel opens safely: text starting with = + - @ is written with a leading ' (no formulas)
 function csv(name, head, rows) {
-  const cell = v => { let s = v == null ? "" : String(v); s = s.replace(/^[=+\-@\t\r]/, "'$&"); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const cell = v => { let s = v == null ? "" : String(v); s = v && typeof v === "object" && v.link ? '=HYPERLINK("' + String(v.link).replace(/"/g, "") + '","Open CV")' : s.replace(/^[=+\-@\t\r]/, "'$&"); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
   const blob = new Blob(["﻿" + [head, ...rows].map(r => r.map(cell).join(",")).join("\r\n")], { type: "text/csv" });
   const a = el("a", { href: URL.createObjectURL(blob), download: name + "-" + new Date().toISOString().slice(0, 10) + ".csv" }); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
@@ -2299,6 +2309,9 @@ function hashOpen() {
   if (m) { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { } openReq(m[1]); }
   else if (/^#apply=[A-Za-z]+$/.test(location.hash) && KIND[location.hash.slice(7)] && can("apply", "add")) {   // the main page's "+" button
     V.kind = location.hash.slice(7); try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { } go("apply"); }
+  else if (/^#cv=AKF-HR-\d{4}-\d{4,}$/.test(location.hash)) {   // a CV link from the candidates Excel list; the server still checks who may see it
+    const id = location.hash.slice(4); try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { }
+    modal("CV · " + id, el("p", { class: "small muted", text: "This link came from the candidates list. The CV opens only for staff who may see applicants." }), el("div", { class: "hr-actions" }, el("button", { class: "btn btn-primary", type: "button", text: "Open CV", onclick: () => openCv(id) }))); }
   else if (["#leave", "#notices", "#exits", "#pay"].includes(location.hash)) { const v = { "#leave": "dashboard", "#notices": "notices", "#exits": "exits", "#pay": "pay" }[location.hash]; try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { } go(v); }
 }
 async function render() {
