@@ -70,6 +70,8 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
   if (!cfg || !window.supabase || !cfg.url) { window.AKF_NOTIFY = function () {}; return; }
   // My signature on every page, main page included (draw, camera or gallery); every submit and approval needs it
   if (!window.AKF_SIGN) { const sg = document.createElement("script"); sg.src = BASE + "akf-signature.js"; sg.defer = true; document.head.append(sg); }
+  // Remarks from the President and the General Secretary on any request (akf-remarks.js fills <div data-akf-remarks>)
+  if (!window.AKF_REMARKS) { const rm = document.createElement("script"); rm.src = BASE + "akf-remarks.js"; rm.defer = true; document.head.append(rm); }
   // Super Admin: correct any entry (it shows nothing for anyone else; the database checks again)
   if (document.documentElement.dataset.jzPage !== "hub" && !window.AKF_SUPEREDIT) {
     const se = document.createElement("script"); se.src = BASE + "akf-superedit.js"; se.defer = true; document.head.append(se);
