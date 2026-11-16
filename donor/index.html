@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Foundation Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-ZZv2uRvoklSMNYbvj6TBN4ZCYJ7/y2HGPJ+92NjEUOM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-2HHbFPHwcI8GBp35y3dzO/UrnjFoADOHZwgUwXhzn/I='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -5133,7 +5133,7 @@ function teamStats(from) {
 function teamTable(rows, compact) {
   const top = Math.max(1, ...rows.map(r => r.amount));
   return rows.length ? `<div class="tbl-wrap"><table class="tbl team-tbl"><thead><tr><th>Officer</th><th class="right">Donors</th><th class="right">Receipts</th><th>Collected</th><th class="right">Pending</th><th class="right">Overdue pledges</th>${compact ? '' : '<th class="right">New donors</th><th>Last activity</th>'}</tr></thead><tbody>
-    ${rows.map((r, i) => `<tr class="click" data-act="team-officer" data-email="${esc(r.u.email)}" tabindex="0"><td><div class="team-who"><span class="avatar">${esc(initials(r.u.name))}</span><div><b>${esc(r.u.name)}</b><span class="t-sub">${esc(ROLES[r.u.role] ? ROLES[r.u.role].label.split(' (')[0] : r.u.role)}${i === 0 && r.amount ? ' · 🏆 top this period' : ''}</span></div></div></td>
+    ${rows.map((r, i) => `<tr class="click" data-act="team-officer" data-email="${esc(r.u.email)}" tabindex="0"><td><div class="team-who"><span class="avatar">${esc(initials(r.u.name))}</span><div><b>${esc(r.u.name)}</b><span class="t-sub">${esc(r.u.designation || (ROLES[r.u.role] ? ROLES[r.u.role].label.split(' (')[0] : r.u.role))}${i === 0 && r.amount ? ' · 🏆 top this period' : ''}</span></div></div></td>
       <td class="right num">${NUM.format(r.donors)}</td><td class="right num">${NUM.format(r.receipts)}</td>
       <td style="min-width:170px"><div class="prog"><span style="width:${Math.round(r.amount / top * 100)}%"></span></div><div class="t-sub">${esc(money(r.amount))} · ${esc(money(r.verified))} verified</div></td>
       <td class="right num">${r.pending ? `<span class="badge b-warn">${r.pending}</span>` : '0'}</td><td class="right num">${r.overdue ? `<span class="badge b-bad">${r.overdue}</span>` : '0'}</td>
@@ -5225,7 +5225,7 @@ async function moveDonors() {
 async function teamXlsx() {
   if (!guard('export')) return;
   const st = UI.team || { period: 'mtd' }, rows = teamStats(periodStart(st.period));
-  await withLoader('Building the Excel file…', () => downloadXlsx(`RMD_Team_${st.period}_${todayISO()}.xlsx`, [{ name: 'Team', rows: [['Officer', 'E-mail', 'Role', 'Donors', 'New donors', 'Receipts', 'Collected (Rs)', 'Verified (Rs)', 'Pending receipts', 'Pending (Rs)', 'Overdue pledges', 'Due in 7 days', 'Last activity'], ...rows.map(r => [r.u.name, r.u.email, ROLES[r.u.role] ? ROLES[r.u.role].label : r.u.role, r.donors, r.newDonors, r.receipts, r.amount, r.verified, r.pending, r.pendingAmt, r.overdue, r.due, r.last ? r.last.slice(0, 16).replace('T', ' ') : ''])], widths: [24, 28, 22, 9, 11, 10, 14, 14, 14, 13, 14, 12, 18] }]));
+  await withLoader('Building the Excel file…', () => downloadXlsx(`RMD_Team_${st.period}_${todayISO()}.xlsx`, [{ name: 'Team', rows: [['Officer', 'E-mail', 'Role', 'Donors', 'New donors', 'Receipts', 'Collected (Rs)', 'Verified (Rs)', 'Pending receipts', 'Pending (Rs)', 'Overdue pledges', 'Due in 7 days', 'Last activity'], ...rows.map(r => [r.u.name, r.u.email, r.u.designation || (ROLES[r.u.role] ? ROLES[r.u.role].label : r.u.role), r.donors, r.newDonors, r.receipts, r.amount, r.verified, r.pending, r.pendingAmt, r.overdue, r.due, r.last ? r.last.slice(0, 16).replace('T', ' ') : ''])], widths: [24, 28, 22, 9, 11, 10, 14, 14, 14, 13, 14, 12, 18] }]));
 }
 
 /* =====================================================================
