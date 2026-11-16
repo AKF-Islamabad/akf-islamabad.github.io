@@ -1976,6 +1976,7 @@ const ME = 'Anwar Ullah';   // sample data only; the live page uses Live.me
    ============================================================ */
 const CFG = window.AKF_SUPABASE;
 const Live = {
+  newest: (a, b) => (Date.parse(b.since) || 0) - (Date.parse(a.since) || 0),   // "Waiting for you": the newest item first (asked 2026-11-16)
   on: true,   // always the real ERP: without a working config.js the page shows "Setup needed", never the sample design data
   sb: null, me: null, portals: [], inbox: [],
   HOME: new URL('../', location.href).href,
@@ -2093,13 +2094,14 @@ const Live = {
     if (!this.me) return;
     if (document.hidden && this.today) { this.timer = setTimeout(() => this.loadToday(), 120000); return; }   // background tab: no fetch
     const before = JSON.stringify([this.today, this.todayErr, this.day]);
-    try { const r = await this.sb.rpc('core_my_today'); if (r.error) throw r.error; this.today = r.data; this.todayErr = false; }
+    try { const r = await this.sb.rpc('core_my_today'); if (r.error) throw r.error; this.today = r.data; this.todayErr = false;
+      if (this.today && Array.isArray(this.today.actions)) this.today.actions.sort(Live.newest); }
     catch (e) { this.todayErr = true; }
     if (this.today) try {
       const r = await this.sb.rpc('hr_today'), h = r.data;
       if (!r.error && h && Array.isArray(h.actions)) {
         const T = this.today, C = T.counts || (T.counts = {}), late = h.actions.filter(a => Date.now() - new Date(a.since).getTime() > 2 * 864e5).length;
-        T.actions = (T.actions || []).concat(h.actions).sort((a, b) => String(a.since || '').localeCompare(String(b.since || '')));
+        T.actions = (T.actions || []).concat(h.actions).sort(Live.newest);
         C.actions = (C.actions || 0) + h.actions.length; C.late = (C.late || 0) + late; C.my_open_requests = (C.my_open_requests || 0) + (+h.mine_open || 0);
         if (Array.isArray(h.mine)) T.mine = (T.mine || []).concat(h.mine).sort((a, b) => String(b.since || '').localeCompare(String(a.since || '')));
       }
@@ -3197,7 +3199,7 @@ class HomeView {
       <div class="live-grid">
         <section class="brief" aria-labelledby="brief-h">
           <div class="brief-head"><div><h2 id="brief-h">${icon('bolt')}Waiting for you</h2>
-            <p>${show.length ? `${plural(show.length, 'item', 'items')}, longest waiting first` : 'Nothing is waiting for you right now.'}</p></div>
+            <p>${show.length ? `${plural(show.length, 'item', 'items')}, newest first` : 'Nothing is waiting for you right now.'}</p></div>
             <div class="seg live-tabs" role="tablist">${[['all', 'All'], ['approve', 'Approvals'], ['do', 'To do']].map(([k, t]) => `<button type="button" role="tab" aria-selected="${tab === k}" data-action="live-tab" data-value="${k}">${t}</button>`).join('')}</div></div>
           ${items.length ? Smart.list(items) : `<div class="brief-empty">${icon('checkCircle')}Nothing is waiting for you. JazakAllah khair!</div>`}
           ${Object.keys(rest).length ? `<p class="brief-more" style="margin:10px 0 0">${Object.entries(rest).map(([n, c]) => `+${c} more in ${esc(n)}`).join(' · ')}</p>` : ''}

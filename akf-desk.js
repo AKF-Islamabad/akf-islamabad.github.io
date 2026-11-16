@@ -195,7 +195,12 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
     if (!pops || !pops.isConnected) { pops = el("div", "akd-pops"); pops.setAttribute("role", "status"); pops.setAttribute("aria-live", "polite"); document.body.appendChild(pops); }
     list.slice(0, 3).forEach((n) => {
       const box = el("div", "akd-pop"), x = el("button", "akd-pop-x", "×"); x.type = "button"; x.setAttribute("aria-label", "Close this alert");
-      x.onclick = () => box.remove();
+      const shut = () => box.remove();
+      x.onclick = (e) => { e.stopPropagation(); shut(); };
+      // a click opens the exact record and closes the alert; it also closes by itself (it stays in the bell list)
+      if (n.url) { const go = () => { shut(); location.href = n.url; }; box.classList.add("go"); box.tabIndex = 0; box.setAttribute("role", "link"); box.title = "Open";
+        box.onclick = go; box.onkeydown = (e) => { if (e.key === "Enter" && e.target === box) go(); }; }
+      setTimeout(shut, 15000);
       box.append(el("b", "", "🔔 " + n.title), n.body ? el("span", "", n.body) : "", x);
       pops.prepend(box);
     });
@@ -231,7 +236,8 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
     const keep = Object.entries(s).sort((a, b) => b[1] - a[1]).slice(0, 400); store.set(k, Object.fromEntries(keep));
     if (first) return;                                               // the first visit on this device: no flood of old items
     const ring = fresh.filter((n) => !(n.pushed && document.visibilityState !== "visible"));
-    if (ring.length) notifyNow(ring.map((n) => ({ key: n.key, title: String(n.title || "New notification").slice(0, 120), body: String(n.body || "").slice(0, 240), url: n.url })));
+    if (ring.length) notifyNow(ring.map((n) => ({ key: n.key, title: String(n.title || "New notification").slice(0, 120), body: String(n.body || "").slice(0, 240),
+      url: n.url || (/^#[\w=:%.\-]+$/.test(n.open || "") ? location.href.split("#")[0] + n.open : undefined) })));   // the portal's own item: its page link
   }
   let bellSig = "", bellT = 0;
   function saveBell(items) {
@@ -347,6 +353,8 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
 .akd-pops{position:fixed;right:16px;bottom:96px;z-index:2147482000;display:grid;gap:8px;width:min(340px,calc(100vw - 32px))}
 .akd-pop{position:relative;display:grid;gap:3px;padding:12px 34px 12px 14px;border-radius:12px;background:#fff;color:#1d2433;border-left:4px solid #0b5cad;box-shadow:0 12px 32px rgba(15,23,42,.22);font:14px/1.4 Manrope,"Segoe UI",system-ui,sans-serif}
 .akd-pop span{color:#4a5568;font-size:13px}
+.akd-pop.go{cursor:pointer}.akd-pop.go:focus-visible{outline:2px solid #0b5cad}
+@media (max-width:640px){.akd-pops{top:10px;bottom:auto;left:12px;right:12px;width:auto}.akd-pop-x{font-size:26px;padding:4px 8px}}
 .akd-pop-x{position:absolute;top:6px;right:8px;border:0;background:none;font-size:20px;line-height:1;cursor:pointer;color:#5b6475}
 .akd-gate::backdrop{background:rgba(4,20,40,.82);backdrop-filter:blur(3px)}
 .akd-gate h2{color:#B42318}
@@ -470,7 +478,7 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
     PAL[color].forEach((c, i) => root.style.setProperty("--n" + (i + 1), c));
     const card = el("div", "akd-card");
     const head = el("div", "akd-head"); head.title = (folded ? "Open my note" : "Fold the note") + " · drag to move · double-click to put it back in the corner";
-    const open = data ? data.plan.length + data.todo.length + data.assigned.length : 0;
+    const open = data ? data.plan.length + data.todo.length + data.notes.length + data.assigned.length : 0;
     head.append(el("b", "", folded ? `📌 My note · ${open}` : "📌 My note"));
     const tog = el("button", "", folded ? "▴" : "▾"); tog.type = "button"; tog.setAttribute("aria-label", folded ? "Open my note" : "Fold my note");
     // keyboard: arrow keys on the fold button move the note
@@ -487,6 +495,7 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
       body.append(week(data.week));
       body.append(section("Today's plan", data.plan, "Nothing planned for today."));
       body.append(section("My to-do", data.todo, "No to-dos. Add them in Tasks → To-Do & Notes."));
+      if (data.notes.length) body.append(section("My sticky notes", data.notes, ""));
       body.append(section("Assigned to me", data.assigned, "No open tasks from others."));
     }
     const cols = el("div", "akd-cols"); cols.append(el("span", "", "Colour"));
@@ -505,11 +514,11 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
     const { data: who } = await sb.from("portal_rows").select("id,data").eq("collection", "users").eq("data->>email", me.email).limit(1);
     let pid = who && who[0] && who[0].id;
     if (!pid) { const r = await sb.from("portal_rows").select("id").eq("collection", "users").eq("data->>username", me.email.split("@")[0]).limit(1); pid = r.data && r.data[0] && r.data[0].id; }
-    if (!pid) { data = { pid: null, plan: [], todo: [], assigned: [] }; paint(); return; }
+    if (!pid) { data = { pid: null, plan: [], todo: [], notes: [], assigned: [] }; paint(); return; }
     const day0 = new Date(); day0.setHours(0, 0, 0, 0); day0.setDate(day0.getDate() - 6);   // the last 7 days, today included
     const [tk, nt, dn] = await Promise.all([
       sb.from("portal_rows").select("data").eq("collection", "tasks").eq("data->>assigneeId", pid).not("data->>stage", "in", '("06","07")').limit(300),
-      sb.from("portal_rows").select("data").eq("collection", "notes").eq("data->>ownerId", pid).eq("data->>kind", "todo").limit(300),
+      sb.from("portal_rows").select("data").eq("collection", "notes").eq("data->>ownerId", pid).in("data->>kind", ["todo", "sticky"]).limit(300),
       sb.from("portal_rows").select("data").eq("collection", "tasks").eq("data->>assigneeId", pid).eq("data->>stage", "06").gte("data->>completedAt", day0.toISOString()).limit(500),
     ]);
     const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(day0); d.setDate(d.getDate() + i); return { t: d.toDateString(), name: d.toLocaleDateString(undefined, { weekday: "short" }), n: 0 }; });
@@ -521,7 +530,8 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
     data = {
       pid, week: days,
       plan: tasks.filter((x) => x.plannedDate && x.plannedDate <= t).map(row).sort(byDue),
-      todo: (nt.data || []).map((r) => r.data).filter((x) => x && !x.done).map(row).sort(byDue),
+      todo: (nt.data || []).map((r) => r.data).filter((x) => x && x.kind === "todo" && !x.done).map(row).sort(byDue),
+      notes: (nt.data || []).map((r) => r.data).filter((x) => x && x.kind === "sticky").map(row),   // sticky notes from Tasks → To-Do & Notes
       assigned: tasks.filter((x) => x.creatorId && x.creatorId !== pid).map(row).sort(byDue),
     };
     paint();
