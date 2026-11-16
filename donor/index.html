@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Foundation Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-1zoCHdFEjTbVrwXwF9t0QCHbKF/YU+5QXRw+wHoT1Vg='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-QOthLYJx/7EGu5ePEHJI9xSCX9/9X/oXD7fCFshZ2NE='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -1687,6 +1687,8 @@ const donorName = d => d ? d.name : 'Unknown donor';
 /* numbers: offline they count up in this browser; in ERP mode they are reserved on the server first (erpNeed),
    so two officers can never issue the same receipt number */
 const seqNext = k => { if (!ERP) { S.seq[k] = (S.seq[k] || 0) + 1; return S.seq[k]; } const n = ERP_POOL[k].shift(); if (n == null) throw new Error('No ' + k + ' number reserved. Please try again.'); return n; };
+const sameDonor = (a, b) => !a.anonymized && !!normPhone(a.phone) && normPhone(a.phone) === normPhone(b.phone) && a.name.trim().toLowerCase() === b.name.trim().toLowerCase();
+console.assert(sameDonor({ name: 'Ali Khan', phone: '0300-1234567' }, { name: ' ali khan', phone: '03001234567' }) && !sameDonor({ name: 'Ali Khan', phone: '0300-1234567' }, { name: 'Sara Khan', phone: '0300-1234567' }) && !sameDonor({ name: 'A', phone: '' }, { name: 'A', phone: '' }), 'sameDonor: same name and same mobile only');
 function nextDonorId() { const n = seqNext('donor'), t = todayISO(); return `AFI-DON-${t.slice(0, 4)}${t.slice(5, 7)}-${pad(n, 5)}`; }
 function nextDonationIds(date) { const n = seqNext('donation'), y = (date || todayISO()).slice(0, 4); return { id: `DON-${y}-${pad(n, 6)}`, receipt: `RCT-${y}-${pad(n, 6)}`, serial: n }; }
 async function receiptCode(x) {
@@ -2551,6 +2553,7 @@ function donorForm(existing, prefill = {}) {
     const others = S.donors.filter(x => !existing || x.id !== existing.id);
     if (p.cnic) { const dup = others.find(x => x.cnic === p.cnic); if (dup) { setErr(f, 'cnic', `This CNIC is already registered to ${dup.name} (${dup.id}).`); focusFirstErr(f); return; } }
     if (p.ntn) { const dup = others.find(x => x.ntn && x.ntn.toLowerCase() === p.ntn.toLowerCase()); if (dup) { setErr(f, 'ntn', `Already registered to ${dup.name} (${dup.id}).`); focusFirstErr(f); return; } }
+    const same = others.find(x => sameDonor(x, p)); if (same) { setErr(f, 'name', `This donor is already registered as ${same.id}. Open that record instead.`); focusFirstErr(f); return; }
     const sim = others.find(x => normPhone(x.phone) === normPhone(p.phone) || x.name.toLowerCase() === p.name.toLowerCase() && x.city === p.city);
     if (sim) { const r = await ask({ title: 'Possible duplicate', message: `A similar donor already exists: <b>${esc(sim.name)}</b> (${esc(sim.id)}, ${esc(sim.city)}). Continue saving anyway?`, ok: 'Save anyway' }); if (!r.ok) return; }
     if (existing) {
@@ -2686,7 +2689,9 @@ const donorSnapOf = d => d ? { type: d.type, title: d.title || (d.type === 'Orga
    SIGNATORIES (name, designation, drawn or imported signature)
    ===================================================================== */
 const activeSignatories = () => S.signatories.filter(s => s.active !== false && S.signatures[s.sigId]);
-const defaultSignatory = () => { const a = activeSignatories(); return a.find(s => s.userId === ME.id) || a[0] || null; };
+/* a receipt carries only the signature of the person signed in: never another person's as a stand-in */
+const mySigs = () => activeSignatories().filter(s => s.userId === ME.id);
+const defaultSignatory = () => mySigs()[0] || null;
 async function upsertMySignatory(sigId, designation) {
   let s = S.signatories.find(x => x.userId === ME.id);
   if (!s) { s = { id: 'SG-' + hex(rand(5)), userId: ME.id, name: ME.name, designation: designation || S.users[ME.id].designation || ROLES[ME.role].label, active: true }; S.signatories.push(s); }
@@ -2720,10 +2725,10 @@ async function processSignatureImage(file) {
     return out;
   } finally { URL.revokeObjectURL(url); }
 }
-function signatoryForm(existing) {
+function signatoryForm(existing, mine) {
   const self = !existing || existing.userId === ME.id;
   if (!can('signatories') && !(self && can('donation.create'))) { guard('signatories'); return Promise.resolve(null); }
-  const s = existing || { name: ME.name, designation: S.users[ME.id].designation || ROLES[ME.role].label, userId: can('signatories') ? '' : ME.id };
+  const s = existing || { name: ME.name, designation: S.users[ME.id].designation || ROLES[ME.role].label, userId: can('signatories') && !mine ? '' : ME.id };
   return new Promise(resolve => {
     openModal({
       title: existing ? 'Edit signatory' : 'Add signatory', size: 'lg',
@@ -3000,6 +3005,8 @@ async function markSent(m, channel, note) {
   await audit('MESSAGE_SENT', m.donationId ? (S.donations.find(d => d.id === m.donationId) || {}).receipt || m.id : m.pledgeId || m.id, `${MSG_TYPES[m.type]} via ${channel}${note ? ' · ' + note : ''} to ${m.to.name}`);
   await persist();
 }
+/* WhatsApp, SMS and the e-mail app only open a draft: the portal cannot see whether it was sent, so the person confirms */
+const reallySent = async m => { const r = await ask({ title: 'Was the message sent?', message: `Press <b>Yes, it is sent</b> only after the message to <b>${esc(m.to.name)}</b> has really gone. Until then it stays <b>Pending</b>.`, ok: 'Yes, it is sent' }); if (!r.ok) toast('Kept as Pending. Nothing was marked as sent.', 'info'); return r.ok; };
 async function sendMessage(id, channel) {
   if (!can('messages') && !(channel && can('reminders'))) { guard('messages'); return; }
   const m = S.messages.find(x => x.id === id); if (!m) return;
@@ -3012,15 +3019,18 @@ async function sendMessage(id, channel) {
     if (!validPhone(m.to.phone)) { toast('No valid mobile number for this donor.', 'error'); return; }
     if (file) { download(file.name, file); toast('Receipt PDF saved. Attach it in the WhatsApp chat that just opened.', 'info', 9000); }
     window.open(`https://wa.me/${intlPhone(m.to.phone)}?text=${encodeURIComponent(m.text)}`, '_blank', 'noopener,noreferrer');
+    if (!await reallySent(m)) return;
     await markSent(m, 'WhatsApp', file ? 'PDF downloaded for attaching' : '');
   } else if (channel === 'sms') {
     if (!validPhone(m.to.phone)) { toast('No valid mobile number for this donor.', 'error'); return; }
     location.href = `sms:${normPhone(m.to.phone)}?body=${encodeURIComponent(m.text)}`;
+    if (!await reallySent(m)) return;
     await markSent(m, 'SMS');
   } else if (channel === 'email') {
     if (!m.to.email) { toast('No e-mail address for this donor.', 'error'); return; }
     if (file) { download(file.name, file); toast('Receipt PDF saved. Attach it to the e-mail that just opened.', 'info', 9000); }
     location.href = `mailto:${encodeURIComponent(m.to.email)}?${m.to.cc ? 'cc=' + encodeURIComponent(m.to.cc) + '&' : ''}subject=${encodeURIComponent(S.org.name + ': ' + MSG_TYPES[m.type])}&body=${encodeURIComponent(m.text)}`;
+    if (!await reallySent(m)) return;
     await markSent(m, 'E-mail', file ? 'PDF downloaded for attaching' : '');
   } else if (channel === 'share') {
     const data = { title: MSG_TYPES[m.type], text: m.text };
@@ -3134,7 +3144,7 @@ function donorTimeline(id, limit = 12) {
   S.pledges.filter(p => p.donorId === id).forEach(p => ev.push({ at: p.createdAt, icon: 'calendar', tone: 'b-info', text: `Pledge ${p.id}: ${money(p.total)} in ${p.count} installments (${p.status})`, act: ['pledge-view', p.id] }));
   S.messages.filter(m => m.donorId === id && m.status === 'Sent').forEach(m => ev.push({ at: m.sentAt, icon: 'send', tone: '', text: `${MSG_TYPES[m.type]} sent via ${m.channel}`, act: ['msg-open', m.id] }));
   const d = donorById(id);
-  if (d) { ev.push({ at: d.createdAt || d.since, icon: 'user', tone: '', text: `Donor registered${d.createdBy ? ' by ' + d.createdBy : ''}` }); S.audit.filter(a => a.target === id && a.action === 'DONOR_UPDATED').forEach(a => ev.push({ at: a.ts, icon: 'edit', tone: '', text: `Profile updated (${a.detail.replace('Fields: ', '')})` })); }
+  if (d) { ev.push({ at: d.createdAt || d.since, icon: 'user', tone: '', text: `Donor registered${d.createdBy ? ' by ' + d.createdBy : ''}` }); S.audit.filter(a => a.target === id && a.action === 'DONOR_UPDATED').forEach(a => ev.push({ at: a.ts, icon: 'edit', tone: '', text: `Profile updated${a.user ? ' by ' + a.user : ''} (${a.detail.replace('Fields: ', '')})` })); }
   return ev.filter(e => e.at).sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, limit);
 }
 const timelineHTML = ev => ev.length ? `<ul class="timeline">${ev.map(e => `<li><span class="tl-ic badge ${e.tone}">${ic(e.icon)}</span><div><div>${e.act ? `<a href="#" data-act="${e.act[0]}" data-id="${esc(e.act[1])}">${esc(e.text)}</a>` : esc(e.text)}</div><span class="muted small">${fmtDT(e.at)}</span></div></li>`).join('')}</ul>` : '<p class="muted small">No history yet.</p>';
@@ -3200,9 +3210,9 @@ VIEWS.new = {
             <div class="field"><label for="nr-coname">C/O name</label><input class="input" id="nr-coname" name="coName" maxlength="80" value="${esc(pf.co ? pf.co.name : '')}"><div class="err" data-err="coName"></div></div>
             <div class="field"><label for="nr-comob">C/O mobile</label><input class="input" id="nr-comob" name="coMobile" inputmode="tel" maxlength="16" placeholder="0300-1234567" value="${esc(pf.co ? pf.co.mobile : '')}"><div class="err" data-err="coMobile"></div></div>
             <div class="field"><label for="nr-coemail">C/O e-mail</label><input class="input" id="nr-coemail" name="coEmail" type="email" maxlength="100" value="${esc(pf.co ? pf.co.email : '')}"><div class="err" data-err="coEmail"></div></div></div></details></section>
-        <section class="card nr-sec"><div class="sec-h"><span class="num">5</span><div><h3>Received by</h3><p>Name, designation and signature printed on the receipt.</p></div></div>
-          <div class="sig-pick"><select class="select" id="nr-sig" name="signatory" aria-label="Signatory"><option value="">Select signatory…</option>${activeSignatories().map(s => `<option value="${esc(s.id)}" ${sig && sig.id === s.id ? 'selected' : ''}>${esc(s.name)} · ${esc(s.designation)}</option>`).join('')}</select>
-            <button type="button" class="btn btn-secondary btn-sm" id="nr-sig-add">${ic('plus')}${activeSignatories().length ? 'Add / import signature' : 'Add my signature'}</button></div>
+        <section class="card nr-sec"><div class="sec-h"><span class="num">5</span><div><h3>Received by</h3><p>Your own name, designation and signature are printed on the receipt.</p></div></div>
+          <div class="sig-pick"><select class="select" id="nr-sig" name="signatory" aria-label="Signatory"><option value="">Select signatory…</option>${mySigs().map(s => `<option value="${esc(s.id)}" ${sig && sig.id === s.id ? 'selected' : ''}>${esc(s.name)} · ${esc(s.designation)}</option>`).join('')}</select>
+            <button type="button" class="btn btn-secondary btn-sm" id="nr-sig-add">${ic('plus')}${mySigs().length ? 'Change my signature' : 'Add my signature'}</button></div>
           <div id="nr-sig-prev"></div><div class="err" data-err="signatory"></div></section>
       </div>
       <aside class="nr-side"><div class="card summary">
@@ -3408,8 +3418,8 @@ function bindNewReceipt() {
   const drawSig = () => { const s = S.signatories.find(x => x.id === f.signatory.value); $('#nr-sig-prev').innerHTML = s ? `<div class="sig-saved"><img src="${esc(S.signatures[s.sigId])}" alt="Signature of ${esc(s.name)}"><div><b>${esc(s.name)}</b><span class="muted small">${esc(s.designation)}</span></div></div>` : ''; };
   f.signatory.addEventListener('change', () => { drawSig(); setErr(f, 'signatory', ''); });
   $('#nr-sig-add').addEventListener('click', async () => {
-    const rec = await signatoryForm(null);
-    if (rec) { f.signatory.innerHTML = `<option value="">Select signatory…</option>` + activeSignatories().map(s => `<option value="${esc(s.id)}" ${s.id === rec.id ? 'selected' : ''}>${esc(s.name)} · ${esc(s.designation)}</option>`).join(''); drawSig(); setErr(f, 'signatory', ''); }
+    const rec = await signatoryForm(S.signatories.find(s => s.userId === ME.id) || null, true);
+    if (rec) { f.signatory.innerHTML = `<option value="">Select signatory…</option>` + mySigs().map(s => `<option value="${esc(s.id)}" ${s.id === rec.id ? 'selected' : ''}>${esc(s.name)} · ${esc(s.designation)}</option>`).join(''); drawSig(); setErr(f, 'signatory', ''); }
   });
   $('#nr-cancel').addEventListener('click', async () => { if (f.dataset.dirty) { const r = await ask({ title: 'Discard this receipt?', message: 'The details you entered will be lost.', ok: 'Discard', danger: true }); if (!r.ok) return; } f.dataset.dirty = ''; go('donations'); });
   drawDonor(); drawSig(); updateSummary();
@@ -3434,6 +3444,7 @@ function bindNewReceipt() {
       if (nd.address.length < 4) fail('ndAddr', 'Address is required for the receipt.');
       const dup = S.donors.find(d => (nd.cnic && d.cnic === nd.cnic) || (nd.ntn && d.ntn && d.ntn.toLowerCase() === nd.ntn.toLowerCase()));
       if (dup) fail('ndCnic', `Already registered to ${dup.name} (${dup.id}). Select that donor instead.`);
+      const same = S.donors.find(d => sameDonor(d, nd)); if (same && !dup) fail('ndName', `This donor is already registered as ${same.id}. Select that donor instead.`);
     }
     /* lines */
     const lines = readLines().filter(l => l.amount || l.detail);
@@ -3492,8 +3503,8 @@ function bindNewReceipt() {
     if (co) { if (!validName(co.name)) fail('coName', 'Use letters only.'); if (v('coMobile') && !validPhone(v('coMobile'))) fail('coMobile', 'Enter a valid mobile number.'); if (co.email && !validEmail(co.email)) fail('coEmail', 'Enter a valid e-mail.'); }
     else if (v('coMobile') || v('coEmail')) { fail('coName', 'Enter the C/O name for these contact details.'); f.querySelector('.co-box').open = true; }
     /* signatory */
-    const sg = S.signatories.find(x => x.id === f.signatory.value);
-    if (needPay && !sg) fail('signatory', 'Select who received the donation (or add a signature).');
+    const sg = S.signatories.find(x => x.id === f.signatory.value && x.userId === ME.id);
+    if (needPay && !sg) fail('signatory', 'Add your own signature. Only the signature of the person signed in is printed on the receipt.');
     if (bad) { const first = f.querySelector('[aria-invalid="true"]') || f.querySelector('.err:not(:empty)'); if (first) { first.scrollIntoView({ block: 'center', behavior: 'smooth' }); first.focus && setTimeout(() => first.focus({ preventScroll: true }), 250); } toast('Please complete the highlighted fields.', 'warn'); return; }
     const dnPre = donor || null;
     if (dnPre && needPay) {
@@ -4058,7 +4069,7 @@ function receiptData(x, mask) {
   const m = (v, f) => mask && v ? f(v) : v;
   return {
     donorNo: x.donorId || '', no: x.bookNo || x.receipt, date: x.date, isOrg,
-    name: `${sn.title || ''} ${sn.name || ''}`.trim(), addr1: mask && sn.address ? 'Hidden for your role' : sn.address, addr2: sn.city,
+    name: `${sn.title || ''} ${sn.name || ''}`.trim().toUpperCase(), addr1: mask && sn.address ? 'Hidden for your role' : sn.address, addr2: sn.city,
     mobile: m(sn.phone, maskPhone), id: isOrg ? sn.ntn : m(sn.cnic, maskCNIC), email: m(sn.email, maskEmail),
     coName: x.co ? x.co.name : '', coMobile: x.co ? m(x.co.mobile, maskPhone) : '', coEmail: x.co ? m(x.co.email, maskEmail) : '',
     ik: isInKind(x), payBy: isInKind(x) ? ['Goods / items', ikOf(x).condition, grnText(ikOf(x).grn)].filter(Boolean).join(' · ') : x.mode === 'Cash' ? 'Cash' : `${x.mode}${x.ref ? ' # ' + x.ref : ''}`, bank: isInKind(x) ? ikOf(x).valuation || '' : bankLabel(x) || (x.mode === 'Cash' ? '—' : ''),
@@ -4132,7 +4143,7 @@ async function drawReceipt(canvas, x, { mask = false } = {}) {
   const ys = yw + 185;
   ctx.fillStyle = NAVY; ctx.font = RF(500, 35); ctx.fillText('Received by: Sign.', RL, ys);
   const sx = RL + ctx.measureText('Received by: Sign.').width + 10; hl(ctx, sx, 790, ys + 6);
-  if (d.sig) { try { drawSig(ctx, await A.sig(d.sig), sx + 5, ys + 14, 790 - sx - 10, 112, true); } catch {} }   // box ends below the second "amount in words" line (yw + 72 = ys - 113)
+  if (d.sig) { try { drawSig(ctx, await A.sig(d.sig), sx + 5, ys + 14, 790 - sx - 10, 92, true); } catch {} }   // kept compact on the Sign. line; box ends well below the second "amount in words" line (yw + 72 = ys - 113)
   ctx.fillStyle = NAVY; ctx.font = RF(500, 35); ctx.fillText('Name:', 285, ys + 88); hl(ctx, 395, 790, ys + 94);
   if (d.rbName) { ctx.fillStyle = PEN; ctx.fillText(rfit(ctx, d.rbName, 380, 600, 33, 20), 405, ys + 84); }
   // stamp
