@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-KkWcVSfZdXjc9FwerY7Y9e6is2e+Wt31aHpfcyjzrAM='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-kN4ngG1u2IXEkKmNru/xGzCVYOQpgEH/AthnVs6hUak='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -1007,6 +1007,16 @@ table.tk-eg tr.sum td{border-top:2px solid var(--line);padding-top:6px}
 .mef-chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid #BBDEFB;background:rgba(255,255,255,.6);color:#71717a}
 .mef-chip i{width:6px;height:6px;border-radius:50%;background:#d4d4d8}
 .mef-chip.on{background:#fff;border-color:var(--mb);color:#01579B}.mef-chip.on i{background:var(--mb)}
+.mef-todo{background:#fff;border:1px solid #90CAF9;border-radius:7px;padding:8px 10px;display:grid;gap:7px}
+.mef-todo-h{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.mef-todo .mef-need{font-size:11px;font-weight:800;color:#92400E;background:#FEF3C7;border:1px solid #F59E0B;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.mef-todo .mef-need.ok{color:#166534;background:#DCFCE7;border-color:#22C55E}
+.mef-todo-sec{display:grid;gap:3px}.mef-todo-sec em{justify-self:start;font-style:normal;font-size:10px;font-weight:900;color:#fff;padding:2px 8px;border-radius:4px;letter-spacing:.05em}
+.mef-todo ol{margin:0;padding:0;list-style:none;display:grid;gap:3px}
+.mef-todo li{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;justify-content:space-between;padding:5px 8px;border-radius:6px;border-left:4px solid #90CAF9;background:#F5FAFF}
+.mef-todo li.need{border-left-color:#F59E0B;background:#FFFBEB}.mef-todo li.given{border-left-color:#22C55E;background:#F0FDF4}
+.mef-todo li>span:first-child{flex:1 1 220px;min-width:0;font-size:12.5px;font-weight:600;color:#3f3f46;overflow-wrap:anywhere}.mef-todo li>span:first-child b{font-size:12.5px;font-weight:800;color:#18181b}
+.mef-todo-add{font-size:12.5px;font-weight:600;color:#3f3f46;border-left:4px solid #71717a;background:#f4f4f5;border-radius:6px;padding:5px 8px;white-space:pre-wrap;overflow-wrap:anywhere}.mef-todo-add b{font-size:12.5px;color:#18181b}
 .mef-sections{padding:8px;display:grid;gap:8px}
 .mef-sec{border:1px solid #d4d4d8;border-radius:7px;overflow:hidden}
 .mef-sec-h{color:#fff;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -4577,7 +4587,7 @@ function TrackTable({req,state}){
   const flow=flowOf(req); const idx=stageIndex(req); const dead=req.status!=="active";
   const done=flow.slice(0,idx+1).length; const pct=Math.round(done/flow.length*100);
   const n=nextStage(req);
-  const evFor=s=>[...req.timeline].reverse().find(t=>t.stage===s.key&&!/sent back|amend/i.test(t.action)&&(t.role===s.owner||s.owner==="hod"||t.role==="super"||s.key==="committee"||(s.key==="approved"&&!!SETTINGS.actingApprover&&t.role===SETTINGS.actingApprover)));
+  const evFor=s=>[...req.timeline].reverse().find(t=>t.stage===s.key&&!/reject|sent back|sent again|amend/i.test(t.action)&&(t.role===s.owner||s.owner==="hod"||t.role==="super"||s.key==="committee"||(s.key==="approved"&&!!SETTINGS.actingApprover&&t.role===SETTINGS.actingApprover)));
   const userOf=e=>e&&((e.uid&&state.users.find(u=>u.id===e.uid))||state.users.find(u=>u.name===e.by));
   // the real people who hold a step: their names and designations ("Taimoor Tahir · Sr. Manager Finance"), not the role's name
   const holders=s=>state.users.filter(u=>u.active!==false&&u.role!=="super"&&(s.key==="closed"&&req.receiverId?u.id===req.receiverId:s.owner==="hod"?u.id===req.requesterId:u.role===s.owner))
@@ -4585,16 +4595,19 @@ function TrackTable({req,state}){
   const officers=s=>holders(s).map(u=>u.name);
   const desigs=s=>[...new Set(holders(s).map(u=>u.designation||(ROLES[u.role]||{}).label||"").filter(Boolean))].join(", ");
   const nobody=s=>`Waiting for a person to be given this step: main page → People → Manage → Role in approvals: ${(ROLES[s.owner]||{}).label||s.who}.`;
+  /* sent again by the Super Admin after a rejection (059_send_again.sql): said on the step it waits at, until that step is passed */
+  const again=[...req.timeline].reverse().find(t=>/^sent again/i.test(t.action)); const rej=again&&[...req.timeline].reverse().find(t=>/^rejected/i.test(t.action)&&t.at<=again.at);
+  const againNote=again&&!dead&&again.stage===req.stage?`${rej?`Rejected by ${rej.by} on ${fmtD(rej.at)}${rej.comment?": "+rej.comment:""}. `:""}Sent again for approval by ${again.by} on ${fmtD(again.at)}: ${again.comment}. `:"";
   const rows=flow.map((s,i)=>{
     if(i<=idx){ const e=evFor(s); const u=userOf(e); return {s,i,kind:"done",name:e?e.by:"—",desig:(e&&e.desig)||(u&&u.designation)||(ROLES[s.owner]||{}).label||s.who,at:e&&e.at,remark:e&&e.comment,pill:e&&e.role==="super"&&/not required/i.test(e.action)?"Not required":s.label}; }
     if(i===idx+1){ if(dead){ const e=req.timeline[req.timeline.length-1]; return {s,i,kind:"bad",name:e.by,desig:e.desig||((userOf(e)||{}).designation)||s.who,at:e.at,remark:e.comment,pill:req.status==="cancelled"?"Cancelled":"Rejected"}; }
       const list=officers(s); if(!list.length&&s.owner&&s.owner!=="hod") return {s,i,kind:"now",name:"Not assigned yet",desig:s.who,at:null,remark:nobody(s),pill:"Needs a person"};
-      return {s,i,kind:"now",name:list.length?list.join(", "):s.who,desig:desigs(s)||s.who,at:null,remark:isEscalated(req)?`Waiting ${Math.round(hoursSince(req.timeline[req.timeline.length-1].at))}h — escalated`:`Waiting since ${ago(req.timeline[req.timeline.length-1].at)}`,pill:"Pending"}; }
+      return {s,i,kind:"now",name:list.length?list.join(", "):s.who,desig:desigs(s)||s.who,at:null,remark:againNote+(isEscalated(req)?`Waiting ${Math.round(hoursSince(req.timeline[req.timeline.length-1].at))}h — escalated`:`Waiting since ${ago(req.timeline[req.timeline.length-1].at)}`),pill:againNote?"Sent again":"Pending"}; }
     const list=officers(s); return {s,i,kind:"next",name:list.length?list.join(", "):s.who,desig:list.length?desigs(s):"",at:null,remark:list.length||!s.owner||s.owner==="hod"?"":"Not assigned yet",pill:dead?"—":"Not reached"};
   });
   const tone={done:"ok",now:"warn",bad:"bad",next:"neutral"};
   return html`<div class="track">
-    <div class="track-head"><div class="grow"><div class="track-k">${dead?(req.status==="cancelled"?"Cancelled":"Rejected"):req.stage==="closed"?"Completed":`Step ${idx+2} of ${flow.length}`}</div><div class="track-t">${dead?`Stopped at ${n?n.label.toLowerCase():"—"}`:req.stage==="closed"?"All steps signed off":html`Now with <b>${(()=>{ const l=n?officers(n):[]; return l.length?l.join(", ")+(desigs(n)?" ("+desigs(n)+")":""):n.who; })()}</b> · ${n.label}`}</div></div><div class="track-pct"><b class="num">${pct}%</b><span>complete</span></div></div>
+    <div class="track-head"><div class="grow"><div class="track-k">${dead?(req.status==="cancelled"?"Cancelled":"Rejected"):req.stage==="closed"?"Completed":`Step ${idx+2} of ${flow.length}`}</div><div class="track-t">${dead?`Stopped at ${((flow[idx+1]||{}).label||"—").toLowerCase()}`:req.stage==="closed"?"All steps signed off":html`Now with <b>${(()=>{ const l=n?officers(n):[]; return l.length?l.join(", ")+(desigs(n)?" ("+desigs(n)+")":""):n.who; })()}</b> · ${n.label}`}</div></div><div class="track-pct"><b class="num">${pct}%</b><span>complete</span></div></div>
     <div class="track-bar">${flow.map((s,i)=>html`<i class=${i<=idx?"d":i===idx+1?(dead?"x":"n"):""} title=${`${i+1}. ${s.label} — ${s.who}`}/>`)}</div>
     <div class="tbl-wrap track-tbl"><table class="tbl"><thead><tr><th>#</th><th>Step</th><th>Name</th><th>Designation</th><th>Date</th><th>Remarks</th><th class="c">Status</th></tr></thead><tbody>
       ${rows.map(r=>html`<tr class=${"tr-"+r.kind}><td data-l="#"><span class="tnum">${r.i+1}</span></td><td data-l="Step"><b>${r.s.label}</b></td><td data-l="Name">${r.name}</td><td data-l="Designation" class="muted">${r.desig||"—"}</td><td data-l="Date" class="nowrap">${r.at?fmtD(r.at):"—"}</td><td data-l="Remarks" class="sm">${r.remark||""}</td><td data-l="Status" class="c"><${Tag} tone=${tone[r.kind]}>${r.pill}</${Tag}></td></tr>`)}
@@ -4721,6 +4734,8 @@ function makeActions(commit, user, toast){
       commit(d=>{ const r=d.requests.find(r=>r.id===reqId); if(!r||r.correction) return; r.correction={at:nowISO(),by:user.name,reason:why,restart:false,stage:r.stage};
         r.timeline.push({at:nowISO(),stage:r.stage,action:"Sent back for correction",comment:why,...who()}); log(d,r.id,"Sent back for correction",why,r.dept); }); toast("Sent back to the requester for correction"); },
     /* offline demo only: the requester's resubmit (live: portal_resubmit in the database) */
+    sendAgainLocal(reqId,why,restart){ commit(d=>{ const r=d.requests.find(r=>r.id===reqId); if(!r||r.status!=="rejected") return; r.status="active"; if(restart) r.stage="submitted";
+        const a="Sent again for approval"+(restart?" (approvals start again)":""); r.timeline.push({at:nowISO(),stage:r.stage,action:a,comment:why,...who()}); log(d,r.id,a,why,r.dept); }); toast("Sent again for approval"); },
     resubmitLocal(reqId,patch,note){ commit(d=>{ const r=d.requests.find(r=>r.id===reqId); if(!r||!r.correction) return; const c=r.correction, t0=flowTotal(r); Object.assign(r,patch);
         const again=!!c.restart||flowTotal(r)>t0; if(again){ r.stage="submitted"; r.flow=flowSnapshot(r.type,flowTotal(r)); } else r.stage=c.stage||r.stage; delete r.correction;
         r.timeline.push({at:nowISO(),stage:r.stage,action:again?"Corrected and resubmitted (approvals start again)":"Corrected and resubmitted",comment:note,...who()}); });
@@ -5080,7 +5095,7 @@ function CorrectionBox({req,user,readOnly,A}){
   const [items,setItems]=useState(()=>(req.items||[]).map(i=>({...i}))); const [purpose,setPurpose]=useState(req.purpose||""); const [note,setNote]=useState("");
   const c=req.correction, mine=req.requesterId===user.id, isSuper=user.role==="super";
   const run=async(fn,args,ok)=>{
-    if(!sb){ if(fn==="portal_resubmit"&&A) A.resubmitLocal(args.p_id,args.p_patch,args.p_note); else window.__toast&&window.__toast("This needs the live database.","bad"); return; }
+    if(!sb){ if(fn==="portal_resubmit"&&A) A.resubmitLocal(args.p_id,args.p_patch,args.p_note); else if(fn==="portal_send_again"&&A) A.sendAgainLocal(args.p_id,args.p_reason,args.p_restart); else window.__toast&&window.__toast("This needs the live database.","bad"); return; }
     setBusy(true); const { data, error } = await sb.rpc(fn,args); setBusy(false);
     if(error){ const m=String(error.message||""); window.__toast&&window.__toast(m.length<300&&!/relation|column|syntax|function /i.test(m)?m:"Not saved. Please try again.","bad"); return; }
     window.__toast&&window.__toast(ok(data)); setTimeout(()=>location.reload(),900); };
@@ -5098,6 +5113,11 @@ function CorrectionBox({req,user,readOnly,A}){
       <label class="row" style="gap:8px"><input type="checkbox" checked=${restart} onChange=${e=>setRestart(e.target.checked)}/><span>Restart approvals from the first step after the correction (otherwise it continues at the step it is waiting at now)</span></label>
       <div class="row"><button class="btn btn-bad" disabled=${busy||why.trim().length<5} onClick=${()=>run("portal_sendback",{p_id:req.id,p_reason:why.trim(),p_restart:restart},()=>"Sent back to "+req.requester+" for correction")}>${busy?"Sending…":"Send back to "+req.requester}</button></div>
       <div class="xs faint">${req.requester} is notified, nobody can approve it until it is resubmitted, and this is signed in the approval log.</div></div></details>`;
+  if(isSuper&&!readOnly&&req.status==="rejected") return html`<details class="card no-print" style="box-shadow:none;margin-bottom:10px"><summary style="cursor:pointer;padding:10px 14px;font-weight:700">↻ Send again for approval (Super Admin)</summary>
+    <div class="card-b stack" style="gap:8px"><textarea class="textarea" aria-label="Why it is sent again" placeholder="Why it is sent again (required), e.g. budget is now available" value=${why} onInput=${e=>setWhy(e.target.value)}/>
+      <label class="row" style="gap:8px"><input type="checkbox" checked=${restart} onChange=${e=>setRestart(e.target.checked)}/><span>Start the approvals again from the first step (otherwise it waits again at the step that rejected it)</span></label>
+      <div class="row"><button class="btn btn-primary" disabled=${busy||why.trim().length<5} onClick=${()=>run("portal_send_again",{p_id:req.id,p_reason:why.trim(),p_restart:restart},()=>"Sent again for approval")}>${busy?"Sending…":"Send again for approval"}</button></div>
+      <div class="xs faint">The rejection stays in the history. A new line "Sent again for approval" with your name and reason is added to the stages and to the audit log.</div></div></details>`;
   return null;
 }
 function RequestModal({req,state,user,A,onClose,openDoc,readOnly}){
@@ -5357,7 +5377,7 @@ function DocModal({id,state,user,A,onClose,openReq}){
   const vendor=po?state.vendors.find(v=>v.id===po.vendorId):null;
   const header=(title,sub)=>html`<${DocHeader} title=${title} sub=${sub} id=${id}/>`;
   const reqOf=rid=>state.requests.find(r=>r.id===rid);
-  const stageEv=(r,key)=>{ if(!r) return null; const st=flowOf(r).find(s=>s.key===key); const ok=t=>t.stage===key&&!/reject|sent back|amend/i.test(t.action); return [...r.timeline].reverse().find(t=>ok(t)&&st&&(t.role===st.owner||(st.owner==="hod"&&t.uid===r.requesterId)))||[...r.timeline].reverse().find(ok); };
+  const stageEv=(r,key)=>{ if(!r) return null; const st=flowOf(r).find(s=>s.key===key); const ok=t=>t.stage===key&&!/reject|sent back|sent again|amend/i.test(t.action); return [...r.timeline].reverse().find(t=>ok(t)&&st&&(t.role===st.owner||(st.owner==="hod"&&t.uid===r.requesterId)))||[...r.timeline].reverse().find(ok); };
   const sign=(e,label,role)=>e?html`<${SignBox} state=${state} userId=${e.uid} name=${e.by} designation=${e.desig} role=${e.role} label=${label} at=${e.at}/>`:html`<${SignBox} state=${state} role=${role} label=${label}/>`;
   let body;
   if(doc&&doc.type==="CS"){ const r=state.rfqs.find(x=>x.id===doc.ref)||{quotes:[]}; const req=reqOf(r.requestId); const c=r.committee||{}; const sel=r.quotes.find(q=>q.id===c.quoteId); const vn=x=>(state.vendors.find(v=>v.id===x)||{}).name;
@@ -8273,7 +8293,8 @@ function EventModal({ekey,tab,setTab,state,user,A,open,onClose,onCreated,openNew
     if(editable&&!A.eSave(orig.key,fields(),true)) return;
     openNew(taskOf(k),orig.key); };
   /* all ticked items that have no task yet go to one person: one task per item, the same rules as assigning one */
-  const todo=canAssign?sel.filter(k=>!et.some(t=>tCheckKey(t.checkItem)===k)):[]; const cand=canAssign?tAssignable(state,tUDept(user),user,orig.key):[];
+  const noTask=sel.filter(k=>!et.some(t=>tCheckKey(t.checkItem)===k));   // ticked, nobody has it yet
+  const todo=canAssign?noTask:[]; const cand=canAssign?tAssignable(state,tUDept(user),user,orig.key):[];
   const assignAll=()=>{ const p=cand.find(x=>x.id===allTo); if(!p||!todo.length) return;
     if(!confirm(`Give ${todo.length} ticked item${todo.length>1?"s":""} to ${p.name}?\nOne task is made for each item.`)) return;
     if(editable&&!A.eSave(orig.key,fields(),true)) return;
@@ -8299,7 +8320,16 @@ function EventModal({ekey,tab,setTab,state,user,A,open,onClose,onCreated,openNew
       <label class="mef-f"><span>Topic:</span><input value=${d.topic} disabled=${dis} placeholder="Main theme / subject of event" onInput=${e=>set("topic",e.target.value)}/></label>
     </div>
     <div class="mef-summary"><div class="row wrap" style="gap:8px;justify-content:space-between"><div class="row wrap" style="gap:8px"><span class="mef-badge">ADMIN SUMMARY</span><b>${sel.length} Tasks Required</b><span>out of ${EV_TOTAL_ITEMS} Total Items</span><span class="mef-pill">${pctSel}% Selected</span></div><span class="mef-total">Total Tasks Selected: ${sel.length} / ${EV_TOTAL_ITEMS}</span></div>
-      <div class="row wrap" style="gap:6px">${EV_SECTIONS.map(sec=>{ const n=sec.items.filter((_,i)=>(d.checklist[`${sec.id}_${i}`]||{}).checked).length; return html`<span class=${"mef-chip"+(n?" on":"")}><i/>${sec.short}: ${n}/${sec.items.length}</span>`; })}</div></div>
+      <div class="row wrap" style="gap:6px">${EV_SECTIONS.map(sec=>{ const n=sec.items.filter((_,i)=>(d.checklist[`${sec.id}_${i}`]||{}).checked).length; return html`<span class=${"mef-chip"+(n?" on":"")}><i/>${sec.short}: ${n}/${sec.items.length}</span>`; })}</div>
+      ${(sel.length>0||(d.additional||"").trim())&&html`<div class="mef-todo">
+        <div class="mef-todo-h"><b>Tasks to be done (${sel.length})</b>${!isNew&&sel.length>0&&html`<span class=${"mef-need"+(noTask.length?"":" ok")}>${noTask.length?noTask.length+" not assigned yet":"All assigned"}</span>`}</div>
+        ${EV_SECTIONS.map(sec=>{ const ks=sec.items.map((_,i)=>sec.id+"_"+i).filter(k=>(d.checklist[k]||{}).checked); if(!ks.length) return "";
+          return html`<div class="mef-todo-sec"><em style=${"background:"+sec.color}>${sec.short}</em><ol>${ks.map(k=>{ const c=item(k); const def=tEvItemDef(k).item; const task=et.find(t=>tCheckKey(t.checkItem)===k);
+            return html`<li class=${isNew?"":task?"given":"need"}><span><b>${tEvItemText(k,c)}${def&&def.isCollab&&d.collab?": "+d.collab:""}</b>${c.qty?" · Qty / Req: "+c.qty:""}${c.remarks?" · "+c.remarks:""}</span>
+              ${!isNew&&(task?html`<button type="button" class="tk-evassigned no-print" title=${task.title} onClick=${()=>{ onClose(); open(task.key); }}><${Icon} name=${task.stage==="06"?"check":"user"}/>${tName(state,task.assigneeId)} · ${tStage(task.stage).name}</button>`
+                :html`<span class="mef-need">Not assigned</span>${canAssign&&html`<button type="button" class="btn btn-primary btn-sm no-print" onClick=${()=>assign(k)}><${Icon} name="user"/>Assign</button>`}`)}</li>`; })}</ol></div>`; })}
+        ${(d.additional||"").trim()&&html`<div class="mef-todo-add"><b>Also asked (special requirements): </b>${d.additional}</div>`}
+      </div>`}</div>
     ${todo.length>1&&html`<div class="row wrap no-print" style="gap:8px;margin:8px 0;align-items:center"><b class="sm">Assign all ${todo.length} ticked items that have no task yet to:</b><select class="select" style="max-width:240px" value=${allTo} onChange=${e=>setAllTo(e.target.value)}><option value="">Choose a person…</option>${cand.map(x=>html`<option value=${x.id}>${x.name} / ${tDept(tUDept(x)).code}</option>`)}</select><button type="button" class="btn btn-primary btn-sm" disabled=${!allTo} onClick=${assignAll}><${Icon} name="user"/>Assign all</button></div>`}
     <div class="mef-sections">${EV_SECTIONS.map(sec=>html`<div class="mef-sec">
       <div class="mef-sec-h" style=${"background:"+sec.color}><span><i/>${sec.title}</span><small>${sec.items.length} ITEMS</small></div>
@@ -8494,7 +8524,7 @@ function VendorQuote({token}){
 }
 
 /* Any unexpected error is shown as a red message, so a failure is never silent ("button does nothing"). */
-const BUILD="2026-11-16 procurement";
+const BUILD="2026-11-17 procurement";
 (()=>{ let last=0;
   /* a browser notice that is no fault of the portal (a size-watcher that needs a second pass, a browser add-on's script): console only, no red message */
   const harmless=m=>/^(ResizeObserver loop|Script error\.?$)/.test(String(m||""));
