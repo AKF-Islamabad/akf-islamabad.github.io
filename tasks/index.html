@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-/YpmZl5YCecU94aDiwfJDzZ984is8pg/eEVI43q3zeI='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-9u4mjfqAw4nxnigiqn+4ou/AbsRRoK147Ivt/BFaRls='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -7120,7 +7120,7 @@ const TR={
   canCreateEvent:u=>["RM","MA","HR","HOD"].includes(tRole(u)),
   canEditEvent(e,u){ const r=tRole(u); if(T_EVMGR.includes(r)) return true; return r==="HOD"&&(e.createdBy===u.id||e.coordinator===u.id); },
   canAssignEvent(e,u){ return TR.canEditEvent(e,u); },
-  canDeleteEvent:(e,u)=>["RM","MA"].includes(tRole(u)),
+  canDeleteEvent:(e,u)=>!!u&&!!e&&e.status==="draft"&&e.createdBy===u.id,   // only your own draft that was never sent; anything sent is cancelled, not deleted (061_event_delete.sql checks it again)
   canCancelEvent:(e,u)=>!!u&&u.role==="regional_manager",   // only the Regional Manager, with a reason (060_event_cancel.sql checks it again)
   canSignEvent(e,stepId,u){ const st=evSteps().find(x=>x.id===stepId); if(!st||!st.roles.includes(tRole(u))) return false; const idx=evSteps().findIndex(x=>x.id===stepId);
     return evSteps().slice(0,idx).every(x=>e.approvals&&e.approvals[x.id])&&!(e.approvals&&e.approvals[stepId])&&!["cancelled","completed","draft"].includes(e.status); },
@@ -7368,7 +7368,7 @@ function makeTaskActions(commit,user,toast){
         audit(d,{id:e.id,title:e.title,dept:tUDept(u)},u,"Event "+status,status==="cancelled"?e.title+" · Reason: "+why:undefined); },`Event ${status}`);
     },
     eDelete(key){
-      return run((d,u)=>{ const e=findEv(d,key); if(!e) return; if(!TR.canDeleteEvent(e,u)) fail("Only the Regional Manager or Manager Admin can delete an event.");
+      return run((d,u)=>{ const e=findEv(d,key); if(!e) return; if(!TR.canDeleteEvent(e,u)) fail("Only a draft that was never sent can be deleted, by the person who made it. An event that was sent is cancelled by the Regional Manager.");
         d.events=d.events.filter(x=>x.key!==key); d.tasks.forEach(t=>{ if(t.eventId===key){ t.eventId=null; t.checkItem=null; } }); audit(d,{id:e.id,title:e.title,dept:tUDept(u)},u,"Event deleted"); return e; },e=>`Deleted ${e.id}`);
     },
     /* ---- personal To-Do & sticky notes: each person sees only their own ---- */
@@ -8367,7 +8367,7 @@ function EventModal({ekey,tab,setTab,state,user,A,open,onClose,onCreated,openNew
     ${!isNew&&editable&&orig.status==="approved"&&orig.date<=tToday()&&html`<button class="btn btn-ok" onClick=${()=>A.eStatus(orig.key,"completed")}><${Icon} name="check"/>Mark completed</button>`}
     ${!isNew&&TR.canCancelEvent(orig,user)&&!["cancelled","completed"].includes(orig.status)&&html`<button class="btn btn-ghost" onClick=${()=>{ const why=prompt("Why is this event cancelled? (required)\nIts open tasks will be cancelled too.");
       if(why===null) return; if(why.trim().length<5){ tToast("Please fill the reason for cancelling (at least 5 letters).","bad"); return; } A.eStatus(orig.key,"cancelled",why); }}><${Icon} name="x"/>Cancel event</button>`}
-    ${!isNew&&TR.canDeleteEvent(orig,user)&&html`<button class="btn btn-ghost" onClick=${()=>{ if(confirm(`Delete ${orig.id} “${orig.title}”? Its tasks stay but lose the event link.`)&&A.eDelete(orig.key)) onClose(); }}><${Icon} name="trash"/>Delete</button>`}
+    ${!isNew&&TR.canDeleteEvent(orig,user)&&html`<button class="btn btn-ghost" onClick=${()=>{ if(confirm(`Delete ${orig.id} “${orig.title}”? Its tasks stay but lose the event link.`)&&A.eDelete(orig.key)) onClose(); }}><${Icon} name="trash"/>Delete draft</button>`}
     <span class="grow"/>
     <button class="btn btn-ghost" onClick=${onClose}>${editable?"Cancel":"Close"}</button>
     ${isNew?html`<button class="btn btn-soft" onClick=${()=>create(false)}>Save as draft</button><button class="btn btn-primary" onClick=${()=>create(true)}><${Icon} name="send"/>Send for approval</button>`
