@@ -312,7 +312,7 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
   }
   // news about my own work vs things only I can move forward
   function kindOf(n) { if (/^Sent back/i.test(n.title || "")) return "act";   // back with me to correct
-    return /^(my|tout|tcm|trq|tdn|x)\||^hr\|(done|grant|notice|off|slip)\|/.test(n.key || "") ? "news" : "act"; }
+    return /^(my|tout|tcm|trq|tdn|x|tev|thd|tself|tevco)\||^hr\|(done|grant|notice|off|slip)\|/.test(n.key || "") ? "news" : "act"; }   // reminders and "for your information" items are news, not work waiting for you
   function markRead(list) {
     const rd = store.get("akf-inread-" + me.id, {}), t = Date.now(); list.forEach(n => (n.keys || [n.key]).forEach(k => { rd[k] = t; }));
     store.set("akf-inread-" + me.id, Object.fromEntries(Object.entries(rd).sort((a, b) => b[1] - a[1]).slice(0, 600)));
@@ -329,13 +329,13 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
   function panelOut(e) { if (panel && !panel.contains(e.target) && !(panel._back && panel._back.contains(e.target))) closePanel(); }
   const ago = s => { const m = Math.round((Date.now() - Date.parse(s)) / 6e4); if (!isFinite(m)) return ""; if (m < 1) return "now"; if (m < 60) return m + " min"; const h = Math.round(m / 60); return h < 24 ? h + " h" : Math.round(h / 24) + " d"; };
   function drawPanel() {
-    const nameOf = k => { const p = myPortals && myPortals.find(x => x.key === k); return p ? p.name : k; };
     const list = el("div", "akd-in-list"), unread = inbox.filter(n => !n.read).length;
-    if (!inbox.length) list.append(el("p", "akd-in-empty", "All clear. Nothing new in any of your portals."));
+    if (!inbox.length) list.append(el("p", "akd-in-empty", "All clear. Nothing new for you."));
     // one list, newest on top (the inbox is already in that order); "Needs your action" is a label on the row
     inbox.slice(0, 50).forEach(n => {
       const r = el("button", "akd-in-row" + (n.read ? " read" : "")); r.type = "button";
-      r.append(el("span", "akd-in-p", nameOf(n.portal) + (n.at ? " · " + (ago(n.at) === "now" ? "just now" : ago(n.at) + " ago") : "") + (kindOf(n) === "act" ? " · Waiting for you" : "")), el("b", "", n.title || "Notification"), n.body ? el("span", "akd-in-b", n.body) : "");
+      const when = n.at && ago(n.at) ? (ago(n.at) === "now" ? "Just now" : ago(n.at) + " ago") : "";   // no portal name: the title says what it is (asked 2026-11-17)
+      r.append(el("b", "", n.title || "Notification"), n.body ? el("span", "akd-in-b", n.body) : "", el("span", "akd-in-p", [kindOf(n) === "act" ? "Waiting for you" : "", when].filter(Boolean).join(" · ")));
       r.onclick = () => go(n); list.append(r);
     });
     if (inbox.length > 50) list.append(el("p", "akd-in-more", `+${inbox.length - 50} more — open the portal to see them all`));

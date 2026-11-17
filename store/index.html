@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-ZCXZy0pATchsR3AzKFoxqN1OyDH06OdYttiHgwXiesA='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-5pPrmU77+te3PT8xkun6h8quMtFUjOAvyLP6nyqgut0='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -7135,12 +7135,13 @@ const TR={
 /* Only the Regional Manager, HODs, Manager Admin and HR assign work to other people; staff plan tasks for themselves.
    Event tasks: RM, Manager Admin and HR can assign anyone in any department; a HOD assigns within their own department. */
 const tCanAssignOthers=u=>["RM",...T_MGR].includes(tRole(u));
+const tOwnDept=(u,d)=>d===tUDept(u)||(!!u&&u.role==="director"&&tMine(u,d));   // a Director assigns in every department they look after; a HOD only in their own
 function tAssignable(state,deptId,u,eventId){
   const act=(state.users||[]).filter(x=>x.active!==false&&(tPick(x)||x.id===u.id)); const r=tRole(u);
   if(r==="RM"||(eventId&&["MA","HR"].includes(r))) return act.filter(x=>tRole(x)!=="President");
   // a HOD assigns only in their OWN department; someone from another department
   // comes through an Engagement request (HOD → that HOD → Regional Manager), which creates the task when approved
-  if(T_MGR.includes(r)) return r==="HOD"&&deptId!==tUDept(u)?act.filter(x=>x.id===u.id):act.filter(x=>(tUDept(x)===deptId||x.id===u.id)&&!["President","GS"].includes(tRole(x)));
+  if(T_MGR.includes(r)) return r==="HOD"&&!tOwnDept(u,deptId)?act.filter(x=>x.id===u.id):act.filter(x=>(tUDept(x)===deptId||x.id===u.id)&&!["President","GS"].includes(tRole(x)));
   return act.filter(x=>x.id===u.id);   // staff: only themselves (your instruction)
 }
 /* ---------- engagement requests: a HOD asks for someone from ANOTHER department ----------
@@ -7156,7 +7157,7 @@ const tEngPeople=(state,u)=>(state.users||[]).filter(x=>x.active!==false&&tPick(
 const tEngWhen=s=>s?fmtD(s.slice(0,10)+"T12:00:00")+" "+s.slice(11,16):"";
 const tAssignError=(state,u,c)=>!tCanAssignOthers(u)&&c.assigneeId!==u.id
   ?"Only the HOD, Manager Admin, HR or the Regional Manager can assign tasks to other people. You can create tasks for yourself."
-  :tRole(u)==="HOD"&&c.dept!==tUDept(u)?`You assign tasks only in your own department (${tDept(tUDept(u)).name}). For someone from another department, send an Engagement request.`
+  :tRole(u)==="HOD"&&!tOwnDept(u,c.dept)?`You assign tasks only in your own department (${tDept(tUDept(u)).name}). For someone from another department, send an Engagement request.`
   :`${tName(state,c.assigneeId)} is not in ${tDept(c.dept).name}. Choose someone from that department, or send an Engagement request.`;
 /* why a stage change is not allowed (null = allowed) */
 const tCanEditJD=(u,p)=>!!u&&!!p&&(u.role==="super"||tRole(u)==="RM"||(T_MGR.includes(tRole(u))&&tUDept(u)===tUDept(p)&&u.id!==p.id));
@@ -7187,6 +7188,7 @@ function makeTaskActions(commit,user,toast){
   const depsLoop=(d,t,deps)=>{ const reach=(k,seen)=>{ if(k===t.key) return true; if(seen.has(k)) return false; seen.add(k); const x=d.tasks.find(z=>z.key===k); return !!x&&(x.dependencies||[]).some(j=>reach(j,seen)); }; return deps.some(k=>reach(k,new Set())); };
   const doMove=(d,t,to,u)=>{
     const e=tMoveError(d,t,to,u); if(e) fail(e);
+    if(to==="05"&&!tMoveError(d,t,"06",u)) to="06";   // approved by a manager who may close it = done (asked 2026-11-17); it rests at Approved only when the approver cannot close or it is blocked
     const from=tStage(t.stage).name; t.stage=to; act(t,`moved from ${from} to ${tStage(to).name}`,u);
     if(to==="06"){ t.completedAt=nowISO(); audit(d,t,u,"Task done"); return spawn(d,t,u); }
     t.completedAt=""; if(to==="05"||to==="07") audit(d,t,u,`Task ${tStage(to).name.toLowerCase()}`);
@@ -7304,8 +7306,8 @@ function makeTaskActions(commit,user,toast){
       },n=>n?`Saved · next occurrence ${n.id} created`:"Saved");
     },
     tMove(key,to){
-      return run((d,u)=>{ const t=find(d,key); if(!t) fail("This task no longer exists."); if(t.stage===to) return; return doMove(d,t,to,u); },
-        n=>n?`Moved to ${tStage(to).name} · next occurrence ${n.id} created`:to==="06"?"Done":`Moved to ${tStage(to).name}`);
+      return run((d,u)=>{ const t=find(d,key); if(!t) fail("This task no longer exists."); if(t.stage===to) return; const n=doMove(d,t,to,u); return {n,s:t.stage}; },   // s = where it really ended (an approval can finish the task)
+        o=>{ const s=o?o.s:to, n=o&&o.n; return n?`Moved to ${tStage(s).name} · next occurrence ${n.id} created`:s==="06"?"Done":`Moved to ${tStage(s).name}`; });
     },
     tReschedule(key,date){
       return run((d,u)=>{ const t=find(d,key); if(!t) fail("This task no longer exists."); if(!TR.canEdit(t,u)) fail("You can't change this task."); if(!tDate(date)) fail("Not a valid date.");
@@ -7433,7 +7435,7 @@ function taskNotifications(state,user){
   TS=state; const out=[]; const weekAgo=Date.now()-7*864e5; const r=tRole(user); const all=["RM","GS","President"].includes(r); const handle=(user.username||"").toLowerCase();
   const groups={};
   (state.tasks||[]).filter(t=>t.v===2&&TR.canSee(t,user)).forEach(t=>{
-    const deptMine=all||(T_MGR.includes(r)&&t.dept===tUDept(user));
+    const deptMine=all||(T_MGR.includes(r)&&tMine(user,t.dept));   // every department this person looks after
     if(t.assigneeId===user.id&&t.creatorId!==user.id&&tTs(t.createdAt)>weekAgo&&tOpen(t)) (groups[t.creatorId]=groups[t.creatorId]||[]).push(t);
     if(r==="HOD"&&t.dept===tUDept(user)&&t.creatorId!==user.id&&t.assigneeId!==user.id&&T_EVMGR.includes(tRole(tUser(state,t.creatorId)))&&tTs(t.createdAt)>weekAgo&&tOpen(t))
       out.push({tone:"info",icon:"users",t:`${tName(state,t.creatorId)} assigned ${tName(state,t.assigneeId)} a task in your department`,d:`${t.title} · ${t.priority}${t.eventId?" · "+((tEventOf(state,t)||{}).title||""):""} · due ${tFmt(t.plannedDate)}`,at:t.createdAt,task:t.key,key:"thd|"+t.key});
@@ -7468,7 +7470,7 @@ function taskNotifications(state,user){
     if(["cancelled","completed"].includes(e.status)) return;
     const involved=e.coordinator===user.id||e.createdBy===user.id||(state.tasks||[]).some(t=>t.eventId===e.key&&t.assigneeId===user.id)||all||["MA","HR"].includes(r);
     const dd=tDaysUntil(e.date);
-    if(involved&&dd>=0&&dd<=7) out.push({tone:dd===0?"bad":dd<=3?"warn":"info",icon:"cal",t:dd===0?`Event today at ${e.time}: ${e.title}`:dd===1?`Event tomorrow: ${e.title}`:`Event in ${dd} days: ${e.title}`,d:`${e.venue} · ${(state.tasks||[]).filter(t=>t.eventId===e.key&&t.assigneeId===user.id&&tOpen(t)).length} of your tasks still open`,at:new Date(Date.now()-dd*3600e3).toISOString(),event:e.key,key:`tev|${e.key}|${dd<=1?dd:dd<=3?3:7}`});
+    if(involved&&dd>=0&&dd<=7) out.push({tone:dd===0?"bad":dd<=3?"warn":"info",icon:"cal",t:dd===0?`Event today at ${e.time}: ${e.title}`:dd===1?`Event tomorrow: ${e.title}`:`Event in ${dd} days: ${e.title}`,d:((n)=>`${e.venue}${n?` · ${n} of your tasks still open`:""}`)((state.tasks||[]).filter(t=>t.eventId===e.key&&t.assigneeId===user.id&&tOpen(t)).length),at:new Date(tAddDays(tToday(),dd-(dd<=1?dd:dd<=3?3:7))+"T07:00:00").toISOString(),event:e.key,key:`tev|${e.key}|${dd<=1?dd:dd<=3?3:7}`});
     const next=evSteps().find(st=>!(e.approvals||{})[st.id]);
     if(next&&TR.canSignEvent(e,next.id,user)) out.push({tone:"info",icon:"approve",t:`Event needs your sign-off (${next.label.toLowerCase()} ${next.who})`,d:e.title,at:e.updatedAt,event:e.key,key:`tevap|${e.key}|${next.id}`});
     if(e.coordinator===user.id&&e.createdBy!==user.id&&tTs(e.createdAt)>weekAgo) out.push({tone:"info",icon:"user",t:"You are the coordinator of an event",d:e.title,at:e.createdAt,event:e.key,key:`tevco|${e.key}`});
@@ -8408,7 +8410,7 @@ function TaskModal({isNew,preset,tkey,state,user,A,timer,onClose,open,onCreated,
     if(isNew){ const t=A.tCreate(payload); if(t){ onCreated&&onCreated(t); } return; }
     if(A.tSave(orig.key,payload)) onClose();
   };
-  const quick=to=>{ if(A.tMove(orig.key,to)) setD(x=>({...x,stage:to})); };
+  const quick=to=>{ const o=A.tMove(orig.key,to); if(o) setD(x=>({...x,stage:o.s||to})); };
   const MAX=SB_READY?10*1024*1024:400*1024;
   const onFile=async ev=>{ const files=[...ev.target.files]; ev.target.value=""; for(let fl of files){
     fl=await fitFile(fl,MAX);
@@ -8436,7 +8438,7 @@ function TaskModal({isNew,preset,tkey,state,user,A,timer,onClose,open,onCreated,
     <span class="grow"/>
     <button class="btn btn-ghost" onClick=${onClose}>${editable?"Cancel":"Close"}</button>
     ${editable&&html`<button class="btn btn-primary" onClick=${save}><${Icon} name="check"/>${isNew?"Create task":"Save changes"}</button>`}</div>`;
-  return html`<${Modal} title=${isNew?"New task":orig.id} sub=${isNew?"Fill in the title, then Create task":`${tDept(orig.dept).code} · ${tDept(orig.dept).name} · created by ${tName(state,orig.creatorId)} · ${TROLE_LABEL[tRole(user)]} view`} onClose=${onClose} footer=${footer}>
+  return html`<${Modal} title=${isNew?"New task":orig.id} sub=${isNew?"Fill in the title, then Create task":`${tDept(orig.dept).code} · ${tDept(orig.dept).name} · created by ${tName(state,orig.creatorId)} · ${user.role==="director"?"Director":TROLE_LABEL[tRole(user)]} view`} onClose=${onClose} footer=${footer}>
     <label class="tk-title-wrap"><span>Task title <b class="tk-bad">*</b></span><input ref=${titleRef} class="tk-title" value=${d.title} placeholder="What needs to be done?" disabled=${!editable} onInput=${e=>set("title",e.target.value)} onKeyDown=${e=>{ if(e.key==="Enter") save(); }}/></label>
     ${ev&&html`<div class="tk-evbanner"><span class="tk-ai-ico sm"><${Icon} name="flag"/></span><span style="flex:1;min-width:0"><b>Event task · ${ev.title}</b><small>${tFmt(ev.date,true)} at ${ev.time} · ${ev.venue}${d.checkItem&&tEvItemDef(tCheckKey(d.checkItem)).item?` · checklist: ${tEvItemDef(tCheckKey(d.checkItem)).sec.short} › ${tEvItemDef(tCheckKey(d.checkItem)).item.label}`:""}</small></span>${!isNew&&openEvent&&html`<button type="button" class="btn btn-ghost btn-sm" onClick=${()=>openEvent(ev.key)}>Open event</button>`}</div>`}
     ${!isNew&&html`<div class="row wrap" style="gap:6px">

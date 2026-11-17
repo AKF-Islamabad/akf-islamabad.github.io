@@ -384,8 +384,8 @@ html.embed .wrap{max-width:none;padding:6px 4px 48px}
 /* ========== Alkhidmat Foundation Islamabad — main page (portal launcher + people & access) ==========
    All rules are enforced by the database (001_core.sql) and the admin-users function; this page only shows them. */
 const CFG = window.AKF_SUPABASE || null;
-const ROLES = ["viewer", "staff", "manager", "admin"];
-const ROLE_LABEL = { viewer: "Viewer", staff: "Staff", manager: "Manager", admin: "Admin", custom: "Custom" };
+const ROLES = ["viewer", "staff", "manager", "director", "admin"];
+const ROLE_LABEL = { viewer: "Viewer", staff: "Staff", manager: "Manager", director: "Director", admin: "Admin", custom: "Custom" };
 const ACTIONS = ["view", "add", "edit", "delete", "approve", "export"];
 const ACTION_LABEL = { view: "See", add: "Add", edit: "Edit", delete: "Delete", approve: "Approve", export: "Export" };
 const AUTH_TYPE = (/[#&]type=(invite|recovery)/.exec(location.hash) || [])[1] || "";   // read before supabase-js clears the link
@@ -997,15 +997,18 @@ function accessDialog(p, m) {
   /* Fleet: a driver starts / returns trips, submits the daily checklist and logs trips (ambulance cash / OPF) */
   const drvNote = el("p", { class: "small", role: "status", style: "display:none;margin:0;padding:8px 10px;border-radius:8px;background:#FFF4E0;color:#7A4B00",
     text: `${p.full_name} is a driver: choose the Staff preset (Vehicle Requests → Edit, Daily Checklists → Add, Driver Trip Log → Add), or they cannot run their trips.` });
+  /* Director: the ticks open the tabs; seeing the whole department and assigning its team comes from the approval role */
+  const dirNote = el("p", { class: "small", role: "status", style: "display:none;margin:0;padding:8px 10px;border-radius:8px;background:#FFF4E0;color:#7A4B00",
+    text: `To see the whole department and assign tasks to its team, ${p.full_name} also needs "Role in approvals" = Department Director: set it with Manage on the People list.` });
   const tick = name => {
     preset = name;
-    tabs.forEach(t => { const want = name ? (t.presets[name] || (name === "admin" ? t.actions : [])) : []; ACTIONS.forEach(a => { if (boxes[t.tab_key][a]) boxes[t.tab_key][a].checked = want.includes(a); }); });
+    tabs.forEach(t => { const want = name ? (t.presets[name] || (name === "admin" ? t.actions : name === "director" ? (t.presets.manager || []).filter(a => a !== "delete") : [])) : []; ACTIONS.forEach(a => { if (boxes[t.tab_key][a]) boxes[t.tab_key][a].checked = want.includes(a); }); });
     drawPresets();
   };
   function drawPresets() {
     presetRow.replaceChildren(...["", ...ROLES].map(r => el("button", { class: "btn sm " + (preset === r ? "" : "ghost"), type: "button", text: r ? ROLE_LABEL[r] : "No access", onclick: () => { changed = true; tick(r); } })),
       ...(preset === "custom" ? [el("span", { class: "tag warn", text: "Custom" })] : []));   // replaceChildren prints a null as "null"
-    checkFD();
+    checkFD(); dirNote.style.display = preset === "director" && p.org_role !== "director" && !p.is_super ? "" : "none";
   }
   const rows = tabs.map(t => {
     boxes[t.tab_key] = {};
@@ -1024,7 +1027,7 @@ function accessDialog(p, m) {
   });
   drawPresets();
   const body = tabs.length
-    ? [el("p", { class: "small muted", text: "Pick a preset, then adjust any tick. A tab with no tick is hidden from this person." }), presetRow, fdNote, toNote, drvNote,
+    ? [el("p", { class: "small muted", text: "Pick a preset, then adjust any tick. A tab with no tick is hidden from this person." }), presetRow, dirNote, fdNote, toNote, drvNote,
        el("div", { class: "tblwrap", style: "border:1px solid var(--line)" }, el("table", {}, el("thead", {}, el("tr", {}, el("th", { text: "Tab" }), ACTIONS.map(a => el("th", { style: "text-align:center", text: ACTION_LABEL[a] })))), el("tbody", {}, rows)))]
     : [el("p", { text: "This portal has no tabs registered yet, so access is simply open or closed." }), presetRow];
   const d = dialog(`${p.full_name} — ${m.name}`, body, close => [el("button", { class: "btn ghost", text: "Cancel", onclick: close }), el("button", { class: "btn", text: "Save access", onclick: async ev => {
