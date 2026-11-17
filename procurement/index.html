@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-kN4ngG1u2IXEkKmNru/xGzCVYOQpgEH/AthnVs6hUak='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-99eDJsVniYpkth2hwSnPZYfjvs7YL7I6lcKHdE1M5OU='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -7121,6 +7121,7 @@ const TR={
   canEditEvent(e,u){ const r=tRole(u); if(T_EVMGR.includes(r)) return true; return r==="HOD"&&(e.createdBy===u.id||e.coordinator===u.id); },
   canAssignEvent(e,u){ return TR.canEditEvent(e,u); },
   canDeleteEvent:(e,u)=>["RM","MA"].includes(tRole(u)),
+  canCancelEvent:(e,u)=>!!u&&u.role==="regional_manager",   // only the Regional Manager, with a reason (060_event_cancel.sql checks it again)
   canSignEvent(e,stepId,u){ const st=evSteps().find(x=>x.id===stepId); if(!st||!st.roles.includes(tRole(u))) return false; const idx=evSteps().findIndex(x=>x.id===stepId);
     return evSteps().slice(0,idx).every(x=>e.approvals&&e.approvals[x.id])&&!(e.approvals&&e.approvals[stepId])&&!["cancelled","completed","draft"].includes(e.status); },
   whyNoClose(t,u,state){ const r=tRole(u), C=tMx().closers;
@@ -7358,12 +7359,13 @@ function makeTaskActions(commit,user,toast){
         e.approvals=e.approvals||{}; e.approvals[step]={who:u.id,at:nowISO()}; e.status=step; e.updatedAt=nowISO(); audit(d,{id:e.id,title:e.title,dept:tUDept(u)},u,"Event "+step); return e; },
         e=>e.status==="approved"?`${e.id} approved`:`Signed: ${evSteps().find(x=>x.id===step).label.toLowerCase()} you`);
     },
-    eStatus(key,status){
+    eStatus(key,status,reason){ const why=String(reason||"").replace(/[<>"`\\]/g,"").trim().slice(0,500);
       return run((d,u)=>{ const e=findEv(d,key); if(!e||!TR.canEditEvent(e,u)) fail("You can't change this event."); if(!["completed","cancelled"].includes(status)) fail("Unknown status.");
+        if(status==="cancelled"){ if(!TR.canCancelEvent(e,u)) fail("Only the Regional Manager can cancel an event."); if(why.length<5) fail("Please fill the reason for cancelling (at least 5 letters)."); e.cancel={by:u.id,name:u.name,at:nowISO(),reason:why}; }
         if(status==="completed"&&!(e.status==="approved"&&e.date<=tToday())) fail("An event can be marked completed only after it is approved and its date has come.");
         e.status=status; e.updatedAt=nowISO();
         if(status==="cancelled") d.tasks.forEach(t=>{ if(t.eventId===e.key&&tOpen(t)){ t.stage="07"; act(t,"cancelled with the event",u); } });
-        audit(d,{id:e.id,title:e.title,dept:tUDept(u)},u,"Event "+status); },`Event ${status}`);
+        audit(d,{id:e.id,title:e.title,dept:tUDept(u)},u,"Event "+status,status==="cancelled"?e.title+" · Reason: "+why:undefined); },`Event ${status}`);
     },
     eDelete(key){
       return run((d,u)=>{ const e=findEv(d,key); if(!e) return; if(!TR.canDeleteEvent(e,u)) fail("Only the Regional Manager or Manager Admin can delete an event.");
@@ -8363,7 +8365,8 @@ function EventModal({ekey,tab,setTab,state,user,A,open,onClose,onCreated,openNew
     ${!isNew&&canAssign&&html`<button class="btn btn-ghost" onClick=${()=>assign("")}><${Icon} name="user"/>Assign task</button>`}
     ${!isNew&&html`<button class="btn btn-ghost" onClick=${printForm}><${Icon} name="print"/>Print form</button>`}
     ${!isNew&&editable&&orig.status==="approved"&&orig.date<=tToday()&&html`<button class="btn btn-ok" onClick=${()=>A.eStatus(orig.key,"completed")}><${Icon} name="check"/>Mark completed</button>`}
-    ${!isNew&&editable&&!["cancelled","completed"].includes(orig.status)&&html`<button class="btn btn-ghost" onClick=${()=>{ if(confirm("Cancel this event? Its open tasks will be cancelled too.")) A.eStatus(orig.key,"cancelled"); }}><${Icon} name="x"/>Cancel event</button>`}
+    ${!isNew&&TR.canCancelEvent(orig,user)&&!["cancelled","completed"].includes(orig.status)&&html`<button class="btn btn-ghost" onClick=${()=>{ const why=prompt("Why is this event cancelled? (required)\nIts open tasks will be cancelled too.");
+      if(why===null) return; if(why.trim().length<5){ tToast("Please fill the reason for cancelling (at least 5 letters).","bad"); return; } A.eStatus(orig.key,"cancelled",why); }}><${Icon} name="x"/>Cancel event</button>`}
     ${!isNew&&TR.canDeleteEvent(orig,user)&&html`<button class="btn btn-ghost" onClick=${()=>{ if(confirm(`Delete ${orig.id} “${orig.title}”? Its tasks stay but lose the event link.`)&&A.eDelete(orig.key)) onClose(); }}><${Icon} name="trash"/>Delete</button>`}
     <span class="grow"/>
     <button class="btn btn-ghost" onClick=${onClose}>${editable?"Cancel":"Close"}</button>
@@ -8371,6 +8374,7 @@ function EventModal({ekey,tab,setTab,state,user,A,open,onClose,onCreated,openNew
       :editable&&html`<button class="btn btn-primary" onClick=${save}><${Icon} name="check"/>Save</button>`}</div>`;
   return html`<${Modal} title=${isNew?"Event request — Master Event / Program Checklist":`${orig.id} · ${d.title||"Untitled event"}`} sub=${isNew?"Fill the form as on paper, then Send for approval (or save as draft)":`${tFmt(orig.date,true)} · ${orig.time} · ${orig.venue} · coordinator ${tName(state,orig.coordinator)}`} onClose=${onClose} footer=${footer}>
     ${!isNew&&html`<div class="tk-evtabs"><button class=${curTab==="form"?"active":""} onClick=${()=>setTab("form")}>Request form (${sel.length} items)</button><button class=${curTab==="tasks"?"active":""} onClick=${()=>setTab("tasks")}>Tasks (${et.length})</button><span class="grow"/><${Tag} tone=${tone}>${label}</${Tag}></div>`}
+    ${!isNew&&orig.status==="cancelled"&&orig.cancel&&html`<div class="notice notice-bad" style="margin:8px 0"><${Icon} name="x"/><span><b>Cancelled</b> by ${orig.cancel.name} (Regional Manager) on ${fmtD(orig.cancel.at)}. Reason: ${orig.cancel.reason}</span></div>`}
     ${curTab==="form"?form:tasksTab}
     ${!isNew&&html`<div data-akf-remarks=${"event:"+orig.key}></div>`}
   <//>`;
