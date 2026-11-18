@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Foundation Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-5YTIefXvkbAs/4fOJvUdumCx+mPThsSqMcUbXyC5ovM='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-Fl4PNmxid7VPHmhkrFkYjfxXFFmcfgul1WdG22za10U='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -1275,14 +1275,14 @@ const CITIES = ['Islamabad', 'Rawalpindi', 'Wah Cantt', 'Taxila', 'Murree', 'Att
 const ROLES = {
   super:     { label: 'Super Admin (IT)', code: 'IT',   perms: ['users', 'settings', 'audit', 'backup', 'reports', 'export', 'revealPII', 'signatories'] },
   /* Manager RMD: every RMD right, plus the team console, donor import, anonymisation, reports and audit */
-  rmdmgr:    { label: 'Manager RMD',      code: 'MRMD', perms: ['donor.create', 'donor.edit', 'donor.anonymize', 'donor.import', 'donor.assign', 'donation.create', 'pledge.manage', 'messages', 'reminders', 'signatories', 'revealPII', 'export', 'reports', 'audit', 'team', 'corrections.view'] },
+  rmdmgr:    { label: 'Manager RMD',      code: 'MRMD', perms: ['donor.create', 'donor.edit', 'donor.anonymize', 'donor.import', 'donor.assign', 'donation.create', 'pledge.manage', 'messages', 'reminders', 'signatories', 'revealPII', 'export', 'reports', 'audit', 'team', 'corrections.view', 'case.create', 'case.work'] },
   /* RMO (Resource Mobilization Officer): field work on donors, receipts, pledges and messages; sees a personal workspace */
-  rmd:       { label: 'RMO (Resource Mobilization Officer)', code: 'R15', perms: ['donor.create', 'donation.create', 'pledge.manage', 'messages', 'reminders', 'revealPII', 'corrections.view', 'mine'] },
-  finance:   { label: 'Finance Officer',  code: 'R14',  perms: ['donor.create', 'donation.create', 'donation.verify', 'donation.void', 'messages', 'revealPII', 'export', 'reports', 'corrections.view'] },
+  rmd:       { label: 'RMO (Resource Mobilization Officer)', code: 'R15', perms: ['donor.create', 'donation.create', 'pledge.manage', 'messages', 'reminders', 'revealPII', 'corrections.view', 'mine', 'case.work'] },
+  finance:   { label: 'Finance Officer',  code: 'R14',  perms: ['donor.create', 'donation.create', 'donation.verify', 'donation.void', 'messages', 'revealPII', 'export', 'reports', 'corrections.view', 'case.approve'] },
   /* Store Officer: sees only in-kind work. 'views' is a strict allow-list of tabs for the role */
   store:     { label: 'Store Officer',    code: 'STR',  perms: ['inkind.verify', 'corrections.view'], views: ['dashboard', 'goods', 'corrections'] },
-  rm:        { label: 'Regional Manager', code: 'R16',  perms: ['reports', 'audit', 'corrections.view', 'export'] },
-  president: { label: 'President',        code: 'PRES', perms: ['reports', 'audit', 'corrections.view'] },
+  rm:        { label: 'Regional Manager', code: 'R16',  perms: ['reports', 'audit', 'corrections.view', 'export', 'case.approve'] },
+  president: { label: 'President',        code: 'PRES', perms: ['reports', 'audit', 'corrections.view', 'case.approve'] },
   gs:        { label: 'GS / Board',       code: 'R18',  perms: ['reports', 'audit', 'corrections.view'] }
 };
 
@@ -1294,6 +1294,7 @@ const NAV = [
   { v: 'goods', label: 'In-kind to receive', icon: 'box', badge: 'goods', perm: 'inkind.verify' },
   { v: 'donors', label: 'Donors', icon: 'users' },
   { v: 'pledges', label: 'Pledges & Installments', icon: 'calendar', badge: 'due' },
+  { v: 'cases', label: 'Cases (One ID, One Story)', icon: 'audit', badge: 'cases' },
   { v: 'team', label: 'RMD Team', icon: 'users', perm: 'team' },
   { v: 'import', label: 'Import / Export (Excel)', icon: 'upload', perm: 'donor.import' },
   { v: 'corrections', label: 'Corrections', icon: 'fix', badge: 'corr', perm: 'corrections.view' },
@@ -1306,7 +1307,7 @@ const NAV = [
   { v: 'users', label: 'Users & Roles', icon: 'userCog', perm: 'users' },
   { v: 'settings', label: 'Settings & Backup', icon: 'gear', perm: 'settings' }
 ];
-const TITLES = { goods: 'In-kind to Receive', team: 'RMD Team', import: 'Import & Export', corrections: 'Corrections', dashboard: 'Dashboard', new: 'New receipt', donors: 'Donors', donations: 'Donations & Receipts', pledges: 'Pledges & Installments', messages: 'Donor Messages', signatories: 'Signatories', collect: 'Quick Collect', reports: 'Reports & Analytics', verify: 'Verify a Receipt', audit: 'Audit Trail', users: 'Users & Roles', settings: 'Settings & Backup', account: 'My Account' };
+const TITLES = { cases: 'Cases', goods: 'In-kind to Receive', team: 'RMD Team', import: 'Import & Export', corrections: 'Corrections', dashboard: 'Dashboard', new: 'New receipt', donors: 'Donors', donations: 'Donations & Receipts', pledges: 'Pledges & Installments', messages: 'Donor Messages', signatories: 'Signatories', collect: 'Quick Collect', reports: 'Reports & Analytics', verify: 'Verify a Receipt', audit: 'Audit Trail', users: 'Users & Roles', settings: 'Settings & Backup', account: 'My Account' };
 
 /* ---------------- Icons ---------------- */
 const IC = {
@@ -1510,10 +1511,11 @@ const ERP_PERMS = {
   'messages': [['messages', 'edit']], 'reminders': [['pledges', 'edit']], 'signatories': [['signatories', 'edit']],
   'revealPII': [['donors', 'export']], 'export': [['reports', 'export'], ['donations', 'export'], ['import', 'export'], ['team', 'export']],
   'reports': [['reports', 'view']], 'audit': [['audit', 'view']], 'team': [['team', 'view']], 'corrections.view': [['corrections', 'view']],
+  'case.create': [['cases', 'add']], 'case.work': [['cases', 'edit']], 'case.approve': [['cases', 'approve']],
   'corrections.request': [['corrections', 'add']], 'corrections.approve': [['corrections', 'approve']], 'settings': [['settings', 'edit']]
 };
 /* the view → the tab ticked on the main page (views not listed are never shown in ERP mode) */
-const ERP_VIEW_TAB = { dashboard: 'dashboard', new: 'new', collect: 'new', donations: 'donations', donors: 'donors', pledges: 'pledges', team: 'team', import: 'import',
+const ERP_VIEW_TAB = { dashboard: 'dashboard', new: 'new', collect: 'new', donations: 'donations', donors: 'donors', pledges: 'pledges', cases: 'cases', team: 'team', import: 'import',
   corrections: 'corrections', messages: 'messages', reports: 'reports', verify: 'verify', signatories: 'signatories', audit: 'audit' };
 /* no settings page inside the portal: everything is set on the main page (Settings → Donor Management, Super Admin) */
 
@@ -1536,6 +1538,7 @@ function freshUI() {
     reports: { from: todayISO().slice(0, 4) + '-01-01', to: todayISO(), cat: '', program: '' },
     audit: { q: '', action: '', page: 1 },
     pledges: { q: '', status: 'Active', due: '' },
+    cases: { q: '', f: 'mine', page: 1 },
     messages: { status: 'Queued', type: '', page: 1 },
     newPrefill: null, newDone: null,
     reveal: {}
@@ -1609,7 +1612,7 @@ function newStore(orgName) {
     v: 1, createdAt: new Date().toISOString(),
     org: Object.assign({ name: orgName || 'Alkhidmat Foundation Islamabad', footer: 'JazakAllah Khair for your generous contribution. Zakat funds are kept in a restricted account and spent only on eligible beneficiaries.' }, RECEIPT_DEFAULTS),
     settings: { idleMin: 30, autoShare: true, autoDownload: true, autoServer: false, serverUrl: '', reminderDays: 3, templates: Object.assign({}, DEFAULT_TEMPLATES) },
-    pledges: [], messages: [], signatories: [], signatures: {}, corrections: [], stock: [],
+    pledges: [], messages: [], signatories: [], signatures: {}, corrections: [], stock: [], cases: [],
     seq: { donor: 0, donation: 0 },
     receiptKey: b64(rand(32)),
     users: {}, donors: [], donations: [], audit: []
@@ -1620,7 +1623,7 @@ function migrate(st) {
   if (!st.settings.idle30) { st.settings.idleMin = Math.max(st.settings.idleMin || 0, 30); st.settings.idle30 = true; }   // one time: the idle sign-out moves from 10 to 30 minutes (asked 2026-11-11)
   st.settings.templates = Object.assign({}, DEFAULT_TEMPLATES, st.settings.templates || {});
   if (st.settings.templates.ack === ACK_V7) st.settings.templates.ack = DEFAULT_TEMPLATES.ack;
-  ['pledges', 'messages', 'signatories', 'corrections', 'stock'].forEach(k => { if (!Array.isArray(st[k])) st[k] = []; });
+  ['pledges', 'messages', 'signatories', 'corrections', 'stock', 'cases'].forEach(k => { if (!Array.isArray(st[k])) st[k] = []; });
   st.signatures = st.signatures || {};
   // every user who already saved a signature becomes a signatory
   Object.entries(st.users).forEach(([uid, u]) => { if (u.sigId && !st.signatories.some(s => s.userId === uid)) st.signatories.push({ id: 'SG-' + uid, userId: uid, name: u.name, designation: u.designation || (ROLES[u.role] ? ROLES[u.role].label : ''), sigId: u.sigId, active: true }); });
@@ -2165,7 +2168,8 @@ function buildChrome() {
     due: can('reminders') ? dueInstallments().length : 0,
     outbox: can('messages') ? S.messages.filter(m => m.status === 'Queued').length : 0,
     corr: S.corrections.filter(c => c.status === 'Pending' && canDecideC(c)).length,
-    goods: can('inkind.verify') ? S.donations.filter(d => d.status === 'Pending' && needsGoodsCheck(d) && canVerifyX(d)).length : 0
+    goods: can('inkind.verify') ? S.donations.filter(d => d.status === 'Pending' && needsGoodsCheck(d) && canVerifyX(d)).length : 0,
+    cases: (caseBoot(), viewOK('cases') ? (S.cases || []).filter(c => caseMine(c) || caseEscalated(c)).length : 0)
   };
   let html = '', prevSec = null;
   for (const n of NAV) {
@@ -3141,6 +3145,7 @@ VIEWS.messages = {
 function computeNotifications() {
   if (!ME || !S) return [];
   const out = [];
+  if (viewOK('cases')) (S.cases || []).filter(c => caseMine(c) || caseEscalated(c)).slice(0, 20).forEach(c => out.push({ tone: caseLevel(c) > 1 ? 'b-bad' : 'b-warn', icon: 'audit', title: `Case ${c.id}: ${CASE_ST[c.status]}${caseLevel(c) ? ' · ' + CASE_LVL[caseLevel(c)] : ''}`, text: `${donorName(donorById(c.donorId))} · ${money(c.amount)}`, actions: [['case-view', 'Open case', { id: c.id }]] }));
   if (can('reminders')) dueInstallments().filter(r => !(r.s.snoozeUntil && r.s.snoozeUntil > todayISO()) && !(r.s.remindedAt && r.s.remindedAt.slice(0, 10) >= addDays(todayISO(), -2))).forEach(({ p, s, state }) => {
     out.push({ tone: state === 'Overdue' ? 'b-bad' : 'b-warn', icon: 'bell', title: `${state === 'Overdue' ? 'Overdue' : 'Due ' + fmtDate(s.due)}: installment ${s.n}/${p.count} · ${money(s.amount)}`, text: `${donorName(donorById(p.donorId))} · ${pledgePurpose(p)}`, actions: [['inst-remind', 'Send reminder', { id: p.id, n: s.n }], ['inst-snooze', 'Later', { id: p.id, n: s.n }]] });
   });
@@ -5533,6 +5538,342 @@ $('#top-search').addEventListener('submit', e => { e.preventDefault(); if (!view
 /* =====================================================================
    DEMO DATA
    ===================================================================== */
+/* ================= Cases: One ID, One Story (asked 2026-11-18) =================
+   One case per receipt or pledge. The Case ID is built from that record's own number, so it can never repeat.
+   The case sits BESIDE the receipt (the receipt and its number are not changed). Every step is one status with one owner;
+   the timeline only grows. donor.sql (donor_case_guard) checks the owner of each step again on the server. */
+const CASE_LIMIT = 200000;   // shortcut: the President limit is fixed here and in donor.sql; move it to Settings when it must change without a developer
+const CASE_ST = { rm: 'Waiting for Regional Manager', president: 'Waiting for President', money: 'Waiting for Finance (money received)', dept: 'Waiting for department', work: 'In progress',
+  visit: 'Waiting for RMD site visit', verify: 'Waiting for Regional Manager (verify report)', finance: 'Waiting for Finance (check expenses)', share: 'Donor report to share',
+  closed: 'Completed', back: 'Sent back for correction', rejected: 'Rejected' };
+const CASE_STEPS = [['new', 'Intake'], ['rm', 'Approval'], ['money', 'Money received'], ['dept', 'Accepted'], ['work', 'Execution'], ['visit', 'Site visit'], ['verify', 'Verified'], ['finance', 'Finance check'], ['share', 'Donor report'], ['closed', 'Closed']];
+const CASE_PURPOSE = ['Orphan Care (Aghosh)', 'Health Services', 'Education Program', 'Bano Qabil', 'WASH Program', 'Islamic Microfinance', 'Community Services', 'Other'];
+const CASE_TEMPLATE = { 'Health Services': ['Buy the medicines or supplies', 'Deliver to the beneficiaries', 'Collect bills and receipts', 'Take photos (with consent)'],
+  'WASH Program': ['Survey the site', 'Install the water point', 'Test the water', 'Take photos (with consent)'],
+  'Education Program': ['Confirm the students or school', 'Pay fees or deliver items', 'Collect bills and receipts', 'Take photos (with consent)'],
+  '': ['Plan the activity', 'Deliver to the beneficiaries', 'Collect bills and receipts', 'Take photos (with consent)'] };
+let CM = { orole: '', dept: '', depts: [['HLT', 'Health Services'], ['EDU', 'Education'], ['ORP', 'Orphan Care'], ['WASH', 'WASH'], ['COM', 'Community Services']], ready: '' };
+/* who am I in the approval path, and the department list (ERP); the demo maps its own roles */
+function caseBoot() {
+  if (!ME || CM.ready === ME.id) return; CM.ready = ME.id; CM.orole = ''; CM.dept = '';   // once per signed-in person
+  if (!ERP) { CM.orole = { rm: 'regional_manager', president: 'president', finance: 'finance' }[ME.role] || ''; return; }
+  Promise.all([erpSb.rpc('donor_caps'), erpSb.from('core_departments').select('code,name').order('name')]).then(([a, b]) => {
+    if (a.data) { CM.orole = a.data.orole || ''; CM.dept = a.data.dept || ''; }
+    if (b.data && b.data.length) CM.depts = b.data.map(d => [d.code, d.name]);
+    buildChrome(); if (UI.view === 'cases') render();
+  }).catch(() => { CM.ready = ''; });
+}
+const caseSuper = () => !!ME && (ME.isSuper || ME.role === 'super');   // the offline demo marks its Super Admin by role
+const caseById = id => (S.cases || []).find(c => c.id === id);
+const caseSpent = c => (c.expenses || []).reduce((s, e) => s + (+e.amount || 0), 0);
+const caseBudget = c => +(c.plan && c.plan.budget) || +c.amount || 0;
+const caseDept = c => c.deptName || (CM.depts.find(d => d[0] === c.dept) || [0, c.dept || '—'])[1];
+const caseOpenNow = c => !['closed', 'rejected'].includes(c.status);
+/* working hours between two moments. shortcut: Monday to Friday, 09:00 to 17:00, no public holidays; make it a setting when the office hours differ */
+function workHours(from, to) {
+  let a = new Date(from), h = 0; to = to ? new Date(to) : new Date(); if (isNaN(a)) return 0;
+  for (let i = 0; i < 800 && a < to; i++) {
+    const s = new Date(a), e = new Date(a); s.setHours(9, 0, 0, 0); e.setHours(17, 0, 0, 0);
+    if (a.getDay() % 6) { const x = Math.max(a, s), y = Math.min(to, e); if (y > x) h += (y - x) / 36e5; }
+    a = new Date(a); a.setDate(a.getDate() + 1); a.setHours(0, 0, 0, 0);
+  }
+  return h;
+}
+console.assert(workHours('2026-11-16T10:00:00', '2026-11-16T12:00:00') === 2 && workHours('2026-11-13T16:00:00', '2026-11-16T10:00:00') === 2 && workHours('2026-11-14T10:00:00', '2026-11-15T12:00:00') === 0, 'workHours');
+/* 0 fine · 1 reminder (2h) · 2 overdue (4h) · 3 with the Regional Manager (8h) · 4 with Top Management (16h); a Critical case counts four times faster (1 hour limit) */
+function caseLevel(c) {
+  if (!caseOpenNow(c)) return 0;
+  if (c.status === 'work') return c.deadline && c.deadline < todayISO() ? 2 : 0;
+  const h = workHours(c.since || c.createdAt) * (c.priority === 'Critical' ? 4 : 1);
+  return h >= 16 ? 4 : h >= 8 ? 3 : h >= 4 ? 2 : h >= 2 ? 1 : 0;
+}
+const CASE_LVL = ['', 'Reminder', 'Overdue', 'Overdue · with Regional Manager', 'Overdue · with Top Management'];
+/* is the next move mine? Nobody approves their own case; the officer who did the work does not verify it */
+function caseMine(c) {
+  if (!ME || !caseOpenNow(c)) return false;
+  const o = CM.orole, ap = can('case.approve'), own = c.createdBy === ME.email;
+  if (caseSuper()) return !(own && ['rm', 'president', 'verify', 'finance'].includes(c.status));
+  switch (c.status) {
+    case 'back': case 'share': return can('case.create');
+    case 'visit': return can('case.create') && c.officer !== ME.email;
+    case 'rm': case 'verify': return ap && o === 'regional_manager' && !own;
+    case 'president': return ap && o === 'president' && !own;
+    case 'money': case 'finance': return ap && /^finance/.test(o) && !own;
+    case 'dept': return ap && !!CM.dept && CM.dept === c.dept;
+    case 'work': return c.officer === ME.email || (ap && !!CM.dept && CM.dept === c.dept);
+  }
+  return false;
+}
+const caseEscalated = c => caseOpenNow(c) && !caseMine(c) && ((caseLevel(c) >= 3 && CM.orole === 'regional_manager') || (caseLevel(c) >= 4 && ['president', 'gen_sec'].includes(CM.orole)));
+const caseBadge = c => `<span class="badge ${c.status === 'closed' ? 'b-ok' : ['rejected', 'back'].includes(c.status) ? 'b-bad' : 'b-warn'}"><span class="dot"></span>${esc(CASE_ST[c.status] || c.status)}</span>`;
+const caseSrc = c => c.donationId ? S.donations.find(x => x.id === c.donationId) : null;
+const caseMoneyIn = c => { const x = caseSrc(c); if (x) return x.status === 'Verified' ? +c.amount : 0; const p = c.pledgeId && pledgeById(c.pledgeId); return p ? Math.min(+c.amount, pledgeStats(p).paid) : 0; };
+function caseLog(c, action, remarks) { (c.timeline = c.timeline || []).push({ at: new Date().toISOString(), by: ME.email, name: ME.name, step: c.status, action, remarks: String(remarks || '').slice(0, 500) }); }
+async function caseSave(c, action, remarks, next, msg) {
+  caseLog(c, action, remarks);
+  if (next) { c.status = next; c.since = new Date().toISOString(); }
+  await audit('CASE_' + action.toUpperCase().replace(/[^A-Z]+/g, '_'), c.id, remarks || '');
+  await persist(); buildChrome(); render(); caseOpen(c.id); toast(msg || 'Saved.', 'success');
+}
+/* the five numbers to watch */
+function caseNumbers() {
+  const L = S.cases || [], pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
+  const acc = L.filter(c => c.acceptH != null), cl = L.filter(c => c.status === 'closed'), rep = cl.filter(c => c.verifiedAt && c.report);
+  const days = cl.map(c => (Date.parse(c.closedAt) - Date.parse((caseSrc(c) || {}).date || c.createdAt)) / 864e5).filter(isFinite);
+  const res = cl.filter(c => c.restricted);
+  const od = dueInstallments().filter(r => r.state === 'Overdue').reduce((s, r) => s + (+r.s.amount || 0), 0);
+  const un = L.filter(c => c.status !== 'rejected').reduce((s, c) => s + Math.max(0, caseMoneyIn(c) - caseSpent(c)), 0);
+  return [['Accepted within the time limit', pct(acc.filter(c => c.acceptH <= (c.priority === 'Critical' ? 1 : 4)).length, acc.length)],
+    ['Average days, collection to closure', days.length ? (days.reduce((a, b) => a + b, 0) / days.length).toFixed(1) : '—'],
+    ['Donor reports within 7 days of verification', pct(rep.filter(c => Date.parse(c.report.at) - Date.parse(c.verifiedAt) <= 7 * 864e5).length, rep.length)],
+    ['Restricted funds used as intended', pct(res.filter(c => c.asIntended !== false).length, res.length)],
+    ['Overdue pledges · unspent balances', compact(od) + ' · ' + compact(un)]];
+}
+VIEWS.cases = {
+  html() {
+    caseBoot();
+    const st = UI.cases, L = S.cases || [], q = st.q.trim().toLowerCase();
+    const mine = L.filter(c => caseMine(c) || caseEscalated(c)), open = L.filter(caseOpenNow), late = open.filter(c => caseLevel(c) >= 2);
+    const rows = L.filter(c => {
+      if (st.f === 'mine' && !(caseMine(c) || caseEscalated(c))) return false;
+      if (st.f === 'open' && !caseOpenNow(c)) return false;
+      if (st.f === 'late' && !(caseOpenNow(c) && caseLevel(c) >= 2)) return false;
+      if (st.f === 'closed' && c.status !== 'closed') return false;
+      if (CASE_ST[st.f] && c.status !== st.f) return false;
+      if (q && ![c.id, donorName(donorById(c.donorId)), c.location, c.fund, c.programme, c.receipt, caseDept(c)].concat((c.bens || []).map(b => b.name + ' ' + b.cnic4)).some(v => String(v || '').toLowerCase().includes(q))) return false;
+      return true;
+    }).sort((a, b) => caseLevel(b) - caseLevel(a) || String(b.createdAt).localeCompare(String(a.createdAt)));
+    const kpi = (f, icon, label, n, sub, warn) => `<button class="kpi kpi-btn ${warn ? 'warn' : ''}" data-act="case-filter" data-f="${f}"><div class="k-ic">${ic(icon)}</div><div class="k-l">${label}</div><div class="k-v num">${n}</div><div class="k-s">${sub}</div></button>`;
+    const items = Object.keys(CASE_ST).map(k => ({ key: k, label: CASE_ST[k], value: L.filter(c => c.status === k).length })).filter(i => i.value);
+    const chart = !items.length ? '' : window.AKF_CHARTS ? AKF_CHARTS.bars({ id: 'case-steps', items })
+      : `<div class="cell-actions" style="justify-content:flex-start;flex-wrap:wrap">${items.map(i => `<button class="btn btn-ghost btn-sm" data-act="case-filter" data-f="${i.key}">${esc(i.label)} · <b>${i.value}</b></button>`).join('')}</div>`;
+    const page = rows.slice((st.page - 1) * PAGE, st.page * PAGE);
+    return `<div class="page-head"><div><h2>Cases: One ID, One Story</h2><p>Each donation is followed under one Case ID, from collection until the donor gets the report.</p></div>
+      <div class="actions">${can('case.create') ? `<button class="btn btn-primary" data-act="case-new">${ic('plus')}New case</button>` : ''}</div></div>
+    <div class="kpis">${kpi('mine', 'bell', 'Waiting for you', mine.length, 'Your next steps', mine.length)}${kpi('open', 'calendar', 'Open cases', open.length, 'All cases in progress')}${kpi('late', 'alert', 'Overdue', late.length, 'Past the time limit', late.length)}${kpi('closed', 'shieldCheck', 'Completed', L.filter(c => c.status === 'closed').length, 'Closed with a donor report')}</div>
+    <div class="card" style="margin-bottom:16px"><h4 class="sec-title" style="margin-top:0">Five numbers to watch</h4><div class="stats-strip" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${caseNumbers().map(([k, v]) => `<div><div class="k">${esc(k)}</div><div class="v num">${esc(v)}</div></div>`).join('')}</div>
+      ${chart ? `<h4 class="sec-title">Cases by step (click a bar to list them)</h4>${chart}` : ''}</div>
+    <div class="card"><div class="toolbar">
+      <div class="grow search-in">${ic('search')}<input class="input" id="case-q" type="search" placeholder="Search Case ID, donor, location, fund, beneficiary or last 4 digits of CNIC…" value="${esc(st.q)}" maxlength="60" aria-label="Search cases"></div>
+      <select class="select" id="case-f" aria-label="Show">${[['mine', 'Waiting for you'], ['open', 'Open cases'], ['late', 'Overdue'], ['closed', 'Completed'], ['', 'All cases']].concat(Object.entries(CASE_ST)).map(([v, l]) => `<option value="${v}" ${v === st.f ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+      ${rows.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Case</th><th>Donor</th><th>Fund · Programme</th><th class="right">Amount</th><th>Department</th><th>Deadline</th><th>Status</th></tr></thead><tbody>
+      ${page.map(c => { const lv = caseLevel(c); return `<tr class="click" data-act="case-view" data-id="${esc(c.id)}" tabindex="0">
+        <td class="mono nowrap">${esc(c.id)}<div class="t-sub">${esc(c.receipt || c.pledgeId || '')}</div></td><td class="t-name">${esc(donorName(donorById(c.donorId)))}</td>
+        <td class="small">${esc(c.fund || '')} · ${esc(c.programme || '')}<div class="t-sub">${esc(c.region || 'Islamabad')}${c.location ? ' · ' + esc(c.location) : ''}${c.restricted ? ' · Restricted' : ''}</div></td>
+        <td class="right num">${esc(money(c.amount))}</td><td class="small">${esc(caseDept(c))}${c.officerName ? `<div class="t-sub">${esc(c.officerName)}</div>` : ''}</td>
+        <td class="nowrap">${c.deadline ? fmtDate(c.deadline) : '—'}${c.priority && c.priority !== 'Normal' ? `<div class="t-sub">${esc(c.priority)}</div>` : ''}</td>
+        <td>${caseBadge(c)}${lv ? ` <span class="badge ${lv > 1 ? 'b-bad' : 'b-warn'}">${esc(CASE_LVL[lv])}</span>` : ''}${caseMine(c) ? ' <span class="badge b-info">Waiting for you</span>' : ''}</td></tr>`; }).join('')}
+      </tbody></table></div>${pager('cases', st.page, rows.length)}` : emptyState('calendar', st.f === 'mine' ? 'Nothing is waiting for you' : 'No cases found', can('case.create') ? 'Press “New case” to start one from a receipt or a pledge.' : 'Cases appear here when one reaches you.')}
+    </div>`;
+  },
+  bind() {
+    $('#case-q').addEventListener('input', debounce(() => { UI.cases.q = $('#case-q').value; UI.cases.page = 1; render(); const i = $('#case-q'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 250));
+    $('#case-f').addEventListener('change', () => { UI.cases.f = $('#case-f').value; UI.cases.page = 1; render(); });
+    const ch = $('#view'); ch.addEventListener('akf-chart-pick', e => { const k = e.detail && e.detail.key; if (CASE_ST[k]) { UI.cases.f = k; UI.cases.page = 1; render(); } });
+  }
+};
+const cf = (id, label, html, req) => `<div class="field"><label for="${id}">${label}${req ? ' <span class="req">*</span>' : ''}</label>${html}</div>`;
+const cOpt = (list, cur) => list.map(v => { const [a, b] = Array.isArray(v) ? v : [v, v]; return `<option value="${esc(a)}" ${a === cur ? 'selected' : ''}>${esc(b)}</option>`; }).join('');
+const cVal = id => { const e = $('#' + id); return e ? String(e.value || '').replace(/[<>`]/g, '').trim() : ''; };
+/* intake: the 60-second form. Amount, donor, fund and programme come from the receipt or pledge, so nothing is typed twice */
+function caseForm(id) {
+  if (!guard('case.create')) return;
+  const c = id ? caseById(id) : null, has = new Set((S.cases || []).map(x => x.donationId || x.pledgeId));
+  const src = c ? [] : S.donations.filter(x => !['Voided', 'Rejected'].includes(x.status) && !x.pledgeId && !has.has(x.id)).slice(-200).reverse().map(x => ['D:' + x.id, `${x.receipt || x.id} · ${donorName(donorById(x.donorId))} · ${money(x.amount)}`])
+    .concat(S.pledges.filter(p => p.status === 'Active' && !has.has(p.id)).map(p => ['P:' + p.id, `${p.id} (pledge) · ${donorName(donorById(p.donorId))} · ${money(p.total)}`]));
+  if (!c && !src.length) { toast('Every receipt and pledge already has a case. Record a new receipt first.', 'warn'); return; }
+  const v = c || { priority: 'Normal', frequency: 'One-Time', purpose: '', src: 'Individual', plan: {}, deadline: addDays(todayISO(), 14) }, pl = v.plan || {};
+  openModal({ title: c ? `Correct case ${c.id}` : 'New case', size: 'lg',
+    body: `<form id="f-case" class="form-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+      ${c ? '' : cf('c-src', 'Receipt or pledge', `<select class="select" id="c-src" autofocus>${cOpt(src)}</select>`, 1)}
+      ${cf('c-type', 'Source type', `<select class="select" id="c-type">${cOpt(['Individual', 'Corporate', 'Institution', 'Online', 'Other'], v.src)}</select>`)}
+      ${cf('c-res', 'Restricted by the donor?', `<select class="select" id="c-res">${cOpt([['', 'No: unrestricted'], ['1', 'Yes: only for this purpose']], v.restricted ? '1' : '')}</select>`)}
+      ${cf('c-purpose', 'Donation purpose', `<select class="select" id="c-purpose">${cOpt(CASE_PURPOSE, v.purpose || CASE_PURPOSE[0])}</select>`, 1)}
+      ${cf('c-freq', 'Donation frequency', `<select class="select" id="c-freq">${cOpt(['One-Time', 'Monthly', 'Quarterly', 'Annual'], v.frequency)}</select>`)}
+      ${cf('c-wo', 'W.O. No', `<input class="input" id="c-wo" maxlength="30" value="${esc(v.wo || '')}">`)}
+      ${cf('c-ref', 'Reference (C/O)', `<input class="input" id="c-ref" maxlength="60" value="${esc(v.ref || '')}">`)}
+      ${cf('c-loc', 'Location', `<input class="input" id="c-loc" maxlength="60" list="c-loc-l" value="${esc(v.location || '')}" placeholder="Pick or type another"><datalist id="c-loc-l">${CITIES.map(x => `<option value="${esc(x)}">`).join('')}</datalist>`, 1)}
+      ${cf('c-dept', 'Executing department', `<select class="select" id="c-dept">${cOpt(CM.depts.concat([['other', 'Other']]), v.dept)}</select>`, 1)}
+      ${cf('c-deptx', 'If Other, which department', `<input class="input" id="c-deptx" maxlength="60" value="${esc(v.dept === 'other' ? v.deptName || '' : '')}">`)}
+      ${cf('c-dead', 'Deadline', `<input class="input" id="c-dead" type="date" min="${todayISO()}" value="${esc(v.deadline || '')}">`, 1)}
+      ${cf('c-pri', 'Priority', `<select class="select" id="c-pri">${cOpt(['Normal', 'High', 'Critical'], v.priority)}</select>`)}
+      ${cf('c-budget', 'Budget allocated (PKR). Empty = the full amount', `<input class="input" id="c-budget" inputmode="numeric" maxlength="12" value="${esc(pl.budget || '')}">`)}
+      ${cf('c-dtype', 'Disbursement type', `<select class="select" id="c-dtype">${cOpt(['Cash', 'In-Kind'], pl.type)}</select>`)}
+      ${cf('c-pdate', 'Planned date', `<input class="input" id="c-pdate" type="date" value="${esc(pl.date || '')}">`)}
+      ${cf('c-pben', 'Planned number of beneficiaries', `<input class="input" id="c-pben" inputmode="numeric" maxlength="6" value="${esc(pl.bens || '')}">`)}
+      <div style="grid-column:1/-1">${cf('c-what', 'What to do', `<textarea class="textarea" id="c-what" maxlength="600" rows="2">${esc(v.what || '')}</textarea>`, 1)}</div>
+      <div style="grid-column:1/-1">${cf('c-tasks', 'Tasks, one per line (empty = the usual checklist for this purpose). A big donation can have several: T1, T2, T3', `<textarea class="textarea" id="c-tasks" maxlength="900" rows="3">${esc((v.tasks || []).map(t => t.title).join('\n'))}</textarea>`)}</div>
+    </form>`,
+    foot: `<button class="btn btn-ghost" data-act="modal-close">Cancel</button><button class="btn btn-primary" data-act="case-save" data-id="${esc(id || '')}">${ic('send')}Send for approval</button>` });
+}
+async function caseSubmit(id) {
+  if (!guard('case.create')) return;
+  let c = id ? caseById(id) : null;
+  const need = [['c-loc', 'the location'], ['c-what', 'what to do'], ['c-dead', 'the deadline']].find(([k]) => !cVal(k));
+  if (need) { toast('Please fill ' + need[1] + '.', 'error'); $('#' + need[0]).focus(); return; }
+  if (cVal('c-dept') === 'other' && !cVal('c-deptx')) { toast('Please fill the department.', 'error'); return; }
+  if (!c) {
+    const [k, sid] = [cVal('c-src')[0], cVal('c-src').slice(2)], x = k === 'D' ? S.donations.find(d => d.id === sid) : null, p = k === 'P' ? pledgeById(sid) : null, o = x || p;
+    if (!o || (S.cases || []).some(z => z.donationId === sid || z.pledgeId === sid)) { toast('This receipt already has a case.', 'error'); return; }
+    const m = /(\d{4})-0*(\d+)$/.exec(o.id) || [0, todayISO().slice(0, 4), Date.now() % 1e6], line = (o.lines || [])[0] || {};
+    c = { id: `RM-${m[1]}-${p ? 'P' : ''}${pad(m[2], 4)}`, donationId: x ? x.id : '', pledgeId: p ? p.id : '', receipt: x ? x.receipt || '' : '', donorId: o.donorId, amount: +(x ? x.amount : p.total) || 0,
+      fund: line.category || '', programme: line.program || '', region: 'Islamabad', mode: (x && x.mode) || (p && p.mode) || '', createdBy: ME.email, createdAt: new Date().toISOString(),
+      status: 'new', expenses: [], bens: [], complaints: [], timeline: [] };
+    if (caseById(c.id)) { toast('This Case ID already exists.', 'error'); return; }
+    (S.cases = S.cases || []).push(c);
+  }
+  const tasks = cVal('c-tasks').split('\n').map(s => s.trim()).filter(Boolean).slice(0, 12), purpose = cVal('c-purpose'), b = +cVal('c-budget').replace(/\D/g, '') || 0;
+  if (b > c.amount) { toast('The budget cannot be more than the donation.', 'error'); if (!id) S.cases.pop(); return; }
+  Object.assign(c, { src: cVal('c-type'), restricted: !!cVal('c-res') || c.fund === 'Zakat', purpose, frequency: cVal('c-freq'), wo: cVal('c-wo'), ref: cVal('c-ref'), location: cVal('c-loc'),
+    dept: cVal('c-dept'), deptName: cVal('c-dept') === 'other' ? cVal('c-deptx') : '', deadline: cVal('c-dead'), priority: cVal('c-pri'), what: cVal('c-what'),
+    plan: { budget: b || c.amount, type: cVal('c-dtype'), date: cVal('c-pdate'), bens: +cVal('c-pben').replace(/\D/g, '') || 0 },
+    tasks: (tasks.length ? tasks : CASE_TEMPLATE[purpose] || CASE_TEMPLATE['']).map((t, i) => { const old = (c.tasks || [])[i]; return { id: 'T' + (i + 1), title: t.slice(0, 120), done: !!(old && old.title === t && old.done) }; }) });
+  closeModal();
+  await caseSave(c, id ? 'Corrected and resubmitted' : 'Case created', c.what, 'rm', `Case ${c.id} sent to the Regional Manager.`);
+}
+/* the case window: everything under the one ID */
+function caseOpen(id) {
+  const c = caseById(id); if (!c) return;
+  const d = donorById(c.donorId), mine = caseMine(c), spent = caseSpent(c), inn = caseMoneyIn(c), lv = caseLevel(c), work = c.status === 'work' && mine;
+  const at = CASE_STEPS.findIndex(s => s[0] === (c.status === 'president' ? 'rm' : c.status)), pos = c.status === 'back' || c.status === 'rejected' ? 0 : at;
+  const steps = `<ol style="display:flex;gap:4px;list-style:none;padding:0;margin:14px 0;overflow:auto">${CASE_STEPS.map(([k, l], i) => `<li style="flex:1;min-width:64px;text-align:center;font-size:11.5px;color:var(--text-2)"><div style="height:6px;border-radius:4px;margin-bottom:5px;background:${i < pos || c.status === 'closed' ? 'var(--ok,#1E9A5A)' : i === pos ? 'var(--brand-600,#0B4A9F)' : 'var(--line,#E2E8F0)'}"></div>${i + 1}. ${esc(l)}</li>`).join('')}</ol>`;
+  const btn = (act, label, cls, extra) => `<button class="btn ${cls || 'btn-ghost'}" data-act="${act}" data-id="${esc(c.id)}" ${extra || ''}>${label}</button>`;
+  let act = '';
+  if (mine) {
+    const s = c.status, big = c.amount > CASE_LIMIT;
+    if (s === 'rm') act = btn('case-do', big ? 'Recommend to President' : 'Approve', 'btn-success', 'data-do="approve"') + btn('case-do', 'Send back', '', 'data-do="back"') + btn('case-do', 'Reject', '', 'data-do="reject" style="color:var(--danger)"');
+    if (s === 'president') act = btn('case-do', 'Approve', 'btn-success', 'data-do="approve"') + btn('case-do', 'Send back', '', 'data-do="back"') + btn('case-do', 'Reject', '', 'data-do="reject" style="color:var(--danger)"');
+    if (s === 'money') act = btn('case-do', 'Confirm money received', 'btn-success', 'data-do="money"');
+    if (s === 'back') act = btn('case-edit', 'Correct and resubmit', 'btn-primary');
+    if (s === 'dept') act = `<select class="select" id="ca-off" aria-label="Officer" style="max-width:240px"><option value="">Assign an officer…</option>${Object.values(S.users || {}).filter(u => !u.disabled).map(u => `<option value="${esc(u.email)}">${esc(u.name)}</option>`).join('')}</select>` + btn('case-do', 'Accept and assign', 'btn-success', 'data-do="accept"') + btn('case-do', 'Ask a question', '', 'data-do="ask"') + btn('case-do', 'Reject', '', 'data-do="back" style="color:var(--danger)"');
+    if (s === 'visit') act = `<select class="select" id="ca-visit" aria-label="Site visit" style="max-width:220px">${cOpt([['Yes', 'Site visit conducted'], ['No', 'No site visit']])}</select>` + btn('case-do', 'Satisfactory: send to Regional Manager', 'btn-success', 'data-do="visit"') + btn('case-do', 'Not satisfactory: return to officer', '', 'data-do="return"');
+    if (s === 'verify') act = btn('case-do', 'Verify report', 'btn-success', 'data-do="verify"') + btn('case-do', 'Return to officer', '', 'data-do="return"');
+    if (s === 'finance') act = btn('case-do', 'Expenses checked', 'btn-success', 'data-do="finance"') + btn('case-do', 'Return to officer', '', 'data-do="return"');
+    if (s === 'share') act = `<select class="select" id="ca-type" aria-label="Report type" style="max-width:170px">${cOpt(['Written Report', 'Photos', 'Video', 'All'])}</select><select class="select" id="ca-via" aria-label="Shared via" style="max-width:150px">${cOpt(['WhatsApp', 'Email', 'Hard Copy'])}</select>${c.restricted ? `<select class="select" id="ca-int" aria-label="Used as intended" style="max-width:210px">${cOpt([['1', 'Spent as the donor intended'], ['', 'Not as intended']])}</select>` : ''}` + btn('case-do', 'Report shared: close the case', 'btn-success', 'data-do="close"');
+  }
+  const inp = (i, ph, w, more) => `<input class="input" id="${i}" placeholder="${ph}" aria-label="${ph}" style="max-width:${w}px" ${more || 'maxlength="80"'}>`;
+  const exp = c.expenses || [], bens = c.bens || [], cmp = c.complaints || [];
+  const zak = c.fund === 'Zakat';
+  openModal({ title: `Case ${c.id}`, size: 'lg',
+    body: `<div class="d-head"><span class="avatar">${esc(initials(donorName(d)))}</span><div><h3>${esc(donorName(d))}</h3><div class="muted small">${esc(c.fund || '')} · ${esc(c.programme || '')} · ${esc(c.region || 'Islamabad')}${c.location ? ' · ' + esc(c.location) : ''} · ${esc(c.purpose || '')}${c.restricted ? ' · Restricted' : ''}</div><div class="muted small">${c.receipt ? 'Receipt ' + esc(c.receipt) : 'Pledge ' + esc(c.pledgeId)}${c.wo ? ' · W.O. ' + esc(c.wo) : ''}${c.ref ? ' · C/O ' + esc(c.ref) : ''} · ${esc(c.frequency || '')} · ${esc(c.mode || '')}</div></div><div style="margin-left:auto;text-align:right">${caseBadge(c)}${lv ? `<div style="margin-top:4px"><span class="badge ${lv > 1 ? 'b-bad' : 'b-warn'}">${esc(CASE_LVL[lv])}</span></div>` : ''}</div></div>
+      ${steps}
+      <div class="stats-strip"><div><div class="k">Donation</div><div class="v num">${esc(compact(c.amount))}</div></div><div><div class="k">Received</div><div class="v num">${esc(compact(inn))}</div></div><div><div class="k">Spent of ${esc(compact(caseBudget(c)))}</div><div class="v num">${esc(compact(spent))}</div></div><div><div class="k">Remaining</div><div class="v num">${esc(compact(Math.max(0, inn - spent)))}</div></div></div>
+      ${inn < c.amount && !['closed', 'rejected'].includes(c.status) ? `<div class="alert alert-info">${ic('wallet')}<span>A pledge is not money. The work stays locked until Finance confirms the money is received${c.receipt ? ' (the receipt is verified)' : ''}.</span></div>` : ''}
+      <p style="margin:6px 0"><b>What to do:</b> ${esc(c.what || '')}</p>
+      <p class="hint">Department: <b>${esc(caseDept(c))}</b>${c.officerName ? ' · Officer: <b>' + esc(c.officerName) + '</b>' : ''} · Deadline ${c.deadline ? fmtDate(c.deadline) : '—'} · ${esc(c.priority || 'Normal')}${c.plan && c.plan.bens ? ' · planned beneficiaries ' + esc(c.plan.bens) : ''}${c.plan && c.plan.date ? ' · planned ' + fmtDate(c.plan.date) : ''}</p>
+      ${act ? `<div class="alert alert-info" style="display:block"><b>Waiting for you.</b> Remarks are asked when you press a button.<div class="cell-actions" style="justify-content:flex-start;flex-wrap:wrap;margin-top:8px">${act}</div></div>` : ''}
+      <h4 class="sec-title">Tasks (${(c.tasks || []).filter(t => t.done).length}/${(c.tasks || []).length})</h4>
+      ${(c.tasks || []).map(t => `<label style="display:flex;gap:8px;align-items:center;padding:3px 0"><input type="checkbox" data-act="case-task" data-id="${esc(c.id)}" data-t="${esc(t.id)}" ${t.done ? 'checked' : ''} ${work ? '' : 'disabled'}><span><b>${esc(t.id)}</b> ${esc(t.title)}</span></label>`).join('')}
+      <h4 class="sec-title">Expenses (${exp.length})</h4>
+      ${exp.length ? `<div class="tbl-wrap"><table class="tbl compact"><thead><tr><th>Date</th><th>For</th><th>Bill</th><th class="right">Amount</th><th>By</th></tr></thead><tbody>${exp.map(e => `<tr><td class="nowrap">${fmtDate(e.at)}</td><td>${esc(e.what)}</td><td>${e.file ? `<button class="btn btn-ghost btn-sm" data-act="case-file" data-path="${esc(e.file)}">${esc(e.bill || 'Open bill')}</button>` : esc(e.bill || '')}</td><td class="right num">${esc(money(e.amount))}</td><td class="small">${esc(e.name || '')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="hint">No expense recorded yet.</p>'}
+      ${work ? `<div class="cell-actions" style="justify-content:flex-start;flex-wrap:wrap;margin-top:8px">${inp('cx-what', 'What was bought or paid', 220)}${inp('cx-amt', 'Amount (PKR)', 130, 'inputmode="numeric" maxlength="12"')}${inp('cx-bill', 'Bill number', 130, 'maxlength="30"')}<input type="file" id="cx-file" accept="image/jpeg,image/png,image/webp,application/pdf" aria-label="Bill photo" style="max-width:210px">${btn('case-exp', 'Add expense', 'btn-primary btn-sm')}</div><p class="hint">Each expense needs a bill photo. Spending above the budget is blocked until the Regional Manager raises it.</p>` : ''}
+      <h4 class="sec-title">Beneficiaries (${bens.length})</h4>
+      ${bens.length ? `<div class="tbl-wrap"><table class="tbl compact"><thead><tr><th>Name</th><th>Father's name</th><th>CNIC / B-Form</th><th>Contact</th><th>Address</th>${zak ? '<th>Zakat eligible</th>' : ''}<th>Photo consent</th></tr></thead><tbody>${bens.map(b => `<tr><td>${esc(b.name)}</td><td>${esc(b.father)}</td><td class="mono">•••••-•••••${esc(b.cnic4 || '')}</td><td>${esc(b.contact || '')}</td><td class="small">${esc(b.address || '')}</td>${zak ? `<td>${b.eligible ? 'Yes' : 'No'}</td>` : ''}<td>${b.consent ? 'Yes' : 'No'}</td></tr>`).join('')}</tbody></table></div>` : '<p class="hint">No beneficiary recorded yet.</p>'}
+      ${work ? `<div class="cell-actions" style="justify-content:flex-start;flex-wrap:wrap;margin-top:8px">${inp('cb-name', 'Name', 150)}${inp('cb-father', "Father's name", 150)}${inp('cb-cnic', 'CNIC or B-Form (13 digits)', 190, 'inputmode="numeric" maxlength="15"')}${inp('cb-contact', 'Contact number', 140, 'inputmode="tel" maxlength="15"')}${inp('cb-addr', 'Address', 220, 'maxlength="120"')}${zak ? '<label class="small"><input type="checkbox" id="cb-elig"> Zakat eligibility checked</label>' : ''}<label class="small"><input type="checkbox" id="cb-consent"> Photo consent (guardian for a child)</label>${btn('case-ben', 'Add beneficiary', 'btn-primary btn-sm')}</div><p class="hint">Only the last 4 digits of the CNIC are kept on screen; the full number is kept as a code that is used only to warn about duplicates.</p>
+        <h4 class="sec-title">Disbursement and report</h4><div class="cell-actions" style="justify-content:flex-start;flex-wrap:wrap">${inp('cd-date', 'Disbursement date', 170, `type="date" max="${todayISO()}" value="${esc((c.disb || {}).date || '')}"`)}${inp('cd-amt', 'Amount disbursed (PKR)', 180, `inputmode="numeric" maxlength="12" value="${esc((c.disb || {}).amount || '')}"`)}${inp('cd-items', 'Items delivered (in-kind)', 240, `maxlength="200" value="${esc((c.disb || {}).items || '')}"`)}${btn('case-do', 'Submit report to RMD', 'btn-success', 'data-do="submit"')}${btn('case-do', 'Report a blocker', '', 'data-do="blocker"')}</div>` : c.disb ? `<p class="hint">Disbursed ${fmtDate(c.disb.date)} · ${esc(money(c.disb.amount))}${c.disb.items ? ' · ' + esc(c.disb.items) : ''}</p>` : ''}
+      ${c.visit ? `<p class="hint">Site visit: ${esc(c.visit.done)} · ${esc(c.visit.result)} · verified by ${esc(c.visit.name)} on ${fmtDate(c.visit.at)}</p>` : ''}
+      ${c.report ? `<p class="hint">Donor report: ${esc(c.report.type)} shared via ${esc(c.report.via)} by ${esc(c.report.name)} on ${fmtDate(c.report.at)}${c.report.feedback ? ' · Donor feedback: ' + esc(c.report.feedback) : ''}</p>` : ''}
+      <h4 class="sec-title">Complaints (${cmp.filter(x => x.open).length} open)</h4>
+      ${cmp.map(x => `<p class="hint">${x.open ? '<span class="badge b-bad">Open</span>' : '<span class="badge b-ok">Closed</span>'} ${fmtDate(x.at)} · ${esc(x.text)}${x.note ? ' · ' + esc(x.note) : ''} ${x.open && (can('case.create') || caseSuper()) ? btn('case-do', 'Close complaint', 'btn-ghost btn-sm', `data-do="cclose" data-c="${esc(x.id)}"`) : ''}</p>`).join('')}
+      <h4 class="sec-title">Timeline (nothing here can be edited or deleted; a correction is a new entry)</h4>
+      <ul class="timeline">${(c.timeline || []).slice().reverse().map(t => `<li><span class="badge tl-ic">${ic('audit')}</span><span><b>${esc(t.action)}</b> · ${esc(t.name || t.by)} · ${fmtDT(t.at)}${t.remarks ? `<div class="muted small">${esc(t.remarks)}</div>` : ''}</span></li>`).join('')}</ul>`,
+    foot: `${caseOpenNow(c) ? btn('case-do', 'Record a complaint', 'btn-ghost left', 'data-do="complaint"') : ''}${caseOpenNow(c) && ['dept', 'work'].includes(c.status) && (can('case.create') || CM.orole === 'regional_manager' || caseSuper()) ? btn('case-do', 'Re-assign', '', 'data-do="reassign"') : ''}${caseOpenNow(c) && (CM.orole === 'regional_manager' || caseSuper()) ? btn('case-do', 'Extend deadline / budget', '', 'data-do="extend"') : ''}${['visit', 'verify', 'finance', 'share', 'closed'].includes(c.status) ? btn('case-rep', 'Execution Report', '', 'data-kind="exec"') : ''}${['share', 'closed'].includes(c.status) && (can('case.create') || can('case.work') || caseSuper()) ? btn('case-rep', 'Donor Report', '', 'data-kind="donor"') : ''}<button class="btn btn-ghost" data-act="modal-close">Close</button>` });
+}
+async function caseUpload(c, input) {
+  const f = input && input.files && input.files[0]; if (!f) return '';
+  if (f.size > 5e6 || !/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(f.type)) throw new Error('Attach a photo or PDF of at most 5 MB.');
+  if (!ERP) return f.name.replace(/[^\w. -]/g, '').slice(0, 60);   // the offline demo keeps only the file name
+  const path = `${c.id}/${Date.now().toString(36)}${hex(rand(3))}.${f.type === 'application/pdf' ? 'pdf' : f.type.split('/')[1]}`;
+  const { error } = await erpSb.storage.from('case-files').upload(path, f, { contentType: f.type });
+  if (error) throw new Error(erpErr(error, 'The file could not be uploaded'));
+  return path;
+}
+async function caseDo(c, what, t) {
+  if (!c) return;
+  const own = what === 'complaint' || what === 'cclose' || what === 'reassign' || what === 'extend';
+  if (!own && !caseMine(c)) { toast('This case is not waiting for you.', 'error'); return; }
+  const say = async (title, label) => { const r = await ask({ title, message: `Case <b>${esc(c.id)}</b>`, ok: title, reason: true, reasonLabel: label || 'Remarks' }); return r.ok ? r.reason : null; };
+  const s = c.status, next0 = caseMoneyIn(c) >= c.amount ? 'dept' : 'money';
+  let r;
+  if (what === 'approve') { const up = s === 'rm' && c.amount > CASE_LIMIT; if ((r = await say(up ? 'Recommend to President' : 'Approve')) == null) return;
+    return caseSave(c, up ? 'Recommended' : 'Approved', r, up ? 'president' : next0, up ? 'Sent to the President.' : next0 === 'dept' ? 'Approved. The department has been told.' : 'Approved. Waiting for Finance to confirm the money.'); }
+  if (what === 'back') { if ((r = await say(s === 'dept' ? 'Reject' : 'Send back', 'Reason')) == null) return; return caseSave(c, s === 'dept' ? 'Rejected by the department' : 'Sent back', r, 'back', 'Sent back to RMD.'); }
+  if (what === 'reject') { if ((r = await say('Reject', 'Reason')) == null) return; return caseSave(c, 'Rejected', r, 'rejected', 'Case rejected.'); }
+  if (what === 'money') { if (caseMoneyIn(c) < c.amount) { toast(c.receipt ? 'Verify the receipt in Donations first. The case opens when the money is verified.' : 'The pledge is not fully paid yet. Work stays locked until the money is received.', 'warn'); return; }
+    if ((r = await say('Confirm money received')) == null) return; return caseSave(c, 'Money received', r, 'dept', 'Money confirmed. The department has been told.'); }
+  if (what === 'accept') { const em = cVal('ca-off'), u = Object.values(S.users || {}).find(x => x.email === em); if (!u) { toast('Please choose the officer.', 'error'); return; }
+    if ((r = await say('Accept and assign')) == null) return; c.acceptH = Math.round(workHours(c.since) * 10) / 10; c.officer = u.email; c.officerName = u.name; return caseSave(c, 'Accepted · officer ' + u.name, r, 'work', 'Accepted and assigned.'); }
+  if (what === 'ask') { if ((r = await say('Ask a question', 'Question')) == null) return; return caseSave(c, 'Question', r, '', 'Question saved in the case.'); }
+  if (what === 'blocker') { if ((r = await say('Report a blocker', 'What is blocking the work')) == null) return; return caseSave(c, 'Blocker', r, '', 'Blocker reported.'); }
+  if (what === 'submit') {
+    if ((c.tasks || []).some(x => !x.done)) { toast('Tick every task first, or report a blocker.', 'error'); return; }
+    if (!cVal('cd-date')) { toast('Please fill the disbursement date.', 'error'); return; }
+    if (!(c.expenses || []).length && !cVal('cd-items')) { toast('Record the expenses, or the items delivered.', 'error'); return; }
+    if (!(c.bens || []).length) { toast('Record at least one beneficiary.', 'error'); return; }
+    if (c.fund === 'Zakat' && c.bens.some(b => !b.eligible)) { toast('Zakat: every beneficiary needs the eligibility check.', 'error'); return; }
+    const disb = { date: cVal('cd-date'), amount: +cVal('cd-amt').replace(/\D/g, '') || caseSpent(c), items: cVal('cd-items') };
+    if ((r = await say('Submit report to RMD')) == null) return; c.disb = disb; c.submittedAt = new Date().toISOString(); return caseSave(c, 'Report submitted', r, 'visit', 'Report sent to RMD.'); }
+  if (what === 'visit') { const done = cVal('ca-visit'); if ((r = await say('Site visit: satisfactory')) == null) return; c.visit = { done, result: 'Satisfactory', by: ME.email, name: ME.name, at: new Date().toISOString(), remarks: r }; return caseSave(c, 'Site visit · Satisfactory', r, 'verify', 'Sent to the Regional Manager.'); }
+  if (what === 'return') { if ((r = await say('Return to officer', 'What must be corrected')) == null) return; return caseSave(c, 'Report returned', r, 'work', 'Returned to the officer.'); }
+  if (what === 'verify') { if ((r = await say('Verify report')) == null) return; c.verifiedAt = new Date().toISOString(); return caseSave(c, 'Report verified', r, 'finance', 'Verified. Sent to Finance.'); }
+  if (what === 'finance') { if ((r = await say('Expenses checked')) == null) return; return caseSave(c, 'Expenses checked', r, 'share', 'Checked. RMD can share the Donor Report.'); }
+  if (what === 'close') { if ((c.complaints || []).some(x => x.open)) { toast('A case cannot close with an open complaint.', 'error'); return; }
+    const type = cVal('ca-type'), via = cVal('ca-via'), int = $('#ca-int') ? !!cVal('ca-int') : true; if ((r = await say('Report shared: close the case', 'Donor feedback')) == null) return;
+    const left = Math.max(0, caseMoneyIn(c) - caseSpent(c));
+    c.report = { type, via, by: ME.email, name: ME.name, at: new Date().toISOString(), feedback: r }; c.asIntended = int; c.closedAt = c.report.at;
+    if (left) caseLog(c, 'Unspent ' + money(left), c.fund === 'Zakat' ? 'Stays in the zakat fund' : c.restricted ? 'Stays in its project unless the donor agrees to a change' : 'Goes to the general fund');
+    return caseSave(c, 'Donor report shared · case closed', r, 'closed', 'Case closed.'); }
+  if (what === 'complaint') { if ((r = await say('Record a complaint', 'Complaint')) == null) return; (c.complaints = c.complaints || []).push({ id: 'C' + Date.now().toString(36), at: new Date().toISOString(), text: r, open: true }); return caseSave(c, 'Complaint recorded', r, '', 'Complaint recorded.'); }
+  if (what === 'cclose') { const x = (c.complaints || []).find(k => k.id === t.dataset.c); if (!x || (r = await say('Close complaint', 'How it was resolved')) == null) return; x.open = false; x.note = r; x.closedAt = new Date().toISOString(); return caseSave(c, 'Complaint closed', r, '', 'Complaint closed.'); }
+  if (what === 'reassign') { if ((r = await say('Re-assign', 'Reason')) == null) return; c.officer = ''; c.officerName = ''; return caseSave(c, 'Re-assigned', r, 'dept', 'Sent back to the department to accept and assign.'); }
+  if (what === 'extend') { const a = await ask({ title: 'Extend deadline / budget', message: `Case <b>${esc(c.id)}</b>. Leave a box empty to keep it.<div class="field" style="margin-top:10px"><label for="ce-d">New deadline</label><input class="input" id="ce-d" type="date" min="${todayISO()}"></div><div class="field"><label for="ce-b">New budget (PKR, at most ${esc(money(c.amount))})</label><input class="input" id="ce-b" inputmode="numeric" maxlength="12"></div>`, ok: 'Save', reason: true });
+    if (!a.ok) return; const dl = cVal('ce-d'), b = +cVal('ce-b').replace(/\D/g, '') || 0; if (b > c.amount) { toast('The budget cannot be more than the donation.', 'error'); return; }
+    if (dl) c.deadline = dl; if (b) c.plan = Object.assign({}, c.plan, { budget: b }); return caseSave(c, 'Extended' + (dl ? ' · deadline ' + dl : '') + (b ? ' · budget ' + money(b) : ''), a.reason, '', 'Saved.'); }
+}
+const urdu = { title: 'عطیہ دہندہ رپورٹ', thanks: 'آپ کے عطیے کا شکریہ۔ یہ رپورٹ بتاتی ہے کہ آپ کا عطیہ کیسے خرچ ہوا۔', fund: 'فنڈ', prog: 'پروگرام', amount: 'رقم', spent: 'خرچ', people: 'مستفید افراد' };
+/* one tap, two reports. The Donor Report carries NO personal data of beneficiaries (only how many) */
+function caseReportHTML(c, kind) {
+  const d = donorById(c.donorId), row = (k, v) => `<tr><td style="padding:4px 12px 4px 0;color:#555">${k}</td><td style="padding:4px 0"><b>${v}</b></td></tr>`;
+  const head = `<h2 style="margin:0">${esc(S.org.name)}</h2><p style="margin:2px 0 14px">${kind === 'donor' ? 'Donor Report' : 'Execution Report (internal)'} · Case ${esc(c.id)}</p>`;
+  const base = row('Fund', esc(c.fund || '')) + row('Programme', esc(c.programme || '')) + row('Region · location', esc((c.region || 'Islamabad') + (c.location ? ' · ' + c.location : ''))) + row('Donation', esc(money(c.amount))) + row('Spent', esc(money(caseSpent(c)))) + row('Beneficiaries', esc((c.bens || []).length)) + row('Completed on', c.disb ? fmtDate(c.disb.date) : '—');
+  if (kind === 'donor') return `<div style="font-family:serif;padding:24px">${head}<p>Dear ${esc(donorName(d))}, JazakAllah Khair. This is how your donation was used.</p><table>${base}${c.disb && c.disb.items ? row('Items delivered', esc(c.disb.items)) : ''}</table><p>${esc(c.what || '')}</p>
+    <div dir="rtl" lang="ur" style="margin-top:18px;border-top:1px solid #ccc;padding-top:12px"><h3 style="margin:0">${urdu.title} · ${esc(c.id)}</h3><p>${urdu.thanks}</p><p>${urdu.fund}: ${esc(c.fund || '')} · ${urdu.prog}: ${esc(c.programme || '')}</p><p>${urdu.amount}: ${esc(money(c.amount))} · ${urdu.spent}: ${esc(money(caseSpent(c)))} · ${urdu.people}: ${esc((c.bens || []).length)}</p></div>
+    <p style="margin-top:18px;color:#555;font-size:12px">Complaints or questions: contact Alkhidmat Foundation Islamabad and quote Case ${esc(c.id)}. Verified by ${esc((c.visit || {}).name || '')}.</p></div>`;
+  return `<div style="font-family:serif;padding:24px">${head}<table>${row('Donor', esc(donorName(d)))}${base}${row('Department · officer', esc(caseDept(c) + ' · ' + (c.officerName || '')))}${row('Site visit', esc(c.visit ? c.visit.done + ' · ' + c.visit.result + ' · ' + c.visit.name : '—'))}</table>
+    <h4>Tasks</h4><ul>${(c.tasks || []).map(t => `<li>${t.done ? '☑' : '☐'} ${esc(t.id)} ${esc(t.title)}</li>`).join('')}</ul>
+    <h4>Expenses</h4><table>${(c.expenses || []).map(e => `<tr><td style="padding-right:12px">${fmtDate(e.at)}</td><td style="padding-right:12px">${esc(e.what)}</td><td style="padding-right:12px">${esc(e.bill || '')}</td><td>${esc(money(e.amount))}</td></tr>`).join('')}</table>
+    <h4>Beneficiaries</h4><table>${(c.bens || []).map(b => `<tr><td style="padding-right:12px">${esc(b.name)}</td><td style="padding-right:12px">s/d/o ${esc(b.father)}</td><td>CNIC ending ${esc(b.cnic4 || '')}</td></tr>`).join('')}</table>
+    <h4>Timeline</h4><ul>${(c.timeline || []).map(t => `<li>${fmtDT(t.at)} · ${esc(t.action)} · ${esc(t.name || t.by)}</li>`).join('')}</ul></div>`;
+}
+Object.assign(ACT, {
+  'case-new': () => caseForm(''), 'case-edit': t => caseForm(t.dataset.id), 'case-save': t => caseSubmit(t.dataset.id), 'case-view': t => caseOpen(t.dataset.id),
+  'case-filter': t => { UI.cases.f = t.dataset.f; UI.cases.page = 1; render(); },
+  'case-do': t => caseDo(caseById(t.dataset.id), t.dataset.do, t),
+  'case-task': async t => { const c = caseById(t.dataset.id), k = c && (c.tasks || []).find(x => x.id === t.dataset.t); if (!k || c.status !== 'work' || !caseMine(c)) return; k.done = !!t.checked; await caseSave(c, (k.done ? 'Done: ' : 'Reopened: ') + k.id + ' ' + k.title, '', '', 'Saved.'); },
+  'case-exp': async t => { const c = caseById(t.dataset.id); if (!c || c.status !== 'work' || !caseMine(c)) return;
+    const what = cVal('cx-what'), amt = +cVal('cx-amt').replace(/\D/g, '') || 0, bill = cVal('cx-bill'), fi = $('#cx-file');
+    if (!what || !amt) { toast('Please fill what was paid and the amount.', 'error'); return; }
+    if (!(fi && fi.files && fi.files[0])) { toast('Each expense needs a bill photo.', 'error'); return; }
+    if (caseSpent(c) + amt > caseBudget(c)) { toast(`This is above the budget of ${money(caseBudget(c))}. Ask the Regional Manager to raise the budget first.`, 'error'); return; }
+    busy(t, true, 'Saving…'); let file; try { file = await caseUpload(c, fi); } finally { busy(t, false); }
+    (c.expenses = c.expenses || []).push({ id: 'E' + Date.now().toString(36), at: new Date().toISOString(), by: ME.email, name: ME.name, what: what.slice(0, 80), amount: amt, bill: bill.slice(0, 30), file });
+    await caseSave(c, 'Expense ' + money(amt), what, '', 'Expense recorded.'); },
+  'case-ben': async t => { const c = caseById(t.dataset.id); if (!c || c.status !== 'work' || !caseMine(c)) return;
+    const name = cVal('cb-name'), father = cVal('cb-father'), cn = cVal('cb-cnic').replace(/\D/g, '');
+    if (!name || !father) { toast("Please fill the name and father's name.", 'error'); return; }
+    if (cn.length !== 13) { toast('The CNIC or B-Form has 13 digits.', 'error'); return; }
+    const cnicH = hex(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('akf-ben:' + cn))));   // shortcut: a one-way code, enough to warn about duplicates; move to the encrypted store (049) if full CNICs must be read back
+    const dup = (S.cases || []).find(x => (x.bens || []).some(b => b.cnicH === cnicH));
+    if (dup && !confirm(`This CNIC is already a beneficiary in case ${dup.id}. Add anyway?`)) return;
+    (c.bens = c.bens || []).push({ id: 'B' + Date.now().toString(36), name: name.slice(0, 60), father: father.slice(0, 60), cnicH, cnic4: cn.slice(-4), contact: cVal('cb-contact').slice(0, 15), address: cVal('cb-addr').slice(0, 120), eligible: !!($('#cb-elig') && $('#cb-elig').checked), consent: !!$('#cb-consent').checked });
+    await caseSave(c, 'Beneficiary added', dup ? 'Duplicate warning shown: also in ' + dup.id : '', '', 'Beneficiary recorded.'); },
+  'case-file': async t => { if (!ERP) { toast('The offline demo keeps only the file name.', 'info'); return; }
+    const { data, error } = await erpSb.storage.from('case-files').createSignedUrl(t.dataset.path, 120); if (error || !data) { toast(erpErr(error, 'The file could not be opened'), 'error'); return; }
+    window.open(data.signedUrl, '_blank', 'noopener'); },
+  'case-rep': async t => { const c = caseById(t.dataset.id); if (!c) return; $('#print-area').innerHTML = caseReportHTML(c, t.dataset.kind);
+    await audit(t.dataset.kind === 'donor' ? 'CASE_DONOR_REPORT_PRINTED' : 'CASE_EXECUTION_REPORT_PRINTED', c.id, ''); persist(); setTimeout(() => window.print(), 120); }
+});
+
 function seedDemo(staff) {
   let seed = 20261028;
   const rnd = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -5783,7 +6124,7 @@ try { matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', 
 let erpSb = null, erpChan = null, erpAuditNew = [], erpRenderT = 0, erpQueued = null, erpBusy = Promise.resolve();
 const ERP_SAVED = new Map();                         // "collection id" → JSON last confirmed by the server
 const ERP_POOL = { donor: [], donation: [], pledge: [] };
-const ERP_COLS = ['donors', 'donations', 'pledges', 'messages', 'corrections', 'signatories'];
+const ERP_COLS = ['donors', 'donations', 'pledges', 'messages', 'corrections', 'signatories', 'cases'];
 const erpKey = (c, id) => c + ' ' + id;
 function erpErr(e, what) {
   const ref = hex(rand(3)).toUpperCase();
