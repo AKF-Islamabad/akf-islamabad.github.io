@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Foundation Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-Fl4PNmxid7VPHmhkrFkYjfxXFFmcfgul1WdG22za10U='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-vBrmCTh/vmKwtJ9EhKhcBqeHFCkpBBKh+p/PxvsB7e8='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -5547,17 +5547,21 @@ const CASE_ST = { rm: 'Waiting for Regional Manager', president: 'Waiting for Pr
   visit: 'Waiting for RMD site visit', verify: 'Waiting for Regional Manager (verify report)', finance: 'Waiting for Finance (check expenses)', share: 'Donor report to share',
   closed: 'Completed', back: 'Sent back for correction', rejected: 'Rejected' };
 const CASE_STEPS = [['new', 'Intake'], ['rm', 'Approval'], ['money', 'Money received'], ['dept', 'Accepted'], ['work', 'Execution'], ['visit', 'Site visit'], ['verify', 'Verified'], ['finance', 'Finance check'], ['share', 'Donor report'], ['closed', 'Closed']];
-const CASE_PURPOSE = ['Orphan Care (Aghosh)', 'Health Services', 'Education Program', 'Bano Qabil', 'WASH Program', 'Islamic Microfinance', 'Community Services', 'Other'];
-const CASE_TEMPLATE = { 'Health Services': ['Buy the medicines or supplies', 'Deliver to the beneficiaries', 'Collect bills and receipts', 'Take photos (with consent)'],
-  'WASH Program': ['Survey the site', 'Install the water point', 'Test the water', 'Take photos (with consent)'],
-  'Education Program': ['Confirm the students or school', 'Pay fees or deliver items', 'Collect bills and receipts', 'Take photos (with consent)'],
+const CASE_TEMPLATE = { health: ['Buy the medicines or supplies', 'Deliver to the beneficiaries', 'Collect bills and receipts', 'Take photos (with consent)'],
+  wash: ['Survey the site', 'Install the water point', 'Test the water', 'Take photos (with consent)'],
+  edu: ['Confirm the students or school', 'Pay fees or deliver items', 'Collect bills and receipts', 'Take photos (with consent)'],
   '': ['Plan the activity', 'Deliver to the beneficiaries', 'Collect bills and receipts', 'Take photos (with consent)'] };
+const caseTemplate = p => CASE_TEMPLATE[/health|medical|ambulance|blood|diagnos/i.test(p) ? 'health' : /water|wash/i.test(p) ? 'wash' : /educat|school|student|qabil/i.test(p) ? 'edu' : ''];
+/* the programme on a receipt or pledge picked in the New case form ('D:id' or 'P:id') */
+const caseSrcProg = v => { const o = v[0] === 'D' ? S.donations.find(d => d.id === v.slice(2)) : pledgeById(v.slice(2)); return (((o || {}).lines || [])[0] || {}).program || ''; };
+/* locations in use: the city list, every donor's city and every location typed on an earlier case */
+const caseLocs = () => Array.from(new Set(CITIES.concat(S.donors.map(d => d.city), (S.cases || []).map(c => c.location)).map(x => String(x || '').trim()).filter(Boolean))).sort();
 let CM = { orole: '', dept: '', depts: [['HLT', 'Health Services'], ['EDU', 'Education'], ['ORP', 'Orphan Care'], ['WASH', 'WASH'], ['COM', 'Community Services']], ready: '' };
 /* who am I in the approval path, and the department list (ERP); the demo maps its own roles */
 function caseBoot() {
   if (!ME || CM.ready === ME.id) return; CM.ready = ME.id; CM.orole = ''; CM.dept = '';   // once per signed-in person
   if (!ERP) { CM.orole = { rm: 'regional_manager', president: 'president', finance: 'finance' }[ME.role] || ''; return; }
-  Promise.all([erpSb.rpc('donor_caps'), erpSb.from('core_departments').select('code,name').order('name')]).then(([a, b]) => {
+  Promise.all([erpSb.rpc('donor_caps'), erpSb.from('core_departments').select('code,name').eq('active', true).order('name')]).then(([a, b]) => {
     if (a.data) { CM.orole = a.data.orole || ''; CM.dept = a.data.dept || ''; }
     if (b.data && b.data.length) CM.depts = b.data.map(d => [d.code, d.name]);
     buildChrome(); if (UI.view === 'cases') render();
@@ -5688,13 +5692,13 @@ function caseForm(id) {
       ${c ? '' : cf('c-src', 'Receipt or pledge', `<select class="select" id="c-src" autofocus>${cOpt(src)}</select>`, 1)}
       ${cf('c-type', 'Source type', `<select class="select" id="c-type">${cOpt(['Individual', 'Corporate', 'Institution', 'Online', 'Other'], v.src)}</select>`)}
       ${cf('c-res', 'Restricted by the donor?', `<select class="select" id="c-res">${cOpt([['', 'No: unrestricted'], ['1', 'Yes: only for this purpose']], v.restricted ? '1' : '')}</select>`)}
-      ${cf('c-purpose', 'Donation purpose', `<select class="select" id="c-purpose">${cOpt(CASE_PURPOSE, v.purpose || CASE_PURPOSE[0])}</select>`, 1)}
+      ${cf('c-purpose', 'Donation purpose', `<select class="select" id="c-purpose">${groupedOptions(PROGRAM_GROUPS, v.purpose || (src[0] ? caseSrcProg(src[0][0]) : '') || PROGRAMS[0])}</select>`, 1)}
       ${cf('c-freq', 'Donation frequency', `<select class="select" id="c-freq">${cOpt(['One-Time', 'Monthly', 'Quarterly', 'Annual'], v.frequency)}</select>`)}
       ${cf('c-wo', 'W.O. No', `<input class="input" id="c-wo" maxlength="30" value="${esc(v.wo || '')}">`)}
       ${cf('c-ref', 'Reference (C/O)', `<input class="input" id="c-ref" maxlength="60" value="${esc(v.ref || '')}">`)}
-      ${cf('c-loc', 'Location', `<input class="input" id="c-loc" maxlength="60" list="c-loc-l" value="${esc(v.location || '')}" placeholder="Pick or type another"><datalist id="c-loc-l">${CITIES.map(x => `<option value="${esc(x)}">`).join('')}</datalist>`, 1)}
+      ${cf('c-loc', 'Location', `<input class="input" id="c-loc" maxlength="60" list="c-loc-l" value="${esc(v.location || '')}" placeholder="Pick or type another"><datalist id="c-loc-l">${caseLocs().map(x => `<option value="${esc(x)}">`).join('')}</datalist>`, 1)}
       ${cf('c-dept', 'Executing department', `<select class="select" id="c-dept">${cOpt(CM.depts.concat([['other', 'Other']]), v.dept)}</select>`, 1)}
-      ${cf('c-deptx', 'If Other, which department', `<input class="input" id="c-deptx" maxlength="60" value="${esc(v.dept === 'other' ? v.deptName || '' : '')}">`)}
+      <div id="c-deptx-w" ${v.dept === 'other' ? '' : 'hidden'}>${cf('c-deptx', 'Which department', `<input class="input" id="c-deptx" maxlength="60" value="${esc(v.dept === 'other' ? v.deptName || '' : '')}">`, 1)}</div>
       ${cf('c-dead', 'Deadline', `<input class="input" id="c-dead" type="date" min="${todayISO()}" value="${esc(v.deadline || '')}">`, 1)}
       ${cf('c-pri', 'Priority', `<select class="select" id="c-pri">${cOpt(['Normal', 'High', 'Critical'], v.priority)}</select>`)}
       ${cf('c-budget', 'Budget allocated (PKR). Empty = the full amount', `<input class="input" id="c-budget" inputmode="numeric" maxlength="12" value="${esc(pl.budget || '')}">`)}
@@ -5705,6 +5709,8 @@ function caseForm(id) {
       <div style="grid-column:1/-1">${cf('c-tasks', 'Tasks, one per line (empty = the usual checklist for this purpose). A big donation can have several: T1, T2, T3', `<textarea class="textarea" id="c-tasks" maxlength="900" rows="3">${esc((v.tasks || []).map(t => t.title).join('\n'))}</textarea>`)}</div>
     </form>`,
     foot: `<button class="btn btn-ghost" data-act="modal-close">Cancel</button><button class="btn btn-primary" data-act="case-save" data-id="${esc(id || '')}">${ic('send')}Send for approval</button>` });
+  $('#c-dept').addEventListener('change', () => { $('#c-deptx-w').hidden = $('#c-dept').value !== 'other'; });   // the box shows only for Other
+  if ($('#c-src')) $('#c-src').addEventListener('change', () => { const p = caseSrcProg($('#c-src').value); if (PROGRAMS.includes(p)) $('#c-purpose').value = p; });   // the purpose follows the receipt
 }
 async function caseSubmit(id) {
   if (!guard('case.create')) return;
@@ -5727,7 +5733,7 @@ async function caseSubmit(id) {
   Object.assign(c, { src: cVal('c-type'), restricted: !!cVal('c-res') || c.fund === 'Zakat', purpose, frequency: cVal('c-freq'), wo: cVal('c-wo'), ref: cVal('c-ref'), location: cVal('c-loc'),
     dept: cVal('c-dept'), deptName: cVal('c-dept') === 'other' ? cVal('c-deptx') : '', deadline: cVal('c-dead'), priority: cVal('c-pri'), what: cVal('c-what'),
     plan: { budget: b || c.amount, type: cVal('c-dtype'), date: cVal('c-pdate'), bens: +cVal('c-pben').replace(/\D/g, '') || 0 },
-    tasks: (tasks.length ? tasks : CASE_TEMPLATE[purpose] || CASE_TEMPLATE['']).map((t, i) => { const old = (c.tasks || [])[i]; return { id: 'T' + (i + 1), title: t.slice(0, 120), done: !!(old && old.title === t && old.done) }; }) });
+    tasks: (tasks.length ? tasks : caseTemplate(purpose)).map((t, i) => { const old = (c.tasks || [])[i]; return { id: 'T' + (i + 1), title: t.slice(0, 120), done: !!(old && old.title === t && old.done) }; }) });
   closeModal();
   await caseSave(c, id ? 'Corrected and resubmitted' : 'Case created', c.what, 'rm', `Case ${c.id} sent to the Regional Manager.`);
 }
