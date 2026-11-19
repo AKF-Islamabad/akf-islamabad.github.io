@@ -9,6 +9,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: write   # only to remove this run's own earlier package (see the step before the upload)
   pages: write
   id-token: write
 concurrency:
@@ -21,7 +22,7 @@ jobs:
       name: github-pages
       url: ${{ steps.pages.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build site (config.js from secrets, CSP hashes)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -45,9 +46,19 @@ jobs:
             printf 'window.AKF_SUPABASE = { url: "%s", anonKey: "%s", emailDomain: "%s" };\n' "$SUPABASE_URL" "$SUPABASE_ANON_KEY" "$AKF_EMAIL_DOMAIN" > "$dir/config.js"
           done
           echo "site built (values not printed)"
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v6
+      # a re-run of this run would leave two packages with one name and the deploy step refuses that (2026-11-19)
+      - name: Remove an earlier package of this run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for id in $(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" -q '.artifacts[] | select(.name=="github-pages") | .id'); do
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/artifacts/$id"
+          done
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
+      # GitHub sometimes needs a moment before a fresh upload can be found ("No artifacts named github-pages", 2026-11-19)
+      - run: sleep 10
       - id: pages
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
