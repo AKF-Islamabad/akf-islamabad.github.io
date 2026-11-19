@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-fleet.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-OfarTp6Y6ufPSdoHh8xqR6fZLP0dr/SEj62lv+VfC6c='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-KQbIk9MPPlMA6DlPKngjy+CYgD9iGKkrA6gnyJScrM8='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1594,7 +1594,7 @@ fleet(){const b=cvs().filter(v=>blk(v.p)),up=PQ.reqs.filter(o=>BUSY.includes(o.s
  return `<div class="card"><b>Fleet board</b><div class="grid md:grid-cols-3 xl:grid-cols-5 gap-3 mt-3">${cvs().filter(v=>v.c!='Ambulance').map(fcard).join('')}</div></div>
  ${b.length?`<div class="card" style="border-color:#DC2626"><b class="text-red-700">Blocked vehicles (daily checklist Not OK)</b>${b.map(v=>{const k=blk(v.p);return `<div class="flex justify-between items-center gap-2 mt-2 text-sm"><span><b>${v.p}</b> - ${(k.notok||[]).join(', ')} (${dmy(k.date)})</span>${PQ.u.r=='Transport Officer'?`<button class="seg" data-onclick="ckAct('ck_clear','${k.id}')">Repaired - clear block</button>`:''}</div>`}).join('')}</div>`:''}
  <div class="card tbl"><b class="text-sm">Bookings (assigned vehicles and bikes)</b><table class="w-full"><tr><th>Vehicle</th><th>Request</th><th>Requester</th><th>Driver</th><th>From</th><th>Till</th><th>Status</th></tr>${up.map(o=>`<tr class="border-t" style="cursor:pointer" data-onclick="ropen('${o.no}')"><td><b>${o.veh}</b></td><td>${o.no}</td><td>${o.name} (${o.dept})</td><td>${o.drv}</td><td>${dt12(wS(o))}</td><td>${dt12(wE(o))}</td><td>${sch(o.status)}</td></tr>`).join('')||'<tr><td colspan="7">No bookings</td></tr>'}</table></div>`},
-new(){const u0=PQ.u,pend0=openReqs(u0.e);if(pend0.length>=MAXREQ)return `${instr()}<div class="card" style="border-color:#F59E0B;background:#FFFBEB"><b class="text-lg">${i('al',20)} Two requests at a time</b><p class="text-sm mt-2">You already have ${MAXREQ} requests in approval: ${pend0.map(o=>`<b>${o.no}</b> (${slab(o.status)})`).join(' and ')}. You can submit a new request after one of them is approved, rejected or cancelled.</p><div class="flex gap-2 flex-wrap mt-3">${pend0.map(o=>`<button class="btn g" data-onclick="ropen('${o.no}')">Open ${o.no} – track / cancel</button>`).join('')}<button class="seg" data-onclick="pgo('home')">Back to dashboard</button></div></div>`;const m=pd2(NOTICE()),u=PQ.u,ps=OTH('fleet.program',PQ.cfg&&PQ.cfg.programs&&PQ.cfg.programs.length?PQ.cfg.programs:S.programs||[]);
+new(){const u0=PQ.u,pend0=openReqs(u0.e);if(pend0.length>=MAXREQ)return `${instr()}<div class="card" style="border-color:#F59E0B;background:#FFFBEB"><b class="text-lg">${i('al',20)} Two requests at a time</b><p class="text-sm mt-2">You already have ${MAXREQ} requests in approval: ${pend0.map(o=>`<b>${o.no}</b> (${slab(o.status)})`).join(' and ')}. You can submit a new request after one of them is approved, rejected or cancelled.</p><div class="flex gap-2 flex-wrap mt-3">${pend0.map(o=>`<button class="btn g" data-onclick="ropen('${o.no}')">Open ${o.no} – track / cancel</button>`).join('')}<button class="seg" data-onclick="pgo('home')">Back to dashboard</button></div></div>`;if(!(PQ.people||[]).length&&typeof erpPeople=='function')erpPeople();const m=pd2(NOTICE()),u=PQ.u,ps=OTH('fleet.program',PQ.cfg&&PQ.cfg.programs&&PQ.cfg.programs.length?PQ.cfg.programs:S.programs||[]);
  return `${instr()}<div class="card"><div class="flex justify-between items-center flex-wrap gap-2"><div><b class="text-lg">VEHICLE REQUISITION FORM</b><div class="text-xs text-slate-500">ANNEXURE-ADM • Doc. No. ADM-011 • CONTROLLED DOCUMENT</div></div><span class="chip" style="background:#0B4EA8">To be filled by Requester</span></div>
  <div class="grid md:grid-cols-3 gap-3 mt-2"><div><label class="lb">Name</label><input class="in bg-slate-100" readonly value="${u.n}"></div><div><label class="lb">Date</label><input class="in bg-slate-100" readonly value="${dmy(pd2(0))}"></div><div><label class="lb">Designation</label><input id="nq_des" class="in" value="${u.des||''}"></div>
  <div><label class="lb">Program</label><select id="nq_prog" class="in" data-onchange="tg('nq_prog','nq_prog2')">${ps.map(x=>`<option>${x}</option>`).join('')}</select><input id="nq_prog2" data-other="fleet.program" maxlength="60" class="in mt-2" style="display:none" placeholder="Type program…"></div>
@@ -2195,6 +2195,16 @@ async function erpLoadAll() {
 async function erpOdometers() { try { const { data } = await SB.rpc('fleet_odometers'); ERP_ODO = {}; (data || []).forEach(r => { ERP_ODO[r.plate] = +r.odo || 0; }); } catch (e) { console.warn('[odo]', e); } }
 async function erpRefresh() { try { await erpLoadAll(); await erpOdometers(); } catch (e) { toast(String(e.message || e)); } if ($('modal').classList.contains('hidden')) erpRender(true); }
 async function erpReload() { return { ok: true }; }
+// The employee list for "Employee visiting". It loads beside the page, so the form can open first (slow phone line):
+// when the names arrive they are put into the open form without touching what was typed; a failed load is tried again when the form opens.
+async function erpPeople() {
+  if (erpPeople.busy) return; erpPeople.busy = true;
+  try {
+    const r = await SB.rpc('fleet_people'); if (r.error || !r.data) return;
+    PQ.people = r.data; const s = $('nq_vis');
+    if (s && s.options.length <= 2 && r.data.length) { const v = s.value; s.innerHTML = '<option value="">Select the employee…</option>' + visOpts(PQ.u) + '<option value="__other">Other (type the name)</option>'; s.value = v; }
+  } catch (e) { /* stays empty; "Other (type the name)" still works and the next opening tries again */ } finally { erpPeople.busy = false; }
+}
 let erpChan = null, erpRT = 0, SIG_CENTRAL = {};
 function erpSubscribe() {
   const on = () => {
@@ -2676,7 +2686,7 @@ async function erpBoot() {
     PQ.dir = (staff.data || []).map(x => ({ e: String(x.email).toLowerCase(), n: x.full_name, r: x.is_super ? 'Super Admin' : ROLE_LABEL[x.org_role] || 'Staff', d: x.dept_name || '', des: x.designation || '', ph: x.phone || '' }));
     PQ.cfg = null; PII_OK = erpCan('compliance');
     await erpLoadAll(); await erpOdometers();
-    SB.rpc('fleet_people').then(r => { PQ.people = r.data || []; });   // who can be named as visiting on a vehicle request
+    erpPeople();   // who can be named as visiting on a vehicle request
     // a signature saved in another portal counts here too (one per person; Fleet's own one wins)
     if (window.AKF_DESK && AKF_DESK.signatures) AKF_DESK.signatures().then(m => { SIG_CENTRAL = m || {}; if (!PQ.mysig && SIG_CENTRAL[ME.email]) { PQ.mysig = { d: SIG_CENTRAL[ME.email], at: '' }; render(); } });
     if (ME.role === 'driver') S.me = PQ.u.n;
