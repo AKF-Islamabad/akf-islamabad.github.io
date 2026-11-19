@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-FysuR4dAS2zw5EGrmUl5ERzaPbKLAjcFrNppvow8R6s='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-gw5N6cP+vrxLPhD1UYZukx6LyETvNHCAT3yWTwM19FI='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1078,6 +1078,34 @@ html.side-pinned .side-pin{background:#fff;color:#0B3D91}
 .hr-pav{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-weight:700;background:rgba(255,255,255,.18);flex:none}
 .hr-sec{margin:18px 0 8px;font-size:14px;font-weight:700}
 .hr-bal span{display:block;font-weight:600;overflow-wrap:anywhere}
+
+/* my dashboard (staff) */
+.hr-my-top{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
+.hr-my-top h2{margin:0;font-size:clamp(22px,4vw,30px);font-weight:600}
+.hr-my-ns{display:flex;flex-wrap:wrap;gap:8px 28px}.hr-my-n b{font-size:clamp(24px,5vw,36px);font-weight:600;display:block;line-height:1.1}.hr-my-n small,.hr-my-fig small{color:var(--muted,#5A6684)}
+.hr-my{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:16px;align-items:start}
+.hr-my>.hr-my-id{align-self:stretch}
+.hr-my>.card{margin:0}
+.hr-my-id{display:flex;flex-direction:column;gap:12px;justify-content:flex-end;min-height:230px;padding:20px;border-radius:14px;color:#fff;background:linear-gradient(160deg,var(--brand-600,#0B51A7),var(--brand-800,#003789))}
+.hr-my-id b{display:block;font-size:19px}.hr-my-id small{display:block;opacity:.9}.hr-my-id .hr-pav{width:64px;height:64px;font-size:22px}
+.hr-my-id .btn{align-self:flex-start;background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.4)}
+.hr-my-tags{display:flex;flex-wrap:wrap;gap:6px}.hr-my-tags span{font-size:12px;padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.16);text-transform:capitalize}
+.hr-my-fig b{font-size:30px;font-weight:600;display:block;line-height:1.1}
+.hr-ring{--p:0;width:150px;height:150px;margin:6px auto 14px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--brand-600,#0B51A7) calc(var(--p)*1%),color-mix(in srgb,var(--brand-600,#0B51A7) 14%,transparent) 0)}
+.hr-ring>div{width:118px;height:118px;border-radius:50%;display:grid;place-content:center;text-align:center;background:var(--surface,var(--card,#fff))}
+.hr-ring b{font-size:22px;display:block}.hr-ring small{color:var(--muted,#5A6684)}
+.hr-bar{height:14px;border-radius:99px;overflow:hidden;margin:12px 0;background:color-mix(in srgb,var(--brand-600,#0B51A7) 14%,transparent)}
+.hr-bar i{display:block;height:100%;border-radius:99px;background:var(--brand-600,#0B51A7);transition:width .6s}
+.hr-my-todo{padding:18px;border-radius:14px;color:#fff;background:var(--brand-800,#003789)}
+.hr-my-todo-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}.hr-my-todo-h h3{margin:0;font-size:16px}.hr-my-todo-h b{font-size:26px;font-weight:600}
+.hr-my-todo button{display:flex;gap:12px;align-items:center;width:100%;min-height:48px;padding:9px 4px;text-align:left;font:inherit;color:inherit;background:none;border:0;border-top:1px solid rgba(255,255,255,.16);cursor:pointer}
+.hr-my-todo button:hover,.hr-my-todo button:focus-visible{background:rgba(255,255,255,.1)}
+.hr-my-todo .i{width:20px;height:20px;flex:none;opacity:.85}.hr-my-todo b{display:block}.hr-my-todo small{display:block;opacity:.85}
+.hr-my-cal>div{display:flex;gap:12px;align-items:center;padding:8px 6px;border-bottom:1px solid var(--border,#E2E7F1);border-radius:8px}
+.hr-my-cal>div.on{background:color-mix(in srgb,var(--brand-600,#0B51A7) 9%,transparent)}
+.hr-my-cal .d{width:40px;text-align:center;flex:none}.hr-my-cal .d small{display:block;color:var(--muted,#5A6684)}.hr-my-cal .grow{flex:1;min-width:0}
+.hr-my-cal .ev{display:block}.hr-my-cal .ev small{display:block;color:var(--muted,#5A6684)}
+@media (prefers-reduced-motion:reduce){.hr-bar i{transition:none}}
 
 </style>
 </head>
@@ -2376,7 +2404,7 @@ async function hrTop(box) {
       can("notices", "edit") ? el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Remove", onclick: async () => { if (!confirm("Remove " + t.title + "?")) return; try { await rpc("hr_training_remove", { p_id: t.id }, "Not removed"); await load360(true); render(); } catch (e) { toast(e.message, true); } } }) : null)) : [empty("No training session is planned.")]),
       can("notices", "edit") ? el("div", { class: "hr-filters", style: "margin-top:10px" }, tTitle, tDate, tTime, tPlace, tFor, addT) : null)));
 }
-const dash0 = VIEWS.dashboard; VIEWS.dashboard = async box => { const top = el("div"), rest = el("div"); box.append(top, rest); dash0(rest); try { await hrTop(top); } catch (e) { } };
+const dash0 = VIEWS.dashboard; VIEWS.dashboard = async box => { const top = el("div"), rest = el("div"); box.append(top, rest); dash0(rest); try { if (!seesStaff()) await myDash(top); await hrTop(top); } catch (e) { } };
 
 /* ---------- one employee: personal details and documents ---------- */
 const P_FIELDS = [["cnic", "CNIC (13 digits)"], ["dob", "Date of birth", "date"], ["gender", "Gender"], ["phone", "Mobile number"], ["email", "Personal e-mail"], ["blood", "Blood group"], ["address", "Home address", "full"], ["emergencyName", "Emergency contact: name"], ["emergencyPhone", "Emergency contact: number"]];
@@ -2506,6 +2534,72 @@ VIEWS.me = async box => {
         el("small", { text: [r.self ? "self-assessment written" : "self-assessment not written", r.manager ? "average " + avg(r.manager) : "", r.decision].filter(Boolean).join(" · ") })))) : [empty("No reviews yet.")]),
       cur ? null : el("div", { class: "hr-actions" }, el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Write my self-assessment for " + yr, onclick: () => reviewModal(p, "annual", yr, null) }))));
 };
+/* ---------- my dashboard (staff): this month, this week, today, to-do. Uses hr_month and hr_reviews_list; nothing new in the database ---------- */
+const weekOf = t => { const d = new Date(t + "T00:00:00"); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return Array.from({ length: 7 }, (_, i) => { const x = new Date(d); x.setDate(d.getDate() + i); return x.toLocaleDateString("en-CA"); }); };
+console.assert(weekOf("2026-11-19")[0] === "2026-11-16" && weekOf("2026-11-22")[6] === "2026-11-22", "weekOf");
+const hm = h => { const m = Math.max(0, Math.round((+h || 0) * 60)); return Math.floor(m / 60) + "h " + String(m % 60).padStart(2, "0") + "m"; };
+const mins = s => { const m = /^(\d\d):(\d\d)/.exec(s || ""); return m ? +m[1] * 60 + +m[2] : null; };
+console.assert(hm(1.5) === "1h 30m" && mins("09:05") === 545 && mins("") === null, "hm/mins");
+async function myDash(box) {
+  const t = today(), wk = weekOf(t), yr = t.slice(0, 4), e = ME.employee || {};
+  await load360(); let mo = {}, rs = []; try { mo = await rpc("hr_month", { p_uid: ME.id, p_month: t.slice(0, 7) }, "") || {}; } catch (x) { }
+  try { rs = await rpc("hr_reviews_list", { p_profile: ME.id }, "") || []; } catch (x) { }
+  const days = mo.days || [], by = Object.fromEntries(days.map(d => [String(d.date).slice(0, 10), d])), td = by[t] || {};
+  const sofar = days.filter(d => String(d.date).slice(0, 10) <= t), work = sofar.filter(d => !["Weekend", "Holiday", "Not yet"].includes(d.status));
+  const present = work.filter(d => ["Present", "Checked in", "Late", "Half Day", "Duty"].includes(d.status)).length, late = sofar.filter(d => d.late).length;
+  // today: with one check-in only, the time runs from the check-in until now, and stops at the end of the shift (a forgotten check-out)
+  const a = mins(td.in), b = mins(td.out), now = new Date(), nowM = now.getHours() * 60 + now.getMinutes();
+  const sh = mo.shift || [], todayH = a == null ? 0 : ((b != null && b > a ? b : Math.max(a, Math.min(nowM, mins(sh[1]) || 1440))) - a) / 60, shiftH = mins(sh[0]) != null && mins(sh[1]) > mins(sh[0]) ? (mins(sh[1]) - mins(sh[0])) / 60 : 8;
+  // shortcut: a week that crosses a month end shows only this month's days, load the other month too if staff ask for it
+  const wkH = d => d === t ? todayH : +((by[d] || {}).hours) || 0, weekH = wk.reduce((s, d) => s + wkH(d), 0);
+  const big = (n, l) => el("div", { class: "hr-my-n" }, el("b", { class: "num", text: String(n) }), el("small", { text: l }));
+  box.append(el("div", { class: "hr-my-top" }, el("h2", { text: "Welcome, " + String(ME.name || "").split(/\s+/)[0] }),
+    el("div", { class: "hr-my-ns" }, big(present, "days present this month"), big(late, "late arrivals"), big(hm(weekH), "worked this week"))));
+
+  const idCard = el("section", { class: "hr-my-id" }, el("span", { class: "hr-pav", text: String(ME.name || "").split(/\s+/).map(x => x[0]).slice(0, 2).join("").toUpperCase() }),
+    el("div", {}, el("b", { text: ME.name }), el("small", { text: [ME.designation, ME.deptName].filter(Boolean).join(" · ") })),
+    el("div", { class: "hr-my-tags" }, el("span", { text: "Emp. no " + (e.emp_no || "—") }), e.emp_type ? el("span", { text: e.emp_type }) : null, e.joining_date ? el("span", { text: "Joined " + fmtD(e.joining_date) }) : null),
+    el("button", { class: "btn btn-sm", type: "button", text: "My record", onclick: () => go("me") }));
+
+  const ch = el("div"); if (window.AKF_CHARTS) ch.innerHTML = AKF_CHARTS.bars({ id: "hr-myweek", items: wk.map(d => ({ key: d, label: new Date(d + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short" }), value: Math.round(wkH(d) * 10) / 10, note: "hours" })), empty: "No attendance this week yet" });
+  const week = card("Work time this week", el("div", { class: "hr-my-fig" }, el("b", { class: "num", text: hm(weekH) }), el("small", { text: "Monday to Sunday" })), ch);
+
+  const pct = Math.min(100, Math.round(todayH / shiftH * 100)), off = ["Leave", "Holiday", "Weekend"].includes(td.status);
+  const todayC = card("Today", el("div", { class: "hr-ring", style: "--p:" + pct, role: "img", "aria-label": hm(todayH) + " worked today" }, el("div", {}, el("b", { class: "num", text: hm(todayH) }), el("small", { text: off ? td.status : "Work time" }))),
+    el("div", { class: "hr-bal" }, el("div", {}, el("small", { text: "In" }), el("span", { text: td.in || "—" })), el("div", {}, el("small", { text: "Out" }), el("span", { text: b != null && b > a ? td.out : "—" })), el("div", {}, el("small", { text: "Shift" }), el("span", { text: sh.length ? sh.join("–") : "—" }))),
+    el("div", { class: "hr-actions" }, el("button", { class: "btn btn-primary btn-sm", type: "button", text: can("attendance", "add") ? "Check in / out" : "My attendance", onclick: () => go("attendance") })));
+
+  // progress: probation for staff on probation (ends = joining + the policy's months, 3 when not set), else attendance this month
+  let prog;
+  if (e.emp_type === "probation" && e.joining_date) {
+    const j = new Date(String(e.joining_date).slice(0, 10) + "T00:00:00"), end = new Date(j); end.setMonth(end.getMonth() + (+((ME.policy || {}).probationMonths) || 3));
+    const ends = e.probation_end || end.toLocaleDateString("en-CA"), left = daysTo(ends), all = Math.max(1, Math.round((new Date(ends + "T00:00:00") - j) / 864e5)), p = Math.max(0, Math.min(100, Math.round((all - left) / all * 100)));
+    prog = card("Probation", el("div", { class: "hr-my-fig" }, el("b", { class: "num", text: p + "%" }), el("small", { text: "ends " + fmtD(ends) + " · " + inDays(left) })), el("div", { class: "hr-bar" }, el("i", { style: "width:" + p + "%" })),
+      el("p", { class: "small muted", text: "Your manager fills the evaluation form before this date." }));
+  } else {
+    const p = work.length ? Math.round(present / work.length * 100) : 0;
+    prog = card("Attendance this month", el("div", { class: "hr-my-fig" }, el("b", { class: "num", text: p + "%" }), el("small", { text: present + " of " + work.length + " working days so far" })), el("div", { class: "hr-bar" }, el("i", { style: "width:" + p + "%" })),
+      el("p", { class: "small muted", text: late ? late + " late arrival" + (late === 1 ? "" : "s") + " this month." : "No late arrivals this month." }));
+  }
+
+  const todo = [];
+  REQ.filter(r => r.myStep).forEach(r => todo.push([(KIND[r.kind] || r.kind) + " " + r.id, "waits for you", () => openReq(r.id)]));
+  NOTES.filter(n => n.needs_ack && !n.acked).forEach(n => todo.push([n.title, "announcement to confirm", () => go("notices")]));
+  X360.docs.filter(d => d.expires && daysTo(d.expires) <= 30).forEach(d => todo.push([d.title, "renew " + inDays(daysTo(d.expires)), () => go("me")]));
+  if (!rs.some(r => r.kind === "annual" && r.period === yr && r.self)) todo.push(["Self-assessment " + yr, "not written yet", () => go("me")]);
+  const todoC = el("section", { class: "hr-my-todo" }, el("div", { class: "hr-my-todo-h" }, el("h3", { text: "My to-do" }), el("b", { class: "num", text: String(todo.length) })),
+    ...(todo.length ? todo.slice(0, 6).map(([a1, b1, f]) => el("button", { type: "button", onclick: f }, ic("check"), el("span", {}, el("b", { text: a1 }), el("small", { text: b1 })))) : [el("p", { text: "All clear. Nothing waits for you." })]));
+
+  const line = d => { const x = by[d] || {}, out = []; if (["Leave", "Duty", "Holiday"].includes(x.status)) out.push([x.leave || x.note || x.status, x.status]);
+    X360.tr.filter(r => String(r.on_date).slice(0, 10) === d).forEach(r => out.push([r.title, ["Training", r.at_time, r.place].filter(Boolean).join(" · ")])); return out; };
+  const cal = card("This week", el("div", { class: "hr-my-cal" }, wk.map(d => { const L = line(d), dt = new Date(d + "T00:00:00");
+    return el("div", { class: d === t ? "on" : null }, el("span", { class: "d" }, el("small", { text: dt.toLocaleDateString("en-GB", { weekday: "short" }) }), el("b", { text: String(dt.getDate()) })),
+      el("span", { class: "grow" }, L.length ? L.map(([a1, b1]) => el("span", { class: "ev" }, el("b", { text: a1 }), el("small", { text: b1 }))) : el("small", { class: "muted", text: (by[d] || {}).status === "Weekend" ? "Weekend" : "—" }))); })),
+    can("calendar") ? el("div", { class: "hr-actions" }, el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Open the calendar", onclick: () => go("calendar") })) : null);
+
+  box.append(el("div", { class: "hr-my" }, idCard, week, todayC, prog, todoC, cal));
+}
+document.addEventListener("akf-chart-pick", e => { if (e.detail.chart === "hr-myweek") go("attendance"); });
 /* ---------- reports: strength, turnover, month attendance ---------- */
 async function hrReports(box) {
   if (can("people")) {
