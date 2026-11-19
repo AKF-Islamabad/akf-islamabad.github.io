@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by erp/tools/build-hr.js (and again by tools/csp-hash.js on deploy) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-j8Q632ac/Og5A+YD/aTCoK8CnS1WPYZTL7H8S7YDQwc='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-FysuR4dAS2zw5EGrmUl5ERzaPbKLAjcFrNppvow8R6s='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -1071,6 +1071,13 @@ html.side-pinned .side-pin{background:#fff;color:#0B3D91}
   #rc-print .rc-page { page-break-after: always; }
   @page { size: A4 landscape; margin: 10mm; }
 }
+/* HR 360 (2026-11-19): one blue for the accents (the brand blue, not a second shade), and the employee record header */
+:root{--primary:var(--brand-600,#0B51A7)}
+.hr-phead{display:flex;gap:14px;align-items:center;padding:16px 18px;border-radius:14px;color:#fff;background:linear-gradient(135deg,var(--brand-800,#003789),var(--brand-600,#0B51A7))}
+.hr-phead b{display:block;font-size:17px}.hr-phead small{display:block;opacity:.9}
+.hr-pav{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-weight:700;background:rgba(255,255,255,.18);flex:none}
+.hr-sec{margin:18px 0 8px;font-size:14px;font-weight:700}
+.hr-bal span{display:block;font-weight:600;overflow-wrap:anywhere}
 
 </style>
 </head>
@@ -1185,6 +1192,8 @@ const NAVX = [
   { v: "notices", l: "Announcements", ic: "bell", ok: () => can("notices"), count: () => NOTES.filter(n => n.needs_ack && !n.acked).length },
   { v: "calendar", l: "Leave calendar", ic: "cal", ok: () => can("calendar") },
   { v: "people", l: "People", ic: "users", ok: () => can("people") },
+  { v: "perf", l: "Probation & performance", ic: "chart", ok: () => can("people") || attLead() || isHead(), count: () => X360.prob.filter(p => p.days <= 14 && p.id !== ME.id && (p.mine || can("people"))).length },
+  { v: "me", l: "My record", ic: "users", ok: () => can("dashboard") || can("apply") },
   { v: "recruit", l: "Recruitment", ic: "brief", ok: () => can("recruit") || isHead() || !!(ME && ME.super) },
   { v: "exits", l: "Onboarding & exits", ic: "door", ok: () => can("exits") },
   { v: "org", l: "Org chart", ic: "org", ok: () => can("org") },
@@ -1523,14 +1532,14 @@ const VIEWS = {
   },
   async people(box) {
     if (!PEOPLE) { try { PEOPLE = await rpc("hr_people", {}, "Staff could not load") || []; } catch (e) { box.append(empty(e.message)); return; } }
-    const q = el("input", { class: "input", type: "search", placeholder: "Search name or department", value: V.f.q, oninput: e => { V.f.q = e.target.value; draw(); } });
+    const q = el("input", { class: "input", type: "search", placeholder: "Search name, department or designation", value: V.f.q, oninput: e => { V.f.q = e.target.value; draw(); } });
     const tb = el("tbody"), lft = (p, t) => { const b = ((p.balance || {}).types || []).find(x => x.type === t); return b && b.left != null ? String(b.left) : "—"; };
-    const draw = () => { const s = V.f.q.toLowerCase(); tb.replaceChildren(...PEOPLE.filter(p => !s || (p.name + " " + (p.dept || "")).toLowerCase().includes(s)).map(p => { const e = p.employee || {};
+    const draw = () => { const s = V.f.q.toLowerCase(); tb.replaceChildren(...PEOPLE.filter(p => { const e = p.employee || {}, f = V.pf || {}; return (!s || (p.name + " " + (p.dept || "") + " " + (p.designation || "")).toLowerCase().includes(s)) && (!f.dept || (p.dept || "Not set") === f.dept) && (!f.desig || p.designation === f.desig) && (!f.type || (e.emp_type || "Not set") === f.type) && (!f.status || (e.status || "active") === f.status); }).map(p => { const e = p.employee || {};
       return el("tr", {}, el("td", { text: p.name }), el("td", { text: p.dept || "" }), el("td", { text: p.designation || "" }), el("td", { text: e.emp_no || "" }), el("td", { text: e.emp_type || "not set" }),
         el("td", { text: fmtD(e.joining_date) }), el("td", { text: fmtD(e.confirmation_date) }), el("td", { text: lft(p, "Casual") }), el("td", { text: lft(p, "Annual") }),
-        el("td", {}, can("people", "edit") && p.id !== ME.id ? [el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Edit", onclick: () => editPerson(p) }), el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Give leave", onclick: () => grantLeave(p) })] : null)); })); };
+        el("td", {}, el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Open", onclick: () => personModal(p) }), can("people", "edit") && p.id !== ME.id ? [el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Edit", onclick: () => editPerson(p) }), el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Give leave", onclick: () => grantLeave(p) })] : null)); })); };
     draw();
-    box.append(card(PEOPLE.length + " staff", el("div", { class: "hr-filters" }, q, can("people", "export") ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Download CSV", onclick: () => csv("hr-staff", ["Name", "Department", "Designation", "Employee no", "Type", "Joining", "Confirmation", "Casual left", "Annual left"],
+    box.append(card(PEOPLE.length + " staff", el("div", { class: "hr-filters" }, q, ...pfSel(draw), can("people", "export") ? el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Download CSV", onclick: () => csv("hr-staff", ["Name", "Department", "Designation", "Employee no", "Type", "Joining", "Confirmation", "Casual left", "Annual left"],
       PEOPLE.map(p => { const e = p.employee || {}; return [p.name, p.dept, p.designation, e.emp_no, e.emp_type, e.joining_date, e.confirmation_date, lft(p, "Casual"), lft(p, "Annual")]; })) }) : null),
       el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, ["Name", "Department", "Designation", "Emp. no", "Type", "Joined", "Confirmed", "Casual left", "Annual left", ""].map(t => el("th", { text: t })))), tb))));
   },
@@ -2297,7 +2306,8 @@ function notify() {
     .concat(REQ.filter(r => r.mine && (r.status === "approved" || r.status === "rejected") && r.updated_at && Date.now() - new Date(r.updated_at).getTime() < 7 * 864e5)
       .map(r => ({ key: "hr|done|" + r.id + "|" + r.status, title: "Your " + r.kind + " request was " + (STATUS[r.status] || [r.status])[0].toLowerCase() + " · " + r.id, body: "", at: r.updated_at, open: "#req=" + r.id })))
     .concat(NOTES.filter(n => !n.acked && (n.needs_ack || Date.now() - new Date(n.at).getTime() < 3 * 864e5))
-      .map(n => ({ key: "hr|notice|" + n.id, title: "HR announcement · " + n.title, body: n.needs_ack ? "Please read and confirm" : "", at: n.at, open: "#notices" })));
+      .map(n => ({ key: "hr|notice|" + n.id, title: "HR announcement · " + n.title, body: n.needs_ack ? "Please read and confirm" : "", at: n.at, open: "#notices" })))
+    .concat(notes360());
   AKF_NOTIFY(items);
 }
 let busy = false;
@@ -2307,6 +2317,7 @@ document.addEventListener("input", e => { if (V.view === "apply" && $("app").con
 function hashOpen() {
   const m = /^#req=(HR-\d{4}-\d{5,})$/.exec(location.hash || "");
   if (m) { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { } openReq(m[1]); }
+  else if (/^#(perf|people)$/.test(location.hash) && NAVX.find(n => n.v === location.hash.slice(1)).ok()) { const v = location.hash.slice(1); try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { } go(v); }   // a probation or document reminder from the bell
   else if (/^#apply=[A-Za-z]+$/.test(location.hash) && KIND[location.hash.slice(7)] && can("apply", "add")) {   // the main page's "+" button
     V.kind = location.hash.slice(7); try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { } go("apply"); }
   else if (/^#cv=AKF-HR-\d{4}-\d{4,}$/.test(location.hash)) {   // a CV link from the candidates Excel list; the server still checks who may see it
@@ -2314,6 +2325,228 @@ function hashOpen() {
     modal("CV · " + id, el("p", { class: "small muted", text: "This link came from the candidates list. The CV opens only for staff who may see applicants." }), el("div", { class: "hr-actions" }, el("button", { class: "btn btn-primary", type: "button", text: "Open CV", onclick: () => openCv(id) }))); }
   else if (["#leave", "#notices", "#exits", "#pay"].includes(location.hash)) { const v = { "#leave": "dashboard", "#notices": "notices", "#exits": "exits", "#pay": "pay" }[location.hash]; try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { } go(v); }
 }
+/* ================= HR 360 improvements (asked 2026-11-19) =================
+   Dashboard figures, personal details, employee documents with renewal dates, training sessions,
+   probation evaluation and decision, annual performance, and the HR reports. Database: supabase/portals/hr_360.sql.
+   Everything is checked again on the server; this page only decides which buttons to show. */
+const today = () => new Date().toLocaleDateString("en-CA");
+const daysTo = d => Math.round((new Date(String(d).slice(0, 10) + "T00:00:00") - new Date(today() + "T00:00:00")) / 864e5);
+console.assert(daysTo(today()) === 0, "daysTo");
+const inDays = n => n < 0 ? Math.abs(n) + " days overdue" : n === 0 ? "today" : "in " + n + " days";
+const seesStaff = () => can("people") || attLead() || isHead() || can("attendance", "edit");
+const tbl = (heads, rows) => el("div", { class: "tbl-wrap" }, el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, heads.map(t => el("th", { text: t })))), el("tbody", {}, rows)));
+const txt = (rows, max) => el("textarea", { class: "input", rows: rows || 3, maxlength: max || 1500 });
+let X360 = { prob: [], docs: [], tr: [], at: 0 };
+async function load360(force) {
+  if (!force && Date.now() - X360.at < 60000) return X360;
+  const safe = async (f) => { try { return await f() || []; } catch (e) { return []; } };
+  const [prob, docs, tr] = await Promise.all([safe(() => rpc("hr_probation", {}, "")), safe(() => rpc("hr_docs_list", { p_profile: can("people") ? null : ME.id }, "")),
+    safe(async () => { const { data, error } = await SB.from("hr_trainings").select("id,title,on_date,at_time,place,for_whom").gte("on_date", today()).order("on_date").limit(30); if (error) throw error; return data; })]);
+  X360 = { prob, docs, tr, at: Date.now() }; return X360;
+}
+/* reminders in the bell: a probation that ends within 14 days (for the manager and HR), a document to renew within 30 days */
+const notes360 = () => X360.prob.filter(p => p.days <= 14 && (p.mine || can("people"))).map(p => ({ key: "hr|prob|" + p.id + "|" + p.ends, title: "Probation of " + p.name + " ends " + inDays(p.days), body: "Fill the evaluation form", at: new Date().toISOString(), open: "#perf" }))
+  .concat(X360.docs.filter(d => d.expires && daysTo(d.expires) <= 30).map(d => ({ key: "hr|doc|" + d.id + "|" + d.expires, title: "Document to renew: " + d.title, body: d.name + " · " + inDays(daysTo(d.expires)), at: new Date().toISOString(), open: "#people" })));
+const openDoc = async d => { const { data: s, error: e } = await SB.storage.from("hr-docs").createSignedUrl(d.path, 60); if (e || !s) return toast(errText(e, "The file could not open"), true); el("a", { href: s.signedUrl, target: "_blank", rel: "noopener" }).click(); };
+
+/* ---------- dashboard: staff figures, probation deadlines, documents to renew, training sessions ---------- */
+async function hrTop(box) {
+  const x = await load360(); notify();
+  if (seesStaff()) {
+    let rows = []; try { rows = await rpc("hr_day_sheet", { p_day: today() }, "") || []; } catch (e) { }
+    const n = s => rows.filter(r => s.includes(r.status)).length;
+    box.append(el("div", { class: "kpis" },
+      kpi("Total employees", rows.length + 1, can("people") || attLead() ? "all staff" : "your team", "users", can("people") ? () => go("people") : null),
+      kpi("Present today", n(["Present", "Checked in", "Half Day", "Duty"]), rows.filter(r => r.late).length + " late", "clock", () => go("attendance")),
+      kpi("On leave today", n(["Leave"]), "approved leave", "cal", can("calendar") ? () => go("calendar") : null),
+      kpi("Absent or not in yet", n(["Absent", "Not yet"]), "", "clock", () => go("attendance"))));
+  }
+  const soon = x.prob.filter(p => p.days <= 30), renew = x.docs.filter(d => d.expires && daysTo(d.expires) <= 30);
+  const tTitle = el("input", { class: "input", maxlength: 150, placeholder: "Training title" }), tDate = el("input", { class: "input", type: "date", min: today() }), tTime = el("input", { class: "input", maxlength: 20, placeholder: "Time, e.g. 10:00" }),
+    tPlace = el("input", { class: "input", maxlength: 100, placeholder: "Place" }), tFor = el("input", { class: "input", maxlength: 100, placeholder: "For whom, e.g. all staff" });
+  const addT = el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Add session", onclick: async () => {
+    if (tTitle.value.trim().length < 2 || !tDate.value) return toast("Please fill the title and the date", true);
+    try { await rpc("hr_training_save", { p_title: tTitle.value, p_date: tDate.value, p_time: tTime.value, p_place: tPlace.value, p_for: tFor.value }, "Not saved"); toast("Training session added"); await load360(true); render(); } catch (e) { toast(e.message, true); } } });
+  box.append(el("div", { class: "hr-grid" },
+    soon.length || seesStaff() ? card("Probation deadlines", ...(soon.length ? soon.map(p => el("button", { class: "hr-row", type: "button", onclick: () => go("perf") }, p.days <= 7 ? el("span", { class: "hr-dot" }) : null,
+      el("span", { class: "grow" }, el("b", { text: p.name }), el("small", { text: (p.dept || "") + " · ends " + fmtD(p.ends) })), el("small", { text: inDays(p.days) }))) : [empty("No probation ends in the next 30 days.")])) : null,
+    renew.length || can("people") ? card("Documents to renew", ...(renew.length ? renew.map(d => el("button", { class: "hr-row", type: "button", onclick: () => openDoc(d) }, daysTo(d.expires) <= 7 ? el("span", { class: "hr-dot" }) : null,
+      el("span", { class: "grow" }, el("b", { text: d.title }), el("small", { text: d.name + " · " + d.kind + " · expires " + fmtD(d.expires) })), el("small", { text: inDays(daysTo(d.expires)) }))) : [empty("No document needs renewal in the next 30 days.")])) : null,
+    card("Training sessions", ...(x.tr.length ? x.tr.map(t => el("div", { class: "hr-row" }, el("span", { class: "grow" }, el("b", { text: t.title }), el("small", { text: [fmtD(t.on_date), t.at_time, t.place, t.for_whom].filter(Boolean).join(" · ") })),
+      can("notices", "edit") ? el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Remove", onclick: async () => { if (!confirm("Remove " + t.title + "?")) return; try { await rpc("hr_training_remove", { p_id: t.id }, "Not removed"); await load360(true); render(); } catch (e) { toast(e.message, true); } } }) : null)) : [empty("No training session is planned.")]),
+      can("notices", "edit") ? el("div", { class: "hr-filters", style: "margin-top:10px" }, tTitle, tDate, tTime, tPlace, tFor, addT) : null)));
+}
+const dash0 = VIEWS.dashboard; VIEWS.dashboard = async box => { const top = el("div"), rest = el("div"); box.append(top, rest); dash0(rest); try { await hrTop(top); } catch (e) { } };
+
+/* ---------- one employee: personal details and documents ---------- */
+const P_FIELDS = [["cnic", "CNIC (13 digits)"], ["dob", "Date of birth", "date"], ["gender", "Gender"], ["phone", "Mobile number"], ["email", "Personal e-mail"], ["blood", "Blood group"], ["address", "Home address", "full"], ["emergencyName", "Emergency contact: name"], ["emergencyPhone", "Emergency contact: number"]];
+const DOC_KINDS = ["CNIC copy", "Appointment letter", "Contract", "Degree or certificate", "Experience letter", "Driving licence", "Medical", "Other"];
+function personHead(p) {
+  const e = p.employee || {};
+  return el("div", { class: "hr-phead" }, el("span", { class: "hr-pav", text: String(p.name).split(/\s+/).map(x => x[0]).slice(0, 2).join("").toUpperCase() }),
+    el("div", {}, el("b", { text: p.name }), el("small", { text: [p.designation, p.dept || p.deptName].filter(Boolean).join(" · ") }),
+      el("small", { text: ["Emp. no " + (e.emp_no || "—"), e.emp_type || "type not set", e.joining_date ? "joined " + fmtD(e.joining_date) : "", e.status && e.status !== "active" ? e.status : ""].filter(Boolean).join(" · ") })));
+}
+async function docsBlock(p, edit) {
+  let docs = []; try { docs = await rpc("hr_docs_list", { p_profile: p.id }, "The documents could not load") || []; } catch (e) { return el("div", {}, empty(e.message)); }
+  const wrap = el("div"), again = async () => { wrap.replaceWith(await docsBlock(p, edit)); X360.at = 0; };
+  wrap.append(el("h4", { class: "hr-sec", text: "Documents (" + docs.length + ")" }), ...(docs.length ? docs.map(d => el("div", { class: "hr-row" }, el("span", { class: "grow" }, el("b", { text: d.title }),
+    el("small", { text: d.kind + " · " + Math.round(d.size / 1024) + " KB · " + fmtD(d.at) + (d.expires ? " · expires " + fmtD(d.expires) + " (" + inDays(daysTo(d.expires)) + ")" : "") })),
+    el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Download", onclick: () => openDoc(d) }),
+    edit ? el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Remove", onclick: async () => { if (!confirm("Remove " + d.title + "?")) return; try { const pth = await rpc("hr_doc_remove", { p_id: d.id }, "Not removed"); if (pth) await SB.storage.from("hr-docs").remove([pth]); again(); } catch (e) { toast(e.message, true); } } }) : null)) : [empty("No documents yet.")]));
+  if (edit) {
+    const f = el("input", { class: "input", type: "file", accept: ".pdf,.doc,.docx,.png,.jpg,.jpeg" }), kind = el("select", { class: "select" }, DOC_KINDS.map(k => el("option", { value: k, text: k }))),
+      ti = el("input", { class: "input", maxlength: 150, placeholder: "Title" }), ex = el("input", { class: "input", type: "date", min: today() }), up = el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Upload" });
+    up.addEventListener("click", async () => {
+      let file = f.files && f.files[0]; if (!file) return toast("Choose a file", true);
+      if (file.size > 10485760 && window.AKF_shrinkImage) file = await AKF_shrinkImage(file, 1600, 0.75, 10485760);
+      const ext = (file.name.split(".").pop() || "").toLowerCase(); if (!/^(pdf|docx?|png|jpe?g)$/.test(ext)) return toast("PDF, Word or picture files only", true);
+      if (file.size > 10485760) return toast("Files must be under 10 MB", true);
+      up.disabled = true; const path = p.id + "/" + crypto.randomUUID() + "." + ext;
+      try { const { error: e1 } = await SB.storage.from("hr-docs").upload(path, file, { contentType: file.type || undefined, upsert: false }); if (e1) throw e1;
+        await rpc("hr_doc_add", { p_profile: p.id, p_kind: kind.value, p_title: ti.value || file.name, p_path: path, p_size: file.size, p_expires: ex.value || null }, "Not saved"); toast("Document uploaded"); again(); }
+      catch (e) { toast(e.shown ? e.message : errText(e, "Not uploaded"), true); up.disabled = false; }
+    });
+    wrap.append(el("div", { class: "hr-form", style: "margin-top:10px" }, el("label", {}, "Kind", kind), el("label", {}, "Title", ti), el("label", {}, "Renewal date (if it expires)", ex), el("label", { class: "full" }, "File (under 10 MB)", f)), el("div", { class: "hr-actions" }, up));
+  }
+  return wrap;
+}
+async function personModal(p) {
+  const edit = can("people", "edit") && p.id !== ME.id || (ME.super && can("people", "edit"));
+  let d = {}; try { d = await rpc("hr_person_get", { p_id: p.id }, "The record could not load") || {}; } catch (e) { return toast(e.message, true); }
+  const inputs = {}, form = el("div", { class: "hr-form" }, P_FIELDS.map(([k, l, t]) => { const i = el("input", { class: "input", type: t === "date" ? "date" : "text", maxlength: 200, value: d[k] || "", disabled: edit ? null : "" }); inputs[k] = i; return el("label", { class: t === "full" ? "full" : "" }, l, i); }));
+  const save = el("button", { class: "btn btn-primary", type: "button", text: "Save personal details", onclick: async () => { save.disabled = true;
+    try { await rpc("hr_person_save", { p_id: p.id, p_data: Object.fromEntries(Object.entries(inputs).map(([k, i]) => [k, i.value.trim()])) }, "Not saved"); toast("Personal details of " + p.name + " saved"); }
+    catch (e) { toast(e.message, true); } save.disabled = false; } });
+  modal("Employee record · " + p.name, personHead(p), el("h4", { class: "hr-sec", text: "Personal details" }), form,
+    el("p", { class: "small muted", text: "These details are stored encrypted. Each time HR opens another person's details it is written in the activity log." }),
+    el("div", { class: "hr-actions" }, edit ? save : null, edit && p.employee !== undefined && p.id !== ME.id ? el("button", { class: "btn btn-outline", type: "button", text: "Employment record", onclick: () => editPerson(p) }) : null,
+      el("button", { class: "btn btn-outline", type: "button", text: "Reviews", onclick: () => reviewsOf(p) })),
+    await docsBlock(p, edit));
+}
+
+/* ---------- probation evaluation and annual performance ---------- */
+const CRIT = { probation: ["Job knowledge", "Quality of work", "Punctuality and attendance", "Conduct and teamwork", "Learning and initiative"], annual: ["Quality of work", "Goals achieved", "Punctuality and attendance", "Teamwork", "Initiative"] };
+const avg = m => { const s = Object.values((m && m.scores) || {}).map(Number).filter(Boolean); return s.length ? (s.reduce((a, b) => a + b, 0) / s.length).toFixed(1) : ""; };
+function reviewModal(p, kind, period, r, back) {
+  r = r || {}; const mine = p.id === ME.id, mgr = !mine && (p.mine || can("people", "edit") || attLead() || isHead()), closed = !!r.decision;
+  const done = async (part, data, msg) => { try { await rpc("hr_review_save", { p_profile: p.id, p_kind: kind, p_period: period, p_part: part, p_data: data }, "Not saved"); toast(msg); X360.at = 0; closeModal(); (back || render)(); } catch (e) { toast(e.message, true); } };
+  const ro = (label, value) => value ? el("p", {}, el("b", { text: label + ": " }), value) : null;
+  const kids = [personHead(p), el("p", { class: "small muted", text: (kind === "probation" ? "Probation evaluation" : "Annual performance evaluation") + " · " + period + (closed ? " · closed: " + r.decision : "") })];
+  /* goals and targets: set by the manager */
+  const g = txt(4); g.value = ((r.goals || {}).list || []).join("\n"); g.placeholder = "One goal or target per line";
+  kids.push(el("h4", { class: "hr-sec", text: "Goals and targets" }));
+  if (mgr && !closed) kids.push(g, el("div", { class: "hr-actions" }, el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Save goals", onclick: () => done("goals", { list: g.value.split("\n").map(s => s.trim()).filter(Boolean).slice(0, 15) }, "Goals saved") })));
+  else kids.push(((r.goals || {}).list || []).length ? el("ul", {}, r.goals.list.map(x => el("li", { text: x }))) : empty("No goals set yet."));
+  /* self-assessment: written by the employee */
+  kids.push(el("h4", { class: "hr-sec", text: "Self-assessment" }));
+  const s1 = txt(3), s2 = txt(3); s1.value = (r.self || {}).done || ""; s2.value = (r.self || {}).help || ""; s1.placeholder = "What I achieved"; s2.placeholder = "Where I need help or training";
+  if (mine && !closed) kids.push(s1, s2, el("div", { class: "hr-actions" }, el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Save my self-assessment", onclick: () => { if (s1.value.trim().length < 5) return toast("Please fill what you achieved", true); done("self", { done: s1.value.trim(), help: s2.value.trim() }, "Self-assessment saved"); } })));
+  else kids.push(r.self ? el("div", {}, ro("Achieved", r.self.done), ro("Needs help with", r.self.help)) : empty("Not written yet."));
+  /* the manager's evaluation: the standard form */
+  kids.push(el("h4", { class: "hr-sec", text: kind === "probation" ? "Probation evaluation form (manager)" : "Manager feedback" }));
+  const m = r.manager || {}, sc = {}, fb = txt(3), sup = el("input", { type: "checkbox" }), supNote = el("input", { class: "input", maxlength: 200, placeholder: "Which support or training" }),
+    rec = el("select", { class: "select" }, ["Confirm", "Extend probation", "Do not confirm"].map(x => el("option", { value: x, text: x, selected: m.recommend === x })));
+  fb.value = m.feedback || ""; fb.placeholder = "Feedback for the employee"; sup.checked = !!m.support; supNote.value = m.supportNote || "";
+  if (mgr && !closed) kids.push(el("div", { class: "hr-form" }, CRIT[kind].map(c => { const i = el("select", { class: "select" }, [["", "Choose"], [5, "5 · Excellent"], [4, "4 · Good"], [3, "3 · Satisfactory"], [2, "2 · Needs improvement"], [1, "1 · Poor"]].map(([v, l]) => el("option", { value: v, text: l, selected: String((m.scores || {})[c] || "") === String(v) }))); sc[c] = i; return el("label", {}, c, i); }),
+      kind === "probation" ? el("label", {}, "Recommendation", rec) : null), fb,
+    el("label", { class: "small", style: "display:flex;gap:8px;align-items:center;margin-top:8px" }, sup, "Needs additional support or training"), supNote,
+    el("div", { class: "hr-actions" }, el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Save evaluation", onclick: () => {
+      const scores = Object.fromEntries(Object.entries(sc).map(([k, i]) => [k, +i.value || 0])); if (Object.values(scores).some(v => !v)) return toast("Please choose a rating for every line", true);
+      if (fb.value.trim().length < 5) return toast("Please fill the feedback", true);
+      done("manager", Object.assign({ scores, feedback: fb.value.trim(), support: sup.checked, supportNote: supNote.value.trim() }, kind === "probation" ? { recommend: rec.value } : {}), "Evaluation saved"); } })));
+  else kids.push(r.manager ? el("div", {}, el("ul", {}, Object.entries(m.scores || {}).map(([k, v]) => el("li", { text: k + ": " + v + " of 5" }))), ro("Average", avg(m)), ro("Recommendation", m.recommend), ro("Feedback", m.feedback),
+    ro("Needs support or training", m.support ? (m.supportNote || "Yes") : ""), ro("Evaluated by", (m.by || "") + (m.at ? " · " + fmtD(m.at) : "")), ro("HR note", m.hrNote), ro("Extended to", m.extendedTo ? fmtD(m.extendedTo) : "")) : empty("Not filled yet."));
+  /* the final decision of a probation: HR */
+  if (kind === "probation" && !closed && can("people", "edit") && !mine) {
+    const dec = el("select", { class: "select" }, ["Confirmed", "Extended", "Not Confirmed"].map(x => el("option", { value: x, text: x }))), until = el("input", { class: "input", type: "date", min: today() }), note = el("input", { class: "input", maxlength: 500, placeholder: "Remarks" });
+    kids.push(el("h4", { class: "hr-sec", text: "Final decision (HR)" }), el("div", { class: "hr-form" }, el("label", {}, "Decision", dec), el("label", {}, "If Extended: new end date", until), el("label", { class: "full" }, "Remarks", note)),
+      el("div", { class: "hr-actions" }, el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Record decision", onclick: () => {
+        if (!r.manager) return toast("The manager's evaluation comes first", true); if (dec.value === "Extended" && !until.value) return toast("Please choose the new end date", true);
+        if (!confirm("Record \"" + dec.value + "\" for " + p.name + "? This closes the evaluation.")) return; PEOPLE = null; done("decision", { decision: dec.value, until: until.value, note: note.value.trim() }, "Decision recorded: " + dec.value); } })));
+  }
+  modal((kind === "probation" ? "Probation · " : "Performance · ") + p.name, ...kids);
+}
+/* previous records of one person */
+async function reviewsOf(p) {
+  let rs = []; try { rs = await rpc("hr_reviews_list", { p_profile: p.id }, "The reviews could not load") || []; } catch (e) { return toast(e.message, true); }
+  const yr = String(new Date().getFullYear());
+  modal("Reviews · " + p.name, personHead(p), ...(rs.length ? rs.map(r => el("button", { class: "hr-row", type: "button", onclick: () => reviewModal(p, r.kind, r.period, r, () => reviewsOf(p)) },
+      el("span", { class: "grow" }, el("b", { text: (r.kind === "probation" ? "Probation evaluation" : "Annual performance") + " · " + r.period }), el("small", { text: [r.manager ? "average " + avg(r.manager) : "not evaluated yet", r.decision, r.manager && r.manager.support ? "needs support" : ""].filter(Boolean).join(" · ") })))) : [empty("No reviews yet.")]),
+    el("div", { class: "hr-actions" }, rs.some(r => r.kind === "annual" && r.period === yr) ? null : el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Start annual review " + yr, onclick: () => reviewModal(p, "annual", yr, null, () => reviewsOf(p)) })));
+}
+VIEWS.perf = async box => {
+  const x = await load360(true), yr = String(new Date().getFullYear());
+  let rs = [], team = []; try { [rs, team] = await Promise.all([rpc("hr_reviews_list", { p_profile: null }, "The reviews could not load"), rpc("hr_day_sheet", { p_day: today() }, "Staff could not load")]); } catch (e) { box.append(empty(e.message)); return; }
+  rs = rs || []; team = team || [];
+  const of = (id, kind, period) => rs.find(r => r.profile === id && r.kind === kind && r.period === period), mark = v => v ? "Done" : "—";
+  const prob = x.prob.filter(p => p.id !== ME.id);
+  box.append(card("Probation (" + prob.length + ")", el("p", { class: "small muted", text: "The end date is the joining date plus the probation months of the HR policy, or the date HR extended it to. The manager fills the evaluation; HR records Confirmed, Extended or Not Confirmed." }),
+    prob.length ? tbl(["Name", "Department", "Joined", "Ends", "", "Evaluation", ""], prob.map(p => { const r = of(p.id, "probation", "to " + p.ends);
+      return el("tr", {}, el("td", { text: p.name }), el("td", { text: p.dept || "" }), el("td", { text: fmtD(p.joined) }), el("td", { text: fmtD(p.ends) }), el("td", { text: inDays(p.days) }), el("td", { text: r && r.manager ? "Filled · " + (r.manager.recommend || "") : "Not filled" }),
+        el("td", {}, el("button", { class: "btn btn-ghost btn-sm", type: "button", text: r && r.manager && can("people", "edit") ? "Decide" : "Evaluate", onclick: () => reviewModal(p, "probation", "to " + p.ends, r) }))); })) : empty("Nobody you manage is on probation.")));
+  const need = rs.filter(r => r.manager && r.manager.support && r.profile !== ME.id);
+  const items = [["Goals set", team.filter(p => (of(p.id, "annual", yr) || {}).goals).length], ["Self-assessment written", team.filter(p => (of(p.id, "annual", yr) || {}).self).length], ["Manager feedback given", team.filter(p => (of(p.id, "annual", yr) || {}).manager).length], ["Needs support", need.filter(r => r.period === yr).length]].map(([k, v]) => ({ key: k, label: k, value: v }));
+  const ch = el("div"); if (window.AKF_CHARTS) ch.innerHTML = AKF_CHARTS.bars({ id: "hr-perf", items, empty: "No annual review started yet" });
+  box.append(card("Annual performance " + yr + " (" + team.length + " staff)", ch,
+    team.length ? tbl(["Name", "Department", "Goals", "Self-assessment", "Manager feedback", "Average", ""], team.filter(p => !V.perfF || (V.perfF === "Needs support" ? need.some(r => r.profile === p.id && r.period === yr) : true)).map(p => { const r = of(p.id, "annual", yr) || {};
+      return el("tr", {}, el("td", { text: p.name }), el("td", { text: p.dept || "" }), el("td", { text: mark(r.goals) }), el("td", { text: mark(r.self) }), el("td", { text: mark(r.manager) }), el("td", { text: avg(r.manager) + (r.manager && r.manager.support ? " · needs support" : "") }),
+        el("td", {}, el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "Open", onclick: () => reviewModal(p, "annual", yr, of(p.id, "annual", yr)) }), el("button", { class: "btn btn-ghost btn-sm", type: "button", text: "History", onclick: () => reviewsOf(p) }))); })) : empty("Nobody to show.")),
+    card("Employees who need additional support or training (" + need.length + ")", ...(need.length ? need.map(r => el("div", { class: "hr-row" }, el("span", { class: "grow" }, el("b", { text: r.name }), el("small", { text: [r.dept, r.period, r.manager.supportNote].filter(Boolean).join(" · ") })))) : [empty("Nobody is marked.")])));
+};
+/* ---------- my own record: details, documents, reviews ---------- */
+VIEWS.me = async box => {
+  const p = { id: ME.id, name: ME.name, designation: ME.designation, dept: ME.deptName, employee: ME.employee || {} }, yr = String(new Date().getFullYear());
+  let d = {}, rs = []; try { [d, rs] = await Promise.all([rpc("hr_person_get", { p_id: ME.id }, "Your record could not load"), rpc("hr_reviews_list", { p_profile: ME.id }, "Your reviews could not load")]); } catch (e) { box.append(empty(e.message)); return; }
+  d = d || {}; rs = rs || []; const cur = rs.find(r => r.kind === "annual" && r.period === yr);
+  box.append(card("", personHead(p), el("div", { class: "hr-bal", style: "margin-top:12px" }, P_FIELDS.filter(([k]) => d[k]).map(([k, l]) => el("div", {}, el("small", { text: l }), el("span", { text: k === "dob" ? fmtD(d[k]) : d[k] })))),
+      P_FIELDS.some(([k]) => d[k]) ? null : empty("HR has not entered your personal details yet."), el("p", { class: "small muted", text: "To correct something, send a Profile correction from New request." })),
+    card("My documents", await docsBlock(p, false)),
+    card("My reviews", ...(rs.length ? rs.map(r => el("button", { class: "hr-row", type: "button", onclick: () => reviewModal(p, r.kind, r.period, r) }, el("span", { class: "grow" }, el("b", { text: (r.kind === "probation" ? "Probation evaluation" : "Annual performance") + " · " + r.period }),
+        el("small", { text: [r.self ? "self-assessment written" : "self-assessment not written", r.manager ? "average " + avg(r.manager) : "", r.decision].filter(Boolean).join(" · ") })))) : [empty("No reviews yet.")]),
+      cur ? null : el("div", { class: "hr-actions" }, el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Write my self-assessment for " + yr, onclick: () => reviewModal(p, "annual", yr, null) }))));
+};
+/* ---------- reports: strength, turnover, month attendance ---------- */
+async function hrReports(box) {
+  if (can("people")) {
+    if (!PEOPLE) { try { PEOPLE = await rpc("hr_people", {}, "Staff could not load") || []; } catch (e) { PEOPLE = null; } }
+    let hc = null; try { hc = await rpc("hr_headcount", {}, ""); } catch (e) { }
+    if (PEOPLE) {
+      const count = f => Object.entries(PEOPLE.reduce((a, p) => { const k = f(p) || "Not set"; a[k] = (a[k] || 0) + 1; return a; }, {})).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ key: k, label: k, value: v }));
+      const c1 = el("div"), c2 = el("div");
+      if (window.AKF_CHARTS) { c1.innerHTML = AKF_CHARTS.bars({ id: "hr-strength", items: count(p => p.dept) }); c2.innerHTML = AKF_CHARTS.donut({ id: "hr-types", center: "staff", items: count(p => (p.employee || {}).emp_type) }); }
+      box.append(el("div", { class: "hr-grid" }, card("Employee strength by department (" + PEOPLE.length + ")", c1, can("reports", "export") ? el("div", { class: "hr-actions" }, el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Download CSV", onclick: () => csv("hr-strength", ["Department", "Employees"], count(p => p.dept).map(i => [i.label, i.value])) })) : null),
+        card("Employees by type", c2),
+        hc ? card("Turnover and recruitment, last 12 months", el("div", { class: "hr-bal" }, [["Joined", hc.joined12], ["Left", hc.left12], ["Leaving now", hc.exiting], ["Turnover", hc.active ? Math.round(hc.left12 / hc.active * 1000) / 10 + "%" : "—"]].map(([k, v]) => el("div", {}, el("small", { text: k }), el("b", { text: String(v) })))),
+          el("p", { class: "small muted", text: "Turnover = staff who left in the last 12 months, as a share of today's " + hc.active + " staff." }),
+          can("recruit") || mayRecruit() ? el("div", { class: "hr-actions" }, el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Recruitment statistics", onclick: () => go("recruit") })) : null) : null));
+    }
+  }
+  if (!seesStaff()) return;
+  const mon = V.repMon || today().slice(0, 7), host = el("div"), mi = el("input", { class: "input", type: "month", value: mon, max: today().slice(0, 7), onchange: e => { V.repMon = e.target.value || mon; render(); } });
+  const go2 = el("button", { class: "btn btn-primary btn-sm", type: "button", text: "Show attendance and leave of " + mon });
+  box.append(card("Attendance and leave report", el("div", { class: "hr-filters" }, mi, go2), host));
+  go2.addEventListener("click", async () => { go2.disabled = true; host.replaceChildren(empty("Working it out…"));
+    let rows = []; try { rows = await rpc("hr_att_report", { p_month: mon, p_dept: "" }, "The report could not load") || []; } catch (e) { host.replaceChildren(empty(e.message)); go2.disabled = false; return; }
+    const cols = [["present", "Present"], ["half", "Half day"], ["late", "Late arrivals"], ["early", "Early departures"], ["absent", "Absent"], ["leave", "On leave"]], sum = k => rows.reduce((a, r) => a + (+r[k] || 0), 0);
+    const ch = el("div"); if (window.AKF_CHARTS) ch.innerHTML = AKF_CHARTS.bars({ id: "hr-attmon", items: cols.map(([k, l]) => ({ key: k, label: l, value: sum(k) })), empty: "No attendance in this month" });
+    const sort = V.repSort || "name", list = rows.slice().sort((a, b) => sort === "name" ? a.name.localeCompare(b.name) : (+b[sort] || 0) - (+a[sort] || 0));
+    host.replaceChildren(el("p", { class: "small muted", text: "Days in " + mon + " for " + rows.length + " staff. Click a bar to put the highest first." }), ch,
+      can("reports", "export") ? el("div", { class: "hr-actions" }, el("button", { class: "btn btn-outline btn-sm", type: "button", text: "Download CSV", onclick: () => csv("hr-attendance-" + mon, ["Name", "Department"].concat(cols.map(c => c[1]), ["Late minutes"]), list.map(r => [r.name, r.dept].concat(cols.map(c => r[c[0]]), [r.lateMin]))) })) : null,
+      tbl(["Name", "Department"].concat(cols.map(c => c[1])), list.map(r => el("tr", {}, el("td", { text: r.name }), el("td", { text: r.dept || "" }), cols.map(c => el("td", { text: String(r[c[0]] ?? 0) }))))));
+    go2.disabled = false; });
+  if (V.repRun) { V.repRun = false; go2.click(); }
+}
+const rep0 = VIEWS.reports; VIEWS.reports = async box => { const a = el("div"), b = el("div"); box.append(a, b); await hrReports(a); rep0(b); };
+document.addEventListener("akf-chart-pick", e => { const c = e.detail.chart, k = e.detail.key;
+  if (c === "hr-strength") { V.f.q = ""; V.pf = { dept: k }; go("people"); }
+  else if (c === "hr-types") { V.f.q = ""; V.pf = { type: k }; go("people"); }
+  else if (c === "hr-attmon") { V.repSort = k; V.repRun = true; render(); }
+  else if (c === "hr-perf") { V.perfF = V.perfF === k ? "" : k; render(); } });
+/* People: pick by department, designation, type and employment status */
+function pfSel(draw) { const f = V.pf = V.pf || {}, uniq = g => [...new Set(PEOPLE.map(g).filter(Boolean))].sort();
+  const sel = (k, opts, lab) => { if (f[k] && !opts.includes(f[k])) opts = opts.concat(f[k]); const x = el("select", { class: "select", "aria-label": lab, onchange: e => { f[k] = e.target.value; draw(); } }, el("option", { value: "", text: lab }), opts.map(o => el("option", { value: o, text: o }))); x.value = f[k] || ""; return x; };
+  return [sel("dept", uniq(p => p.dept), "All departments"), sel("desig", uniq(p => p.designation), "All designations"), sel("type", ["probation", "confirmed", "permanent", "contract"], "All types"), sel("status", ["active", "exiting"], "Any status")]; }
 async function render() {
   if (!ME) return; V.typed = false; chrome();
   const n = NAVX.find(x => x.v === V.view); if (!n || !n.ok()) { const f = NAVX.find(x => x.ok()); if (!f) { $("app").replaceChildren(empty("No HR pages have been given to you. Ask the Super Admin.")); return; } V.view = f.v; chrome(); }
