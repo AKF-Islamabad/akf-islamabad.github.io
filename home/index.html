@@ -2019,13 +2019,13 @@ const Live = {
     }
     // Decision 2026-11-08: only the sign-in screen is new. Once signed in, everyone goes to the main page, as before.
     if (this.SIGN_IN_ONLY) { location.replace(this.HOME); return 'away'; }
-    const [p, i, nw] = await Promise.all([this.sb.rpc('core_my_portals'), this.sb.rpc('core_my_inbox'), this.sb.rpc('core_my_new')]);
+    const [p, i, nw, hn, hi] = await Promise.all([this.sb.rpc('core_my_portals'), this.sb.rpc('core_my_inbox'), this.sb.rpc('core_my_new'), this.sb.rpc('hub_my_new'), this.sb.rpc('hub_inbox')]);   // hub_*: the Request Hub's own lists (portals/reqhub.sql)
     if (p.error) throw p.error;
     this.me = me;
     try { sessionStorage.removeItem('akf-hops'); } catch (e) {}   // arrived safely: reset the main page's loop counter
     this.portals = p.data || [];
-    this.inbox = i.error ? [] : (i.data || []);   // empty if this database has not got the all-portals inbox yet
-    this.newItems = nw.error || !Array.isArray(nw.data) ? [] : nw.data;   // the "+" button: forms this person may send (046)
+    this.inbox = (i.error ? [] : (i.data || [])).concat(hi.error || !Array.isArray(hi.data) ? [] : hi.data);   // empty if this database has not got the all-portals inbox yet
+    this.newItems = (nw.error || !Array.isArray(nw.data) ? [] : nw.data).concat(hn.error || !Array.isArray(hn.data) ? [] : hn.data);   // the "+" button: forms this person may send (046)
     Fab.live();
     this.paintUser();
     Role.apply();
@@ -2079,12 +2079,12 @@ const Live = {
   // Procurement and Store are one app on the same requests: a person who has only one of the two opens the request there
   gate(a) { const n = this.nav(), ok = k => n.find(x => x.id === k && x.href !== '#'); return ok(a.portal) || ok({ procurement: 'store', store: 'procurement' }[a.portal]); },
   link(a) { const p = this.gate(a); if (!p) return ''; const r = this.ref(a);
-    return p.href + (r && ['procurement', 'store', 'fleet'].includes(a.portal) ? '#track=' + r : r && a.portal === 'hr' ? '#req=' + r : r && a.portal === 'assistance' ? '#case=' + r
+    return p.href + (r && ['procurement', 'store', 'fleet'].includes(a.portal) ? '#track=' + r : r && (a.portal === 'hr' || a.portal === 'reqhub') ? '#req=' + r : r && a.portal === 'assistance' ? '#case=' + r
       : a.portal === 'tasks' && /^EV-\d+$/.test(r) ? '#task=ev:' + r : a.portal === 'tasks' && /^EN-\d+$/.test(r) ? '#task=view:engagements' : ''); },
   async loadReqs() {
     this.reqsAt = Date.now();
-    try { const r = await this.sb.rpc('core_my_requests'); if (r.error) throw r.error;
-      this.reqs = (Array.isArray(r.data) ? r.data : []).sort((a, b) => (Date.parse(b.since) || 0) - (Date.parse(a.since) || 0)); this.reqsErr = false; }
+    try { const [r, h] = await Promise.all([this.sb.rpc('core_my_requests'), this.sb.rpc('hub_my_requests')]); if (r.error) throw r.error;
+      this.reqs = (Array.isArray(r.data) ? r.data : []).concat(h.error || !Array.isArray(h.data) ? [] : h.data).sort((a, b) => (Date.parse(b.since) || 0) - (Date.parse(a.since) || 0)); this.reqsErr = false; }
     catch (e) { this.reqsErr = true; }
     if (this.me && Router.parse().id === 'requests') Router.render(false);
   },

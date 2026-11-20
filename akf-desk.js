@@ -282,9 +282,10 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
     if (!me) return;
     if (!myPortals) myPortals = await portalsOnce();
     // each portal's own bell list (saved by that portal, 036) plus the live list of steps waiting for me (035)
-    const [live, saved, hr] = await Promise.all([sb.rpc("core_my_inbox"), sb.rpc("core_bell_all"), sb.rpc("hr_inbox")]);   // HR keeps its own list (portals/hr.sql)
+    const [live, saved, hr, hub] = await Promise.all([sb.rpc("core_my_inbox"), sb.rpc("core_bell_all"), sb.rpc("hr_inbox"), sb.rpc("hub_inbox")]);   // HR keeps its own list (portals/hr.sql)
     if (live.error && saved.error) return;
     if (!hr.error && Array.isArray(hr.data)) live.data = (Array.isArray(live.data) ? live.data : []).concat(hr.data);
+    if (!hub.error && Array.isArray(hub.data)) live.data = (Array.isArray(live.data) ? live.data : []).concat(hub.data);   // the Request Hub keeps its own list too (portals/reqhub.sql)
     const has = k => !myPortals || myPortals.some(p => p.key === k), keys = new Set(), all = [];
     (Array.isArray(saved.data) ? saved.data : []).forEach(b => (b.items || []).forEach(n => { if (n && n.key && !keys.has(n.key)) { keys.add(n.key); all.push({ ...n, portal: b.portal, at: n.at || b.at }); } }));
     (Array.isArray(live.data) ? live.data : []).forEach(n => { if (n && n.key && !keys.has(n.key)) { keys.add(n.key); all.push(n); } });
