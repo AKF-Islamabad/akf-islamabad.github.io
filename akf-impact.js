@@ -1,6 +1,5 @@
 /* Programme impact in the foot line (home page #prog-foot, old main page .pf, every portal .jz-prog-foot). Loaded on every page by akf-desk.js.
-   Cursor (or keyboard focus) on a programme: a card in the programme's colour flips up with its figures.
-   Click: a small window with the same figures; it closes with a click on the empty side, Esc or the x.
+   Click (or Enter / Space): a small window in the programme's colour with its figures; nothing shows on hover; it closes with a click on the empty side, Esc or the x.
    The figures are the published national impact figures of Alkhidmat Foundation (given 2026-11-13). No personal data. */
 (function () {
   "use strict";
@@ -30,13 +29,12 @@
     + ".ip-g{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin:0}.ip-g div{min-width:0}.ip-g dt{font-size:19px;font-weight:800;line-height:1.1}.ip-g dd{margin:1px 0 0;font-size:10.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;opacity:.95}"
     + ".ip-b{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:5px 12px 5px 5px;border-radius:10px;background:rgba(255,255,255,.2);font-size:21px;font-weight:800}"
     + ".ip-n{font-variant-numeric:tabular-nums}.ip-b span{padding:5px 9px;border-radius:7px;background:#fff;color:#16222e;font-size:11px;letter-spacing:.05em}"
-    + ".ip-pop{position:fixed;z-index:9990;pointer-events:none;transform-origin:50% 100%;animation:ip-flip .38s cubic-bezier(.2,.8,.3,1.15) both}"
     + "@keyframes ip-flip{from{transform:perspective(700px) rotateX(-92deg);opacity:0}to{transform:perspective(700px) rotateX(0);opacity:1}}"
     + "dialog.ip-dlg{padding:0;border:0;border-radius:16px;background:transparent;overflow:visible;max-width:none}dialog.ip-dlg::backdrop{background:rgba(8,25,45,.5)}"
     + "dialog.ip-dlg[open]{animation:ip-flip .38s cubic-bezier(.2,.8,.3,1.15) both;transform-origin:50% 50%}"
     + "dialog.ip-dlg .ip-card{width:min(430px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;padding:18px}dialog.ip-dlg .ip-g dt{font-size:22px}dialog.ip-dlg .ip-g dd{font-size:11px}dialog.ip-dlg .ip-b{font-size:24px}"
     + ".ip-x{margin-left:auto;width:30px;height:30px;border:0;border-radius:99px;background:rgba(255,255,255,.22);color:inherit;font:700 18px/1 system-ui,sans-serif;cursor:pointer}"
-    + "@media (prefers-reduced-motion:reduce){.ip-pop,dialog.ip-dlg[open]{animation:none}}@media print{.ip-pop,dialog.ip-dlg{display:none!important}}";
+    + "@media (prefers-reduced-motion:reduce){dialog.ip-dlg[open]{animation:none}}@media print{dialog.ip-dlg{display:none!important}}";
   document.head.append(st);
 
   const nameOf = chip => chip.textContent.trim();
@@ -69,19 +67,9 @@
     })(t0);
   }
 
-  let pop, cur;
-  function hide() { if (pop) pop.remove(); pop = cur = null; }
-  function show(chip) {
-    if (chip === cur) return;
-    hide(); if (!DATA[nameOf(chip)] || document.querySelector("dialog.ip-dlg[open]")) return;
-    cur = chip; pop = card(chip); pop.classList.add("ip-pop"); pop.setAttribute("role", "tooltip"); document.body.append(pop);
-    const r = chip.getBoundingClientRect(), w = pop.offsetWidth;   // sits just above the programme, kept inside the screen
-    pop.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + "px";
-    pop.style.bottom = (innerHeight - r.top + 8) + "px";
-    count(pop);
-  }
+  // the card opens on a click (or Enter / Space) only; nothing shows on hover (asked 2026-11-20)
   function open(chip) {
-    hide(); if (!DATA[nameOf(chip)]) return;
+    if (!DATA[nameOf(chip)]) return;
     const old = document.querySelector("dialog.ip-dlg"); if (old) old.remove();
     const dlg = el("dialog", "ip-dlg"); dlg.setAttribute("aria-label", nameOf(chip) + ": impact"); dlg.append(card(chip, true));
     let done = 0; const shut = () => { if (done++) return; if (dlg.open) dlg.close(); dlg.remove(); if (chip.isConnected) chip.focus(); };
@@ -90,13 +78,8 @@
     document.body.append(dlg); dlg.showModal(); count(dlg);
   }
   const chipOf = e => e.target && e.target.closest ? e.target.closest(SEL) : null;
-  document.addEventListener("mouseover", e => { const c = chipOf(e); if (c) show(c); });
-  document.addEventListener("mouseout", e => { const c = chipOf(e); if (c && !c.contains(e.relatedTarget)) hide(); });
-  document.addEventListener("focusin", e => { const c = chipOf(e); if (c && c.matches(":focus-visible")) show(c); });
-  document.addEventListener("focusout", e => { if (chipOf(e)) hide(); });
   document.addEventListener("click", e => { const c = chipOf(e); if (c) open(c); });
   document.addEventListener("keydown", e => { const c = chipOf(e); if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); open(c); } });
-  addEventListener("scroll", hide, true);
   // the home page draws its line itself: make its programmes reachable by keyboard too
   const arm = () => document.querySelectorAll(SEL).forEach(c => { if (!c.hasAttribute("tabindex")) { c.tabIndex = 0; c.setAttribute("role", "button"); } });
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", arm); else arm();
