@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-4R8RhYRsgFrAj50sPvniSgHPruYN5md96bwpp4SxFnk='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-hWOL/xetX1eO5Bd3Ik6m/aviaYKrt0+C1g2D+poDcJ8='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -3767,6 +3767,10 @@ const UOMS = ["Pcs","Box","Kg","Ltr","Pack","Set","Carton"];
 const DEFAULT_STORES = ["CS1 Central Store 1","CS2 Central Store 2"];
 let STORES = DEFAULT_STORES;   // "CODE Name"; the Super Admin renames or adds stores in Settings (settings.stores)
 const storesOf = st => { const l=st&&Array.isArray(st.stores)?st.stores.filter(x=>/^[A-Z0-9]{1,6} \S/.test(String(x||""))):[]; return l.length?l:DEFAULT_STORES; };
+let CANON = {};   // person record id -> the original record of the same person (same e-mail)
+const canonMap=users=>{ const first={}, m={}; (users||[]).forEach(u=>{ const e=String(u.email||"").toLowerCase(); if(!e) return; const f=first[e]; if(!f||(f.active===false||f.erased)&&u.active!==false&&!u.erased) first[e]=u; }); (users||[]).forEach(u=>{ const e=String(u.email||"").toLowerCase(); if(e) m[u.id]=first[e].id; }); return m; };
+const cid=id=>CANON[id]||id, isOrig=u=>cid(u.id)===u.id;
+{ const m=canonMap([{id:"u9",email:"A@x.org",active:true},{id:"c1",email:"a@x.org",active:true},{id:"u2",email:"b@x.org",active:false},{id:"c2",email:"b@x.org",active:true},{id:"n"}]); console.assert(m.u9==="u9"&&m.c1==="u9"&&m.u2==="c2"&&m.c2==="c2"&&!("n" in m),"canonMap: copies of one person point to the original, an active copy before a closed one"); }
 let SETTINGS = { orgName:"Alkhidmat Foundation Islamabad Region", escalationHours:48, gst:0.18, whtGoodsFiler:0.04, whtGoodsNonFiler:0.08, whtServicesFiler:0.08, whtServicesNonFiler:0.16, storeAutoApprove:0, procurementAutoApprove:0, assetThreshold:50000, actingApprover:"", fiscalYear:"2026-27", directPurchaseLimit:200000, presidentAbove:150000, aiProvider:"builtin", aiKey:"", aiModel:"gemini-2.5-flash" };
 const DEFAULT_SETTINGS={...SETTINGS};
 
@@ -4789,7 +4793,7 @@ function makeActions(commit, user, toast){
     },
     /* test copy without a database: the same two steps the database functions do (064_purchase_committee.sql) */
     committeeLocal(fn,a){ commit(d=>{ const rfq=d.rfqs.find(r=>r.id===a.p_rfq); if(!rfq) return;
-      if(fn==="portal_committee_vote"){ const m=committeeMembers(d,d.requests.find(r=>r.id===rfq.requestId)).find(m=>m.uid===user.id); if(!m) return; rfq.votes=[...(rfq.votes||[]).filter(v=>v.uid!==user.id),{uid:user.id,name:user.name,title:m.title,quoteId:a.p_quote,remarks:a.p_remarks,at:nowISO()}]; }
+      if(fn==="portal_committee_vote"){ const m=committeeMembers(d,d.requests.find(r=>r.id===rfq.requestId)).find(m=>m.uid===cid(user.id)); if(!m) return; rfq.votes=[...(rfq.votes||[]).filter(v=>cid(v.uid)!==cid(user.id)),{uid:user.id,name:user.name,title:m.title,quoteId:a.p_quote,remarks:a.p_remarks,at:nowISO()}]; }
       else rfq.meet={link:a.p_link,when:a.p_when,by:user.name,byId:user.id,at:nowISO()}; }); },
     markOpened(rfqId,qId){ commit(d=>{ const q=d.rfqs.find(r=>r.id===rfqId).quotes.find(q=>q.id===qId); if(q.status==="Sent") q.status="Opened"; }); },
     recordQuote(rfqId,qId,{amount,inclusive,docs,deliveryDays}){
@@ -5033,7 +5037,7 @@ function visibleRequestsAll(user, requests){
   if(user.role==="super"||READ_ONLY_ROLES.includes(user.role)) return requests;
   return requests.filter(r=>{
     if(r.requesterId===user.id||r.receiverId===user.id) return true;
-    if(r.links&&r.links.rfq&&Array.isArray(SETTINGS.committee)&&SETTINGS.committee.some(m=>m.uid===user.id)) return true;
+    if(r.links&&r.links.rfq&&Array.isArray(SETTINGS.committee)&&SETTINGS.committee.some(m=>cid(m.uid)===cid(user.id))) return true;
     if(user.role==="hod") return myDepts(user).includes(r.dept);   // HOD: every department they look after, and only those
     if(user.role==="director"&&myDepts(user).includes(r.dept)) return true;   // Director: their departments, plus any request at their matrix step (below)
     const flow=flowOf(r); const reached=stageIndex(r)+1;
@@ -5156,7 +5160,7 @@ function RequestModal({req,state,user,A,onClose,openDoc,readOnly}){
   const backBtn=html`<button class="btn btn-ghost" title="Back to the person who raised it, for correction. After the correction it continues at this step." onClick=${()=>{ if(comment.trim().length<5){alert("Write in the remarks box what must be corrected (at least 5 letters).");return;} A.sendBack(req.id,comment); onClose(); }}>Send back</button>`;
 
   let actionBlock=null;
-  const cmView=!readOnly&&!!next&&next.key==="committee"&&cm.length>0&&req.status==="active"&&!req.correction&&(cm.some(m=>m.uid===user.id)||["admin_officer","manager_hr"].includes(user.role));
+  const cmView=!readOnly&&!!next&&next.key==="committee"&&cm.length>0&&req.status==="active"&&!req.correction&&(cm.some(m=>m.uid===cid(user.id))||["admin_officer","manager_hr"].includes(user.role));
   if((can||cmView) && next){
     const k=next.key;
     const nextAfter=flowOf(req)[stageIndex(req)+2];
@@ -5328,7 +5332,7 @@ function ComparativeTable({rfq,state,selectable,choice,onChoose,actions}){
    Each member records a choice with their own login; when all have chosen, the Admin Officer generates the comparative statement and the minutes. */
 const MEET_RE=/^https:\/\/meet\.google\.com\/[a-z0-9-]{3,40}$/;
 function committeeMembers(state,req){
-  const us=state.users||[], live=id=>us.find(x=>x.id===id&&x.active&&!x.erased);
+  const us=state.users||[], live=id=>us.find(x=>x.id===cid(id)&&x.active&&!x.erased);
   const set=(Array.isArray(state.settings.committee)?state.settings.committee:[]).map(m=>{ const u=live(m.uid); return u?{uid:u.id,name:u.name,title:m.title||"Member Committee"}:null; }).filter(Boolean);
   if(!set.length||!req) return [];
   const h=live(req.requesterId); if(h&&!set.some(m=>m.uid===h.id)) set.splice(1,0,{uid:h.id,name:h.name,title:"Member Committee (HOD)",hod:true});
@@ -5336,7 +5340,7 @@ function committeeMembers(state,req){
 }
 /* the vendor the committee chose: every member has chosen; most choices win; a tie is settled by the Chairman's choice */
 function committeeResult(rfq,members){
-  const votes=((rfq&&rfq.votes)||[]).filter(v=>members.some(m=>m.uid===v.uid));
+  const votes=((rfq&&rfq.votes)||[]).map(v=>({...v,uid:cid(v.uid)})).filter(v=>members.some(m=>m.uid===v.uid));
   if(!members.length||members.some(m=>!votes.some(v=>v.uid===m.uid))) return null;
   const n={}; votes.forEach(v=>{ n[v.quoteId]=(n[v.quoteId]||0)+1; }); const top=Math.max(...Object.values(n)), tied=Object.keys(n).filter(k=>n[k]===top);
   if(tied.length===1) return tied[0];
@@ -5347,7 +5351,7 @@ function committeeResult(rfq,members){
 /* first draft of the minutes, in the wording of the committee's paper minutes; the Admin Officer can edit it before it is generated */
 function momDraft(state,req,rfq,qid,members){
   const vn=id=>(state.vendors.find(v=>v.id===id)||{}).name||"the vendor"; const subs=rfq.quotes.filter(q=>q.status==="Submitted").sort((a,b)=>grossOf(a)-grossOf(b)); const sel=subs.find(q=>q.id===qid)||subs[0]; const low=subs[0].id===sel.id;
-  const items=req.items.map(i=>`${i.qty} ${i.uom||""} ${i.name}`.replace(/\s+/g," ").trim()).join(", "); const votes=(rfq.votes||[]).filter(v=>members.some(m=>m.uid===v.uid)); const all=votes.every(v=>v.quoteId===sel.id);
+  const items=req.items.map(i=>`${i.qty} ${i.uom||""} ${i.name}`.replace(/\s+/g," ").trim()).join(", "); const votes=(rfq.votes||[]).map(v=>({...v,uid:cid(v.uid)})).filter(v=>members.some(m=>m.uid===v.uid)); const all=votes.every(v=>v.quoteId===sel.id);
   const org=SETTINGS.orgName||"Alkhidmat Foundation Islamabad"; const d=new Date((rfq.meet&&rfq.meet.when)||(votes.length?votes[votes.length-1].at:Date.now()));
   return { subject:req.purpose||req.items.map(i=>i.name).join(", "), when:new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,16), mode:rfq.meet?"Online (Google Meet)":"In person",
     background:`The requesting department (${req.dept}) of ${org} initiated the procurement of ${items}. Purpose: ${req.purpose||"as per the request"}.\n\nIn compliance with the Procurement Policy of ${org}, quotations were obtained from ${subs.length} vendors through ${rfq.id} to ensure transparency, competitive pricing, quality assurance and value for money. The Procurement Committee reviewed the quotations, compared the prices inclusive of applicable taxes, and assessed documentation, past performance and delivery time.`,
@@ -5360,7 +5364,7 @@ function momDraft(state,req,rfq,qid,members){
 }
 function CommitteeBoard({rfq,state,A,req,user,members,onDone}){
   const subs=rfq.quotes.filter(q=>q.status==="Submitted"); const scores=scoreQuotes(rfq.quotes,state.vendors); const best=subs.length?subs.reduce((a,b)=>(scores[b.id].total>scores[a.id].total?b:a)):null;
-  const votes=rfq.votes||[]; const my=votes.find(v=>v.uid===user.id); const me=members.find(m=>m.uid===user.id); const result=committeeResult(rfq,members);
+  const votes=(rfq.votes||[]).map(v=>({...v,uid:cid(v.uid)})); const my=votes.find(v=>v.uid===cid(user.id)); const me=members.find(m=>m.uid===cid(user.id)); const result=committeeResult(rfq,members);
   const [choice,setChoice]=useState((my&&my.quoteId)||(best&&best.id)); const [remarks,setRemarks]=useState((my&&my.remarks)||""); const [busy,setBusy]=useState(false);
   const [link,setLink]=useState((rfq.meet&&rfq.meet.link)||""); const [when,setWhen]=useState(""); const [mom,setMom]=useState(null); const setM=(k,x)=>setMom(o=>({...o,[k]:x}));
   const vn=q=>{ const x=rfq.quotes.find(y=>y.id===q); return (state.vendors.find(v=>v.id===(x&&x.vendorId))||{}).name||"—"; };
@@ -5402,7 +5406,7 @@ function CommitteePanel({rfq,state,A,req,user,onDone}){
   const [choice,setChoice]=useState(best&&best.id); const [reason,setReason]=useState("");
   const [members,setMembers]=useState([{name:user.name,designation:(user.designation||"Manager Admin & HR")+" (Convener)"},{name:"",designation:"Finance"},{name:"",designation:"Admin Officer"}]);
   if(!rfq) return html`<div class="notice notice-warn"><${Icon} name="alert"/>No quotations linked.</div>`;
-  const people=(state.users||[]).filter(u=>u.active&&!u.erased&&u.name);
+  const people=(state.users||[]).filter(u=>u.active&&!u.erased&&u.name&&isOrig(u));
   /* picking a name from the user list also fills that person's designation */
   const setM=(i,k,v)=>setMembers(m=>m.map((x,j)=>{ if(j!==i) return x; const u=k==="name"&&people.find(p=>p.name===v); return {...x,[k]:v,...(u&&u.designation?{designation:u.designation}:{})}; }));
   const notBest=best&&choice&&choice!==best.id;
@@ -5464,7 +5468,7 @@ function GrnForm({req,po,onCancel,onSave}){
     <div class="row"><button class="btn btn-ghost" onClick=${onCancel}>Back</button><span class="grow"/><button class="btn btn-primary" onClick=${()=>onSave({store,rack,bin,lines,note,rating})}><${Icon} name="check"/>Create GRN & add to stock</button></div></div>`;
 }
 /* any active employee (never the Super Admin): who receives issued goods, or confirms a beneficiary distribution */
-const PersonPick=({users,value,onChange,other})=>html`<select class="select" value=${value} onChange=${e=>onChange(e.target.value)}><option value="">Select employee…</option>${other&&html`<option value="other">Other (not an employee) — type the name</option>`}${users.filter(u=>u.active!==false&&!u.erased&&tPick(u)).sort((a,b)=>String(a.name).localeCompare(b.name)).map(u=>html`<option value=${u.id}>${u.name}${u.designation?" · "+u.designation:""}${u.dept?" · "+u.dept:""}</option>`)}</select>`;
+const PersonPick=({users,value,onChange,other})=>html`<select class="select" value=${value} onChange=${e=>onChange(e.target.value)}><option value="">Select employee…</option>${other&&html`<option value="other">Other (not an employee) — type the name</option>`}${users.filter(u=>u.active!==false&&!u.erased&&tPick(u)&&isOrig(u)).sort((a,b)=>String(a.name).localeCompare(b.name)).map(u=>html`<option value=${u.id}>${u.name}${u.designation?" · "+u.designation:""}${u.dept?" · "+u.dept:""}</option>`)}</select>`;
 function IssueForm({users,defaultId,onCancel,onSave}){
   const [vehicle,setVehicle]=useState(""); const [driver,setDriver]=useState(""); const [note,setNote]=useState(""); const [rcv,setRcv]=useState(defaultId||"");
   return html`<div class="stack"><${Field} label="Issued to (receives the items, accepts and signs in the portal)"><${PersonPick} users=${users} value=${rcv} onChange=${setRcv}/><//><div class="grid3"><${Field} label="Vehicle no. (gate pass)"><input class="input" placeholder="LEA-123" value=${vehicle} onInput=${e=>setVehicle(e.target.value)}/><//><${Field} label="Driver / carrier"><input class="input" placeholder="Name" value=${driver} onInput=${e=>setDriver(e.target.value)}/><//><${Field} label="Note"><input class="input" placeholder="Handed to…" value=${note} onInput=${e=>setNote(e.target.value)}/><//></div>
@@ -5553,8 +5557,8 @@ function TrackBox({state,user,openReq,openDoc,inline}){
 function buildNotifications(state,user){
   const n=[]; const reqs=visibleRequests(user,state.requests);
   reqs.filter(r=>r.status==="active"&&!r.correction&&(nextStage(r)||{}).key==="committee").forEach(r=>{ const rfq=state.rfqs.find(x=>x.id===r.links.rfq); const cm=rfq?committeeMembers(state,r):[]; if(!cm.length) return; const done=committeeResult(rfq,cm);
-    if(!done&&cm.some(m=>m.uid===user.id)&&!(rfq.votes||[]).some(v=>v.uid===user.id)) n.push({tone:"info",icon:"stamp",t:`Purchase committee: your choice is needed · ${r.id}`,d:`${r.dept} · ${pkr(reqTotal(r))}`,at:r.timeline[r.timeline.length-1].at,id:r.id});
-    if(!done&&rfq.meet&&rfq.meet.byId!==user.id&&cm.some(m=>m.uid===user.id)) n.push({tone:"info",icon:"send",t:`Purchase committee meeting${rfq.meet.when?" · "+fmtDT(rfq.meet.when):""} · join from ${r.id}`,d:`Called by ${rfq.meet.by}`,at:rfq.meet.at||r.timeline[r.timeline.length-1].at,id:r.id});
+    if(!done&&cm.some(m=>m.uid===cid(user.id))&&!(rfq.votes||[]).some(v=>cid(v.uid)===cid(user.id))) n.push({tone:"info",icon:"stamp",t:`Purchase committee: your choice is needed · ${r.id}`,d:`${r.dept} · ${pkr(reqTotal(r))}`,at:r.timeline[r.timeline.length-1].at,id:r.id});
+    if(!done&&rfq.meet&&cid(rfq.meet.byId)!==cid(user.id)&&cm.some(m=>m.uid===cid(user.id))) n.push({tone:"info",icon:"send",t:`Purchase committee meeting${rfq.meet.when?" · "+fmtDT(rfq.meet.when):""} · join from ${r.id}`,d:`Called by ${rfq.meet.by}`,at:rfq.meet.at||r.timeline[r.timeline.length-1].at,id:r.id});
     if(done&&user.role==="admin_officer") n.push({tone:"info",icon:"stamp",t:`Committee decided: generate the minutes · ${r.id}`,d:`${r.dept} · ${pkr(reqTotal(r))}`,at:r.timeline[r.timeline.length-1].at,id:r.id}); });
   reqs.filter(r=>canAct(user,r)).forEach(r=>{ const rc=nextStage(r).key==="closed"&&r.receiverId===user.id; n.push({tone:"info",icon:rc?"box":"stamp",t:rc?`Accept and sign for items issued to you · ${r.id}`:`${nextStage(r).label} needed · ${r.id}`,d:`${r.dept} · ${pkr(reqTotal(r))}`,at:r.timeline[r.timeline.length-1].at,id:r.id,receive:rc}); });
   reqs.filter(r=>isEscalated(r)).forEach(r=>n.push({tone:"bad",icon:"alert",t:`${escHours(r)}h escalation · ${r.id}`,d:`Waiting for ${nextStage(r).who} for ${Math.round(hoursSince(r.timeline[r.timeline.length-1].at))}h`,at:r.timeline[r.timeline.length-1].at,id:r.id}));
@@ -6370,7 +6374,7 @@ function Settings({state,A,user}){
         <${Field} label="Asset tagging threshold (PKR) — items at or above this, and all IT items, get an asset tag"><input class="input" type="number" min="0" value=${f.assetThreshold||50000} onInput=${e=>set("assetThreshold",Number(e.target.value))}/><//>
         <${Field} label="Acting approver (when President unavailable)"><select class="select" value=${f.actingApprover} onChange=${e=>set("actingApprover",e.target.value)}><option value="">None — President only</option><option value="regional_manager">Regional Manager</option><option value="gen_sec">General Secretary</option></select><//></div>
       <div style="margin-top:12px"><b class="sm">Purchase committee</b><div class="sm muted">The members, in the order they sign the minutes (the Chairman last). The Head of Department who raised the request joins as a member by itself. Each member gets the Procurement portal by itself when you save. Empty list: the Manager Admin & HR decides as before.</div>
-        ${(f.committee||[]).map((m,i)=>html`<div class="grid2" style="margin-top:6px"><select class="select" value=${m.uid} onChange=${e=>set("committee",f.committee.map((x,j)=>j===i?{...x,uid:e.target.value}:x))}><option value="">Choose a person…</option>${(state.users||[]).filter(u=>u.active&&!u.erased&&u.name).map(u=>html`<option value=${u.id}>${u.name}${u.designation?" · "+u.designation:""}</option>`)}</select><div class="row"><select class="select grow" value=${m.title} onChange=${e=>set("committee",f.committee.map((x,j)=>j===i?{...x,title:e.target.value}:x))}><option>Member Committee</option><option>Chairman Committee</option></select><button class="iconbtn" style="width:32px;height:32px" aria-label="Remove member" onClick=${()=>set("committee",f.committee.filter((_,j)=>j!==i))}><${Icon} name="trash"/></button></div></div>`)}
+        ${(f.committee||[]).map((m,i)=>html`<div class="grid2" style="margin-top:6px"><select class="select" value=${m.uid} onChange=${e=>set("committee",f.committee.map((x,j)=>j===i?{...x,uid:e.target.value}:x))}><option value="">Choose a person…</option>${(state.users||[]).filter(u=>u.active&&!u.erased&&u.name&&isOrig(u)).map(u=>html`<option value=${u.id}>${u.name}${u.designation?" · "+u.designation:""}</option>`)}</select><div class="row"><select class="select grow" value=${m.title} onChange=${e=>set("committee",f.committee.map((x,j)=>j===i?{...x,title:e.target.value}:x))}><option>Member Committee</option><option>Chairman Committee</option></select><button class="iconbtn" style="width:32px;height:32px" aria-label="Remove member" onClick=${()=>set("committee",f.committee.filter((_,j)=>j!==i))}><${Icon} name="trash"/></button></div></div>`)}
         <div style="margin-top:8px"><${Field} label="Committee meeting room (Google Meet link, set once)"><input class="input" value=${f.committeeMeet||""} maxlength="70" placeholder="https://meet.google.com/abc-defg-hij" onInput=${e=>set("committeeMeet",e.target.value.trim())}/><//><div class="sm muted">${f.committeeMeet&&!MEET_RE.test(f.committeeMeet)?"This is not a Google Meet link. It must look like https://meet.google.com/abc-defg-hij":"In Google Meet choose New meeting, then Create a meeting for later, and paste the link here. After that, Meet now opens this room in a new window with one click and every member gets a Join button."}</div></div>
         <div class="row" style="margin-top:6px"><button class="btn btn-ghost btn-sm" onClick=${()=>set("committee",[...(f.committee||[]),{uid:"",title:"Member Committee"}])}><${Icon} name="plus"/>Add member</button></div></div>
       <div class="notice notice-info" style="margin-top:10px"><${Icon} name="shield"/><span>Auto-approval has been removed: every request passes every step of its approval matrix.</span></div><//>
@@ -6845,7 +6849,7 @@ function App(){
     sb.from("core_modules").select("name").eq("key",PORTAL).maybeSingle().then(({data})=>{ if(data&&data.name){ PORTAL_NAME=data.name; document.title="Alkhidmat Foundation Islamabad · "+data.name; } },()=>{})
       .then(()=>sb.rpc("core_my_tabs",{p_module:PORTAL})).then(({data,error})=>{ const g=error?[]:(data||[]).map(t=>t.tab_key); PORTAL_GRID=g; setGrid(g); },()=>{ PORTAL_GRID=[]; setGrid([]); }); },[authUser&&authUser.id]);
   if(boot!=="ready"||!state) return html`<${BootScreen} status=${boot} err=${bootErr}/>`;
-  SETTINGS=state.settings; STORES=storesOf(state.settings);
+  SETTINGS=state.settings; STORES=storesOf(state.settings); CANON=canonMap(state.users);
   let user=null;
   if(SB_MODE){ if(authUser){ user=profileFor(state,authUser); if(!user&&state.users.length===0&&state.authLoaded){ /* first ever login on an empty portal becomes Super Admin */ const email=(authUser.email||"").toLowerCase(); user={id:authUser.id,name:email.split("@")[0].replace(/[._]/g," ").replace(/\b\w/g,c=>c.toUpperCase()),username:email.split("@")[0],email,role:"super",designation:"System Administrator",dept:"IT",active:true}; const u=user; setTimeout(()=>commit(d=>{ if(!d.users.length) d.users.push(u); }),0); } if(user&&!user.active) user=null; } }
   else user=state.users.find(u=>u.id===sessionId&&u.active)||null;
@@ -7255,7 +7259,7 @@ const TR={
 const tCanAssignOthers=u=>["RM",...T_MGR].includes(tRole(u));
 const tOwnDept=(u,d)=>d===tUDept(u)||(!!u&&u.role==="director"&&tMine(u,d));   // a Director assigns in every department they look after; a HOD only in their own
 function tAssignable(state,deptId,u,eventId){
-  const act=(state.users||[]).filter(x=>x.active!==false&&(tPick(x)||x.id===u.id)); const r=tRole(u);
+  const act=(state.users||[]).filter(x=>x.active!==false&&((tPick(x)&&isOrig(x))||x.id===u.id)); const r=tRole(u);
   if(r==="RM"||(eventId&&["MA","HR"].includes(r))) return act.filter(x=>tRole(x)!=="President");
   // a HOD assigns only in their OWN department; someone from another department
   // comes through an Engagement request (HOD → that HOD → Regional Manager), which creates the task when approved
@@ -7271,7 +7275,7 @@ const tCanEngage=u=>T_MGR.includes(tRole(u));
 const tHodOf=(state,dept)=>{ const L=(state.users||[]).filter(x=>x.active!==false&&tRole(x)==="HOD"); return L.find(x=>tUDept(x)===dept)||L.find(x=>tMine(x,dept)); };   // the department's own head first, then a Director who oversees it
 const tEngMine=(e,u)=>e.status==="hod"?tRole(u)==="HOD"&&tUDept(u)===e.empDept:e.status==="rm"&&tRole(u)==="RM";   // is the next decision mine?
 const tEngSees=(e,u)=>["RM","President","GS"].includes(tRole(u))||e.requesterId===u.id||e.employeeId===u.id||(T_MGR.includes(tRole(u))&&[e.reqDept,e.empDept].includes(tUDept(u)));
-const tEngPeople=(state,u)=>(state.users||[]).filter(x=>x.active!==false&&tPick(x)&&tUDept(x)!==tUDept(u)&&!["President","GS","RM"].includes(tRole(x)));
+const tEngPeople=(state,u)=>(state.users||[]).filter(x=>x.active!==false&&tPick(x)&&isOrig(x)&&tUDept(x)!==tUDept(u)&&!["President","GS","RM"].includes(tRole(x)));
 const tEngWhen=s=>s?fmtD(s.slice(0,10)+"T12:00:00")+" "+s.slice(11,16):"";
 const tAssignError=(state,u,c)=>!tCanAssignOthers(u)&&c.assigneeId!==u.id
   ?"Only the HOD, Manager Admin, HR or the Regional Manager can assign tasks to other people. You can create tasks for yourself."
@@ -7863,7 +7867,7 @@ function TList({state,user,A,open,filtered}){
   /* bulk edit: tick rows, then change priority / due date / assignee / stage in one go (each task still checked against the rules) */
   const [picked,setPicked]=useState({}); const [bp,setBp]=useState({priority:"",plannedDate:"",assigneeId:"",stage:""});
   const keys=Object.keys(picked).filter(k=>picked[k]&&filtered.some(t=>t.key===k));
-  const people=(state.users||[]).filter(x=>x.active!==false&&tPick(x)&&tRole(x)!=="President").sort((a,b)=>a.name.localeCompare(b.name));
+  const people=(state.users||[]).filter(x=>x.active!==false&&tPick(x)&&isOrig(x)&&tRole(x)!=="President").sort((a,b)=>a.name.localeCompare(b.name));
   const applyBulk=()=>{ const patch={}; Object.entries(bp).forEach(([k,v])=>{ if(v) patch[k]=v; }); if(!Object.keys(patch).length){ tToast("Choose what to change first","bad"); return; } if(A.tBulk(keys,patch)){ setPicked({}); setBp({priority:"",plannedDate:"",assigneeId:"",stage:""}); } };
   const V={id:tNum,title:t=>t.title.toLowerCase(),dept:t=>tDept(t.dept).code,assignee:t=>tName(state,t.assigneeId).toLowerCase(),stage:t=>t.stage,priority:t=>TPRI_RANK[t.priority],plannedDate:t=>t.plannedDate||""};
   const rows=filtered.slice().sort((a,b)=>{ const x=V[sort.k](a), y=V[sort.k](b); return (x>y?1:x<y?-1:0)*sort.d; });
@@ -8403,7 +8407,7 @@ function EventModal({ekey,tab,setTab,state,user,A,open,onClose,onCreated,openNew
   const editable=isNew||TR.canEditEvent(orig,user); const canAssign=!isNew&&TR.canAssignEvent(orig,user); const dis=!editable;
   const et=isNew?[]:tEvTasks(state,orig).sort(tByPri); const [label,tone]=tEvStatus(isNew?{status:"draft"}:orig);
   const sel=Object.keys(d.checklist).filter(k=>d.checklist[k].checked); const pctSel=Math.round(sel.length/EV_TOTAL_ITEMS*100);
-  const people=(state.users||[]).filter(x=>x.active!==false&&tPick(x)&&tRole(x)!=="President");
+  const people=(state.users||[]).filter(x=>x.active!==false&&tPick(x)&&isOrig(x)&&tRole(x)!=="President");
   const fields=()=>({title:d.title,date:d.date,time:d.time,venue:d.venue,types:d.types,otherType:d.otherType,expected:d.expected,coordinator:d.coordinator,topic:d.topic,collab:d.collab,additional:d.additional,checklist:d.checklist});
   const create=send=>{ const e=A.eCreate(fields()); if(!e) return; if(send) A.eSubmit(e.key); onCreated(e); };
   const save=()=>{ if(isNew) return create(false); if(A.eSave(orig.key,fields())) onClose(); };
@@ -8542,7 +8546,7 @@ function TaskModal({isNew,preset,tkey,state,user,A,timer,onClose,open,onCreated,
   const openFile=async f=>{ try{ let url=f.data; if(f.path){ const { data, error } = await sb.storage.from("task-files").createSignedUrl(f.path,600); if(error) throw error; url=data.signedUrl; } if(!url) throw new Error("This file was not stored."); if(!f.path) return openStoredFile(url,f.name); const a=document.createElement("a"); a.href=url; a.target="_blank"; a.rel="noopener"; a.click(); }catch(err){ tToast(errRef(err,"Could not open the file"),"bad"); } };
   const delFile=async f=>{ if(!confirm(`Remove ${f.name}?`)) return; if(f.path&&sb){ try{ await sb.storage.from("task-files").remove([f.path]); }catch(e){} } A.tRemoveFile(orig.key,f.id); };
   const logTime=()=>{ const v=tParseMin(logv); if(isNaN(v)||!v){ tToast("Write the time like 45m, 1h 30m or 90 (minutes)","bad"); return; } if(A.tLogTime(orig.key,v)) setLogv(""); };
-  const mentionables=(state.users||[]).filter(u=>u.active!==false&&tPick(u)&&u.id!==user.id&&u.username);
+  const mentionables=(state.users||[]).filter(u=>u.active!==false&&tPick(u)&&isOrig(u)&&u.id!==user.id&&u.username);
   const onCmt=e=>{ const v=e.target.value; setCmt(v); const m=/(^|\s)@([\w.-]*)$/.exec(v.slice(0,e.target.selectionStart)); setMent(m?m[2].toLowerCase():null); };
   const pickMent=u=>{ setCmt(c=>c.replace(/(^|\s)@([\w.-]*)$/,(_,s)=>`${s}@${u.username} `)); setMent(null); };
   const mList=ment===null?[]:mentionables.filter(u=>u.username.toLowerCase().includes(ment)||(u.name||"").toLowerCase().includes(ment)).slice(0,6);

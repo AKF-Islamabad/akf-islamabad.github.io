@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-a4jJ8HAzkOgiltUyAdn4emIpVTxTir6keTzCG6KPHAI=' 'sha256-hl+psU5Pi7Dxj0D6EU+Ghy+V8mSF3OohVjCeu1XMIFk='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-a4jJ8HAzkOgiltUyAdn4emIpVTxTir6keTzCG6KPHAI=' 'sha256-j2c2LuxpaSR1xLMFD1E5gytt5/iTCfwRfqlqeQ9ngM8='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>(function(){var em=/[?&]embed=admin(&|$)/.test(location.search),ok=window.self===window.top;if(!ok&&em){try{ok=window.parent.location.origin===location.origin;}catch(e){ok=false;}}if(ok){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);if(em&&window.self!==window.top){window.AKF_EMBED=true;document.documentElement.classList.add("embed");window.AKF_NOTIFY=function(){};window.AKF_ASSISTANT=function(){};}}else{try{window.top.location=window.self.location;}catch(e){}}})();</script>
@@ -1389,8 +1389,12 @@ function committeeCard(cur) {
     return el("div", { class: "grid2" }, p, el("div", { style: "display:flex;gap:8px" }, t, el("button", { class: "btn ghost sm", type: "button", text: "Remove", onclick: () => { list.splice(i, 1); draw(); } })));
   }), ...(list.length ? [] : [el("p", { class: "small muted", style: "margin:0", text: "No member yet. While this list is empty, the Manager Admin & HR decides at the committee step as before." })]));
   (async () => {
-    try { people = ((await q(sb.from("portal_rows").select("id,name:data->>name,designation:data->>designation,active:data->>active,erased:data->>erased").eq("collection", "users"))) || [])
-      .filter(u => u.name && u.active !== "false" && !u.erased).sort((a, b) => a.name.localeCompare(b.name)); } catch (e) { fail(e, "The list of people could not be loaded"); }
+    try { people = ((await q(sb.from("portal_rows").select("id,name:data->>name,designation:data->>designation,active:data->>active,erased:data->>erased,email:data->>email").eq("collection", "users").order("created_at", { ascending: true }))) || [])
+      .filter(u => u.name && u.active !== "false" && !u.erased);
+      /* some people have two records (old portal + main page): show each person once, the original (oldest) record */
+      const all = people, seen = new Set(); people = people.filter(u => { const k = String(u.email || "").toLowerCase() || u.id; if (seen.has(k)) return false; seen.add(k); return true; }).sort((a, b) => a.name.localeCompare(b.name));
+      /* a member saved under the other record of the same person shows as that person */
+      list.forEach(m => { if (people.some(p => p.id === m.uid)) return; const r = all.find(x => x.id === m.uid), k = r && String(r.email || "").toLowerCase(), o = k && people.find(p => String(p.email || "").toLowerCase() === k); if (o) m.uid = o.id; }); } catch (e) { fail(e, "The list of people could not be loaded"); }
     draw();
   })();
   draw();
