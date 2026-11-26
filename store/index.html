@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-u8gbYCNJmnxksIJWy1ajLh6lbOb68Ok33i/YKQYmWFA='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-fjRlC8MlFND8lyiYmoHZzwklsBgympwsjiL9HFNLvKk='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -4779,13 +4779,18 @@ function makeActions(commit, user, toast){
       }); toast(`${id} recorded — issue the PO next`,"ok");
     },
     /* Purchase committee picks one vendor; a comparative statement (CS) document is generated. */
-    committeeDecide(rfqId,quoteId,{members,reason}){
+    committeeDecide(rfqId,quoteId,{members,reason,minutes}){
       let cs; commit(d=>{ const rfq=d.rfqs.find(r=>r.id===rfqId); const r=d.requests.find(x=>x.id===rfq.requestId); const q=rfq.quotes.find(q=>q.id===quoteId); const v=d.vendors.find(v=>v.id===q.vendorId);
         cs=nextNumber(d,`AKF-CS-${YEAR}-`); rfq.committee={quoteId,members,reason,at:nowISO(),by:user.name,byId:user.id}; rfq.csId=cs; rfq.status="Closed";
         d.docs.unshift({id:cs,type:"CS",title:"Comparative statement",at:nowISO(),by:user.name,byId:user.id,amount:grossOf(q),ref:rfq.id,store:"",lines:r.items.map(i=>({item:i.name,qty:i.qty,uom:i.uom,price:i.price}))});
+        if(minutes){ const mm=cs.replace("AKF-CS-","AKF-MOM-"); d.docs.unshift({id:mm,type:"MOM",title:"Minutes of meeting · purchase committee",at:nowISO(),by:user.name,byId:user.id,amount:grossOf(q),ref:rfq.id,store:"",minutes}); rfq.momId=mm; r.links.mom=mm; }
         r.links.cs=cs; advance(d,r,"committee",`Committee selected ${v.name}`,`${cs} · ${pkr(grossOf(q))} incl. tax${reason?" · "+reason:""}`);
       }); toast(`${cs} comparative statement generated`,"ok");
     },
+    /* test copy without a database: the same two steps the database functions do (064_purchase_committee.sql) */
+    committeeLocal(fn,a){ commit(d=>{ const rfq=d.rfqs.find(r=>r.id===a.p_rfq); if(!rfq) return;
+      if(fn==="portal_committee_vote"){ const m=committeeMembers(d,d.requests.find(r=>r.id===rfq.requestId)).find(m=>m.uid===user.id); if(!m) return; rfq.votes=[...(rfq.votes||[]).filter(v=>v.uid!==user.id),{uid:user.id,name:user.name,title:m.title,quoteId:a.p_quote,remarks:a.p_remarks,at:nowISO()}]; }
+      else rfq.meet={link:a.p_link,when:a.p_when,by:user.name,byId:user.id,at:nowISO()}; }); },
     markOpened(rfqId,qId){ commit(d=>{ const q=d.rfqs.find(r=>r.id===rfqId).quotes.find(q=>q.id===qId); if(q.status==="Sent") q.status="Opened"; }); },
     recordQuote(rfqId,qId,{amount,inclusive,docs,deliveryDays}){
       commit(d=>{ const rfq=d.rfqs.find(r=>r.id===rfqId); const q=rfq.quotes.find(q=>q.id===qId); const v=d.vendors.find(v=>v.id===q.vendorId);
@@ -4958,7 +4963,7 @@ function makeActions(commit, user, toast){
       ren.forEach((n,o)=>{ d.stock.forEach(x=>{ if(x.store===o) x.store=n; }); d.docs.forEach(x=>{ if(x.store===o) x.store=n; }); });
       log(d,"SETTINGS","Stores changed",[...ren].map(([o,n])=>o+" → "+n).concat(list.filter(x=>!storesOf(SETTINGS).some(o=>code(o)===code(x))).map(x=>"Added "+x)).join(" · ")); });
       STORES=list; toast("Stores saved","ok"); },
-    saveSettings(st){ commit(d=>{ const diffs=Object.keys(st).filter(k=>String(d.settings[k])!==String(st[k])).map(k=>`${k}: ${d.settings[k]} → ${st[k]}`); d.settings={...d.settings,...st}; if(diffs.length) log(d,"SETTINGS","Settings changed",diffs.join(" · ")); }); toast("Settings saved","ok"); },
+    saveSettings(st){ commit(d=>{ const txt=x=>x&&typeof x==="object"?JSON.stringify(x):String(x); const diffs=Object.keys(st).filter(k=>txt(d.settings[k])!==txt(st[k])).map(k=>k==="committee"?"purchase committee changed":`${k}: ${d.settings[k]} → ${st[k]}`); d.settings={...d.settings,...st}; if(diffs.length) log(d,"SETTINGS","Settings changed",diffs.join(" · ")); }); toast("Settings saved","ok"); },
     async changePasswordSB(next){ try{ await DB.changePassword(next); commit(d=>{ log(d,user.username,"Password changed",""); });   /* the password lives only in Supabase Auth, never on the profile */ toast("Password changed","ok"); return true; }catch(e){ toast(/password/i.test(e.message||"")&&!/[{}<>]/.test(e.message)?e.message:errRef(e,"Could not change password"),"bad"); return false; } },
     async restoreSB(json){ try{ const s=JSON.parse(json); if(!s||!Array.isArray(s.requests)) throw new Error("not a backup"); await DB.replaceAll(s,true); toast("Backup restored","ok"); setTimeout(()=>location.reload(),600); }catch(e){ toast(errRef(e,"Restore failed"),"bad"); } },
     changePassword(current,next){ let ok=false; commit(d=>{ const u=d.users.find(u=>u.id===user.id); if(u.password===current){ u.password=next; ok=true; log(d,u.username,"Password changed",""); } }); toast(ok?"Password changed":"Current password is incorrect",ok?"ok":"bad"); return ok; },
@@ -5132,6 +5137,7 @@ function RequestModal({req,state,user,A,onClose,openDoc,readOnly}){
     const mine=req.status==="active"&&!req.links.po&&req.stage!=="closed"?reqTotal(req):0; return {used:String(u.spent+u.committed-mine),avail:String(u.remaining+mine)}; });
   const [mode,setMode]=useState(null); // sub-forms: rfq | quote | po | grn | issue
   const can=canAct(user,req);
+  const cm=committeeMembers(state,req);
   const [attLabel,setAttLabel]=useState("Quotation"); const fileRef=useRef();
   const canAttach=!READ_ONLY_ROLES.includes(user.role)&&req.status==="active"&&(user.role!=="hod"||req.dept===user.dept);
   const onFile=e=>readAtts(e.target,attLabel,(req.attachments||[]).length,a=>A.attach(req.id,a));
@@ -5149,7 +5155,8 @@ function RequestModal({req,state,user,A,onClose,openDoc,readOnly}){
   const backBtn=html`<button class="btn btn-ghost" title="Back to the person who raised it, for correction. After the correction it continues at this step." onClick=${()=>{ if(comment.trim().length<5){alert("Write in the remarks box what must be corrected (at least 5 letters).");return;} A.sendBack(req.id,comment); onClose(); }}>Send back</button>`;
 
   let actionBlock=null;
-  if(can && next){
+  const cmView=!readOnly&&!!next&&next.key==="committee"&&cm.length>0&&req.status==="active"&&!req.correction&&(cm.some(m=>m.uid===user.id)||["admin_officer","manager_hr"].includes(user.role));
+  if((can||cmView) && next){
     const k=next.key;
     const nextAfter=flowOf(req)[stageIndex(req)+2];
     const fwdLabel=nextAfter?` & forward to ${nextAfter.who}`:"";
@@ -5172,7 +5179,7 @@ function RequestModal({req,state,user,A,onClose,openDoc,readOnly}){
       actionBlock=html`<${Act} ...${actProps}>${rfq?html`<${QuotesPanel} rfq=${rfq} state=${state} A=${A} req=${req} collect onIssued=${onClose}/>`:mode==="rfq"?html`<${RfqForm} vendors=${state.vendors} req=${req} onAdd=${v=>A.saveVendor(v)} onCancel=${()=>setMode(null)} onSend=${(ids,days)=>{A.sendRFQ(req.id,ids,days);onClose();}}/>`
         :mode==="direct"?html`<${DirectForm} vendors=${state.vendors} req=${req} onCancel=${()=>setMode(null)} onSave=${p=>{A.directPurchase(req.id,p);onClose();}}/>`
         :html`<div class=${"notice "+(needRfq?"notice-warn":"notice-info")}><${Icon} name=${needRfq?"alert":"shield"}/><span>Request value <b>${pkr(total)}</b> ${needRfq?`exceeds ${pkr(lim)} — quotations from vendors and a purchase-committee decision are mandatory.`:`is within the direct-purchase limit of ${pkr(lim)} — the Admin Officer (Procurement) buys directly from one vendor and carries it out, or may still send an RFQ link to vendors to get their rates.`}</span></div><div class="row wrap"><button class="btn btn-primary" onClick=${()=>setMode("rfq")}><${Icon} name="send"/>Send RFQ to vendors</button>${!needRfq&&html`<button class="btn btn-ghost" onClick=${()=>setMode("direct")}><${Icon} name="cart"/>Direct purchase</button>`}${rejectBtn}</div>`}<//>`; }
-    if(k==="committee") actionBlock=html`<${Act} ...${actProps}><${CommitteePanel} rfq=${rfq} state=${state} A=${A} req=${req} user=${user} onDone=${onClose}/><//>`;
+    if(k==="committee") actionBlock=cm.length&&rfq?html`<${Act} ...${actProps}><${CommitteeBoard} rfq=${rfq} state=${state} A=${A} req=${req} user=${user} members=${cm} onDone=${onClose}/><//>`:can?html`<${Act} ...${actProps}><${CommitteePanel} rfq=${rfq} state=${state} A=${A} req=${req} user=${user} onDone=${onClose}/><//>`:null;
     if(k==="po") actionBlock=html`<${Act} ...${actProps}><${QuotesPanel} rfq=${rfq} state=${state} A=${A} req=${req} onIssued=${onClose}/><//>`;
     if(k==="grn") actionBlock=html`<${Act} ...${actProps}>${mode==="grn"?html`<${GrnForm} req=${req} po=${po} onCancel=${()=>setMode(null)} onSave=${p=>{A.receiveGRN(req.id,p);onClose();}}/>`:html`<p class="sm muted" style="margin:0">${po?`${po.id} issued to ${vendorName(po.vendorId)} · delivery by ${fmtD(po.deliveryBy)}`:"Waiting for goods from vendor"}.</p><button class="btn btn-primary" onClick=${()=>setMode("grn")}><${Icon} name="box"/>Receive goods (create GRN)</button>`}<//>`;
     if(k==="issued") actionBlock=html`<${Act} ...${actProps}>${mode==="issue"?html`<${IssueForm} users=${state.users} defaultId=${req.requesterId} onCancel=${()=>setMode(null)} onSave=${p=>{A.issueToDept(req.id,p);onClose();}}/>`
@@ -5315,6 +5322,75 @@ function ComparativeTable({rfq,state,selectable,choice,onChoose,actions}){
           ${!selectable&&actions&&html`<td class="nowrap">${actions(q)}</td>`}</tr>`; })}
     </tbody></table></div></div>`;
 }
+/* ---------- Purchase committee as named people (064_purchase_committee.sql; the database checks every step) ----------
+   Settings → Purchase committee lists the members in signing order. The Head of Department who raised the request joins as a member.
+   Each member records a choice with their own login; when all have chosen, the Admin Officer generates the comparative statement and the minutes. */
+const MEET_RE=/^https:\/\/meet\.google\.com\/[a-z0-9-]{3,40}$/;
+function committeeMembers(state,req){
+  const us=state.users||[], live=id=>us.find(x=>x.id===id&&x.active&&!x.erased);
+  const set=(Array.isArray(state.settings.committee)?state.settings.committee:[]).map(m=>{ const u=live(m.uid); return u?{uid:u.id,name:u.name,title:m.title||"Member Committee"}:null; }).filter(Boolean);
+  if(!set.length||!req) return [];
+  const h=live(req.requesterId); if(h&&!set.some(m=>m.uid===h.id)) set.splice(1,0,{uid:h.id,name:h.name,title:"Member Committee (HOD)",hod:true});
+  return set;
+}
+/* the vendor the committee chose: every member has chosen; most choices win; a tie is settled by the Chairman's choice */
+function committeeResult(rfq,members){
+  const votes=((rfq&&rfq.votes)||[]).filter(v=>members.some(m=>m.uid===v.uid));
+  if(!members.length||members.some(m=>!votes.some(v=>v.uid===m.uid))) return null;
+  const n={}; votes.forEach(v=>{ n[v.quoteId]=(n[v.quoteId]||0)+1; }); const top=Math.max(...Object.values(n)), tied=Object.keys(n).filter(k=>n[k]===top);
+  if(tied.length===1) return tied[0];
+  const ch=members.find(m=>/^chairman/i.test(m.title)), cv=ch&&votes.find(v=>v.uid===ch.uid); return cv&&tied.includes(cv.quoteId)?cv.quoteId:null;
+}
+{ const M=[{uid:"a",title:"Member Committee"},{uid:"h",title:"Member Committee (HOD)"},{uid:"b",title:"Member Committee"},{uid:"c",title:"Chairman Committee"}], V=(...q)=>({votes:q.map((x,i)=>({uid:"ahbc"[i],quoteId:x}))});
+  console.assert(committeeResult(V("q1","q1","q1"),M)===null&&committeeResult(V("q1","q1","q1","q1"),M)==="q1"&&committeeResult(V("q1","q1","q1","q2"),M)==="q1"&&committeeResult(V("q1","q1","q2","q2"),M)==="q2"&&committeeResult({votes:[]},[])===null,"committeeResult: all must choose; most wins; the Chairman settles a tie"); }
+/* first draft of the minutes, in the wording of the committee's paper minutes; the Admin Officer can edit it before it is generated */
+function momDraft(state,req,rfq,qid,members){
+  const vn=id=>(state.vendors.find(v=>v.id===id)||{}).name||"the vendor"; const subs=rfq.quotes.filter(q=>q.status==="Submitted").sort((a,b)=>grossOf(a)-grossOf(b)); const sel=subs.find(q=>q.id===qid)||subs[0]; const low=subs[0].id===sel.id;
+  const items=req.items.map(i=>`${i.qty} ${i.uom||""} ${i.name}`.replace(/\s+/g," ").trim()).join(", "); const votes=(rfq.votes||[]).filter(v=>members.some(m=>m.uid===v.uid)); const all=votes.every(v=>v.quoteId===sel.id);
+  const org=SETTINGS.orgName||"Alkhidmat Foundation Islamabad"; const d=new Date((rfq.meet&&rfq.meet.when)||(votes.length?votes[votes.length-1].at:Date.now()));
+  return { subject:req.purpose||req.items.map(i=>i.name).join(", "), when:new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,16), mode:rfq.meet?"Online (Google Meet)":"In person",
+    background:`The requesting department (${req.dept}) of ${org} initiated the procurement of ${items}. Purpose: ${req.purpose||"as per the request"}.\n\nIn compliance with the Procurement Policy of ${org}, quotations were obtained from ${subs.length} vendors through ${rfq.id} to ensure transparency, competitive pricing, quality assurance and value for money. The Procurement Committee reviewed the quotations, compared the prices inclusive of applicable taxes, and assessed documentation, past performance and delivery time.`,
+    findings:[`The Procurement Committee reviewed and evaluated all ${subs.length} submitted quotations on price (inclusive of applicable taxes), documentation, past performance and delivery time.`,
+      `${vn(sel.vendorId)} offered ${low?"the lowest evaluated quotation":"a quotation"} of ${pkr(grossOf(sel))} inclusive of applicable taxes${sel.deliveryDays?`, with delivery in ${sel.deliveryDays} days`:""}.`,
+      ...subs.filter(q=>q.id!==sel.id).map(q=>`${vn(q.vendorId)} quoted ${pkr(grossOf(q))} inclusive of applicable taxes.`),
+      ...votes.filter(v=>v.remarks).map(v=>`${v.name} (${v.title})${v.quoteId!==sel.id?` preferred ${vn((subs.find(q=>q.id===v.quoteId)||{}).vendorId)}`:""}: ${v.remarks}`),
+      `Based on cost-effectiveness, compliance with the required specifications, vendor reliability and delivery commitment, the Procurement Committee ${all?"unanimously":"by majority"} approved procurement from ${vn(sel.vendorId)}.`].join("\n"),
+    decision:`The Procurement Committee approved the procurement of ${items} from ${vn(sel.vendorId)} at a total quoted amount of ${pkr(grossOf(sel))} (inclusive of applicable taxes)${low?", identified as the lowest evaluated and technically compliant vendor":""}.\n\nThis decision reflects the commitment of ${org} to financial prudence, transparency, procurement compliance and responsible use of organisational resources.` };
+}
+function CommitteeBoard({rfq,state,A,req,user,members,onDone}){
+  const subs=rfq.quotes.filter(q=>q.status==="Submitted"); const scores=scoreQuotes(rfq.quotes,state.vendors); const best=subs.length?subs.reduce((a,b)=>(scores[b.id].total>scores[a.id].total?b:a)):null;
+  const votes=rfq.votes||[]; const my=votes.find(v=>v.uid===user.id); const me=members.find(m=>m.uid===user.id); const result=committeeResult(rfq,members);
+  const [choice,setChoice]=useState((my&&my.quoteId)||(best&&best.id)); const [remarks,setRemarks]=useState((my&&my.remarks)||""); const [busy,setBusy]=useState(false);
+  const [link,setLink]=useState((rfq.meet&&rfq.meet.link)||""); const [when,setWhen]=useState(""); const [mom,setMom]=useState(null); const setM=(k,x)=>setMom(o=>({...o,[k]:x}));
+  const vn=q=>{ const x=rfq.quotes.find(y=>y.id===q); return (state.vendors.find(v=>v.id===(x&&x.vendorId))||{}).name||"—"; };
+  const call=async(fn,args,ok)=>{
+    if(!sb){ A.committeeLocal(fn,args); window.__toast&&window.__toast(ok); return; }
+    setBusy(true); const { error } = await sb.rpc(fn,args); setBusy(false);
+    if(error){ const m=String(error.message||""); window.__toast&&window.__toast(m.length<300&&!/relation|column|syntax|function /i.test(m)?m:"Not saved. Please try again.","bad"); return; }
+    window.__toast&&window.__toast(ok); setTimeout(()=>location.reload(),900); };
+  const notBest=best&&choice&&choice!==best.id, waiting=members.filter(m=>!votes.some(v=>v.uid===m.uid)), all=result&&votes.filter(v=>members.some(m=>m.uid===v.uid)).every(v=>v.quoteId===result);
+  const meetOk=rfq.meet&&MEET_RE.test(rfq.meet.link||""), cal="https://calendar.google.com/calendar/render?action=TEMPLATE&text="+encodeURIComponent("Purchase committee meeting · "+req.id);
+  return html`<div class="stack"><div class="sm muted">Each committee member compares the quotations (all totals include applicable taxes) and records a choice with their own login. When every member has chosen, the Admin Officer generates the comparative statement and the minutes of meeting.</div>
+    <${ComparativeTable} rfq=${rfq} state=${state} selectable=${!!me} choice=${choice} onChoose=${setChoice}/>
+    <b class="sm">Committee members</b>
+    <div class="list">${members.map(m=>{ const v=votes.find(x=>x.uid===m.uid); return html`<div class="item"><div class="row between wrap"><div><b>${m.name}</b><div class="xs faint">${m.title}</div></div>${v?html`<span class="sm"><${Tag} tone="ok" dot>Approved</${Tag}> ${vn(v.quoteId)} <span class="faint">· ${fmtDT(v.at)}</span></span>`:html`<${Tag} tone="warn" dot>Waiting</${Tag}>`}</div>${v&&v.remarks&&html`<div class="xs muted">Remarks: ${v.remarks}</div>`}</div>`; })}</div>
+    ${meetOk&&html`<div class="notice notice-info"><${Icon} name="send"/><span class="grow"><b>Online meeting</b>${rfq.meet.when?` · ${fmtDT(rfq.meet.when)}`:""} · shared by ${rfq.meet.by}</span><a class="btn btn-primary btn-sm" href=${rfq.meet.link} target="_blank" rel="noopener noreferrer">Join Google Meet</a></div>`}
+    ${me&&!me.hod&&!result&&html`<details><summary class="sm"><b>Meet online</b> (Google Meet: now or scheduled)</summary><div class="stack" style="margin-top:8px"><div class="row wrap"><a class="btn btn-ghost btn-sm" href="https://meet.google.com/new" target="_blank" rel="noopener noreferrer">Start Google Meet now</a><a class="btn btn-ghost btn-sm" href=${cal} target="_blank" rel="noopener noreferrer">Schedule in Google Calendar</a></div>
+      <div class="grid2"><${Field} label="Meeting link"><input class="input" value=${link} maxlength="70" placeholder="https://meet.google.com/abc-defg-hij" onInput=${e=>setLink(e.target.value.trim())}/><//><${Field} label="Date and time (leave empty for now)"><input class="input" type="datetime-local" value=${when} onInput=${e=>setWhen(e.target.value)}/><//></div>
+      <div class="row"><span class="sm muted grow">Start or schedule the meeting in Google, copy its link and paste it here. Every member then gets a Join button on this request.</span><button class="btn btn-primary btn-sm" disabled=${busy||!MEET_RE.test(link)} onClick=${()=>call("portal_committee_meet",{p_rfq:rfq.id,p_link:link,p_when:when?new Date(when).toISOString():""},"Meeting shared with the committee")}>Share with the committee</button></div></div></details>`}
+    ${me&&!mom&&html`<${Field} label=${notBest?"Reason for not selecting the best-scored vendor (required)":"Remarks"}><textarea class="textarea" value=${remarks} maxlength="500" onInput=${e=>setRemarks(e.target.value)} style="min-height:48px"/><//>
+      <div class="row wrap"><span class="grow sm muted">${my?`You approved ${vn(my.quoteId)}. You can change it until the minutes are generated.`:"Your choice is signed with your login."}</span><button class="btn btn-ok" disabled=${busy||!choice||(notBest&&!remarks.trim())||(my&&my.quoteId===choice&&(my.remarks||"")===remarks.trim())} onClick=${()=>call("portal_committee_vote",{p_rfq:rfq.id,p_quote:choice,p_remarks:remarks.trim()},"Your choice is recorded")}><${Icon} name="stamp"/>${my?"Change my choice":"Approve selected vendor"}</button></div>`}
+    ${result?html`<div class="notice notice-ok"><${Icon} name="check"/><span><b>Committee decision:</b> ${vn(result)} · ${all?"unanimous":"by majority"}. ${user.role==="admin_officer"?"":"The Admin Officer generates the comparative statement and the minutes of meeting."}</span></div>`
+      :html`<div class="notice notice-warn"><${Icon} name="alert"/><span>${waiting.length?`Waiting for ${waiting.map(m=>m.name).join(", ")}.`:"The choices are tied and the Chairman has not settled it. Members can change their choice."}</span></div>`}
+    ${result&&user.role==="admin_officer"&&!mom&&html`<div class="row"><span class="grow"/><button class="btn btn-primary" onClick=${()=>setMom(momDraft(state,req,rfq,result,members))}><${Icon} name="stamp"/>Generate procurement committee minutes</button></div>`}
+    ${mom&&html`<div class="stack" style="border-top:1px solid var(--line);padding-top:10px"><b class="sm">Minutes of meeting: check the draft, change what you need, then generate</b>
+      <div class="grid3"><${Field} label="Subject (Procurement Approval – …)"><input class="input" value=${mom.subject} maxlength="200" onInput=${e=>setM("subject",e.target.value)}/><//><${Field} label="Meeting date and time"><input class="input" type="datetime-local" value=${mom.when} onInput=${e=>setM("when",e.target.value)}/><//><${Field} label="Meeting held"><${Pick} value=${mom.mode} options=${["In person","Online (Google Meet)"]} onChange=${x=>setM("mode",x)}/><//></div>
+      <${Field} label="Background"><textarea class="textarea" value=${mom.background} maxlength="4000" onInput=${e=>setM("background",e.target.value)} style="min-height:120px"/><//>
+      <${Field} label="Final findings and resolutions (one per line)"><textarea class="textarea" value=${mom.findings} maxlength="4000" onInput=${e=>setM("findings",e.target.value)} style="min-height:140px"/><//>
+      <${Field} label="Decision"><textarea class="textarea" value=${mom.decision} maxlength="3000" onInput=${e=>setM("decision",e.target.value)} style="min-height:90px"/><//>
+      <div class="row wrap"><button class="btn btn-ghost" onClick=${()=>setMom(null)}>Back</button><span class="grow"/><button class="btn btn-ok" disabled=${!mom.subject.trim()||!mom.when||!mom.decision.trim()} onClick=${()=>{A.committeeDecide(rfq.id,result,{members:members.map(m=>({uid:m.uid,name:m.name,designation:m.title})),reason:all?"Unanimous":"By majority",minutes:{...mom,when:new Date(mom.when).toISOString()}});onDone();}}><${Icon} name="stamp"/>Generate comparative statement and minutes</button></div></div>`}
+  </div>`;
+}
 /* Purchase committee: picks one vendor, names its members, generates the comparative statement */
 function CommitteePanel({rfq,state,A,req,user,onDone}){
   const subs=rfq?rfq.quotes.filter(q=>q.status==="Submitted"):[]; const scores=rfq?scoreQuotes(rfq.quotes,state.vendors):{};
@@ -5404,7 +5480,17 @@ function DocModal({id,state,user,A,onClose,openReq}){
     body=html`<div class="doc">${header("Comparative statement",`${r.id} · ${fmtDT(doc.at)}`)}
       <div class="kv"><dt>Request</dt><dd>${req?html`<button class="btn btn-soft btn-sm id" onClick=${()=>openReq(req.id)}>${req.id}</button> · ${req.purpose}`:"—"}</dd><dt>Department</dt><dd>${req?req.dept+" · "+req.requester:"—"}</dd><dt>Selected vendor</dt><dd><b>${sel?vn(sel.vendorId):"—"}</b>${sel?` · ${pkr(grossOf(sel))} incl. tax`:""}</dd>${c.reason&&html`<dt>Committee remarks</dt><dd>${c.reason}</dd>`}</div>
       <${ComparativeTable} rfq=${r} state=${state}/>
-      <div><b class="sm">Purchase committee</b><div class="signs" style="margin-top:8px">${(c.members||[]).map(m=>html`<${SignBox} state=${state} name=${m.name} designation=${m.designation} label="Committee member" at=${c.at}/>`)}</div></div>
+      <div><b class="sm">Purchase committee</b><div class="signs" style="margin-top:8px">${(c.members||[]).map(m=>html`<${SignBox} state=${state} userId=${m.uid} name=${m.name} designation=${m.designation} label="Committee member" at=${c.at}/>`)}</div></div>
+      <div class="row" style="justify-content:flex-end"><${QR} text=${trackUrl(id)} caption=${"Verify · "+id}/></div></div>`; }
+  else if(doc&&doc.type==="MOM"){ const r=state.rfqs.find(x=>x.id===doc.ref)||{quotes:[]}; const req=reqOf(r.requestId); const c=r.committee||{}; const m=doc.minutes||{}; const para=t=>String(t||"").split(/\n+/).filter(x=>x.trim());
+    body=html`<div class="doc">${header("Minutes of meeting · Procurement Committee",`${r.id} · ${r.csId||""}`)}
+      <h3 style="margin:0;text-align:center">Procurement Approval – ${m.subject}</h3>
+      <div class="kv"><dt>Meeting date</dt><dd>${fmtD(m.when)}</dd><dt>Meeting time</dt><dd>${new Date(m.when).toLocaleTimeString("en-PK",{hour:"2-digit",minute:"2-digit"})} · ${m.mode||"In person"}</dd><dt>Requisitioned by</dt><dd>${req?req.dept+" · "+req.requester:"—"}</dd><dt>Request</dt><dd>${req?html`<button class="btn btn-soft btn-sm id" onClick=${()=>openReq(req.id)}>${req.id}</button>`:"—"}</dd><dt>Procurement item</dt><dd>${req?req.items.map(i=>i.name).join(", "):"—"}</dd><dt>Quantity</dt><dd>${req?req.items.map(i=>`${i.qty} ${i.uom||""}`.trim()).join(", "):"—"}</dd></div>
+      <div><b>Background</b>${para(m.background).map(t=>html`<p style="margin:6px 0">${t}</p>`)}</div>
+      <div><b>Comparative statement</b><div style="margin-top:6px"><${ComparativeTable} rfq=${r} state=${state}/></div></div>
+      <div><b>Final findings and resolutions</b><ul style="margin:6px 0;padding-left:20px">${para(m.findings).map(t=>html`<li style="margin:3px 0">${t}</li>`)}</ul></div>
+      <div><b>Decision</b>${para(m.decision).map(t=>html`<p style="margin:6px 0">${t}</p>`)}</div>
+      <div class="signs" style="margin-top:8px">${(c.members||[]).map(x=>html`<${SignBox} state=${state} userId=${x.uid} name=${x.name} designation=${x.designation} label=${x.designation} at=${c.at}/>`)}</div>
       <div class="row" style="justify-content:flex-end"><${QR} text=${trackUrl(id)} caption=${"Verify · "+id}/></div></div>`; }
   else if(doc&&doc.type==="RGT"){ const r=state.rfqs.find(x=>x.id===doc.ref)||{}; const req=reqOf(r.requestId); const v=state.vendors.find(x=>x.id===doc.vendorId)||{};
     body=html`<div class="doc">${header("Regret letter",fmtD(doc.at))}
@@ -5462,6 +5548,9 @@ function TrackBox({state,user,openReq,openDoc,inline}){
 /* ---------- Notifications derived from state ---------- */
 function buildNotifications(state,user){
   const n=[]; const reqs=visibleRequests(user,state.requests);
+  reqs.filter(r=>r.status==="active"&&!r.correction&&(nextStage(r)||{}).key==="committee").forEach(r=>{ const rfq=state.rfqs.find(x=>x.id===r.links.rfq); const cm=rfq?committeeMembers(state,r):[]; if(!cm.length) return; const done=committeeResult(rfq,cm);
+    if(!done&&cm.some(m=>m.uid===user.id)&&!(rfq.votes||[]).some(v=>v.uid===user.id)) n.push({tone:"info",icon:"stamp",t:`Purchase committee: your choice is needed · ${r.id}`,d:`${r.dept} · ${pkr(reqTotal(r))}`,at:r.timeline[r.timeline.length-1].at,id:r.id});
+    if(done&&user.role==="admin_officer") n.push({tone:"info",icon:"stamp",t:`Committee decided: generate the minutes · ${r.id}`,d:`${r.dept} · ${pkr(reqTotal(r))}`,at:r.timeline[r.timeline.length-1].at,id:r.id}); });
   reqs.filter(r=>canAct(user,r)).forEach(r=>{ const rc=nextStage(r).key==="closed"&&r.receiverId===user.id; n.push({tone:"info",icon:rc?"box":"stamp",t:rc?`Accept and sign for items issued to you · ${r.id}`:`${nextStage(r).label} needed · ${r.id}`,d:`${r.dept} · ${pkr(reqTotal(r))}`,at:r.timeline[r.timeline.length-1].at,id:r.id,receive:rc}); });
   reqs.filter(r=>isEscalated(r)).forEach(r=>n.push({tone:"bad",icon:"alert",t:`${escHours(r)}h escalation · ${r.id}`,d:`Waiting for ${nextStage(r).who} for ${Math.round(hoursSince(r.timeline[r.timeline.length-1].at))}h`,at:r.timeline[r.timeline.length-1].at,id:r.id}));
   if(user.role==="hod") reqs.filter(r=>r.requesterId===user.id&&r.status==="rejected").slice(0,2).forEach(r=>n.push({tone:"bad",icon:"x",t:`Rejected · ${r.id}`,d:(r.timeline[r.timeline.length-1]||{}).comment||"",at:r.timeline[r.timeline.length-1].at,id:r.id}));
@@ -6275,6 +6364,9 @@ function Settings({state,A,user}){
         <${Field} label="President approves above (PKR) — purchases up to this amount get their final approval from the Regional Manager (0 = the President approves every purchase)"><input class="input" type="number" min="0" value=${f.presidentAbove||0} onInput=${e=>set("presidentAbove",Number(e.target.value))}/><//>
         <${Field} label="Asset tagging threshold (PKR) — items at or above this, and all IT items, get an asset tag"><input class="input" type="number" min="0" value=${f.assetThreshold||50000} onInput=${e=>set("assetThreshold",Number(e.target.value))}/><//>
         <${Field} label="Acting approver (when President unavailable)"><select class="select" value=${f.actingApprover} onChange=${e=>set("actingApprover",e.target.value)}><option value="">None — President only</option><option value="regional_manager">Regional Manager</option><option value="gen_sec">General Secretary</option></select><//></div>
+      <div style="margin-top:12px"><b class="sm">Purchase committee</b><div class="sm muted">The members, in the order they sign the minutes (the Chairman last). The Head of Department who raised the request joins as a member by itself. Empty list: the Manager Admin & HR decides as before.</div>
+        ${(f.committee||[]).map((m,i)=>html`<div class="grid2" style="margin-top:6px"><select class="select" value=${m.uid} onChange=${e=>set("committee",f.committee.map((x,j)=>j===i?{...x,uid:e.target.value}:x))}><option value="">Choose a person…</option>${(state.users||[]).filter(u=>u.active&&!u.erased&&u.name).map(u=>html`<option value=${u.id}>${u.name}${u.designation?" · "+u.designation:""}</option>`)}</select><div class="row"><select class="select grow" value=${m.title} onChange=${e=>set("committee",f.committee.map((x,j)=>j===i?{...x,title:e.target.value}:x))}><option>Member Committee</option><option>Chairman Committee</option></select><button class="iconbtn" style="width:32px;height:32px" aria-label="Remove member" onClick=${()=>set("committee",f.committee.filter((_,j)=>j!==i))}><${Icon} name="trash"/></button></div></div>`)}
+        <div class="row" style="margin-top:6px"><button class="btn btn-ghost btn-sm" onClick=${()=>set("committee",[...(f.committee||[]),{uid:"",title:"Member Committee"}])}><${Icon} name="plus"/>Add member</button></div></div>
       <div class="notice notice-info" style="margin-top:10px"><${Icon} name="shield"/><span>Auto-approval has been removed: every request passes every step of its approval matrix.</span></div><//>
     <${Card} title="AI assistant" desc="The built-in assistant is free forever and works offline from your own portal data. Optionally connect Google Gemini (free tier) for open-ended questions.">
       <div class="grid3"><${Field} label="Assistant engine"><select class="select" value=${f.aiProvider||"builtin"} onChange=${e=>set("aiProvider",e.target.value)}><option value="builtin">Built-in (free, offline, no key)</option><option value="gemini">Google Gemini (free API key)</option></select><//>
