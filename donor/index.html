@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Foundation Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-vBrmCTh/vmKwtJ9EhKhcBqeHFCkpBBKh+p/PxvsB7e8='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dcaPmKDKYlmGW5AfaPKT4E+64tjervUIKwzCEvjBJlA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -1291,6 +1291,7 @@ const NAV = [
   { v: 'new', label: 'New receipt', icon: 'plus', perm: 'donation.create', primary: true },
   { v: 'collect', label: 'Quick Collect (walk-in)', icon: 'zap', perm: 'donation.create' },
   { v: 'donations', label: 'Donations', icon: 'receipt', badge: 'pending' },
+  { v: 'finance', label: 'Finance Verification', icon: 'shieldCheck', badge: 'fin', perm: 'donation.verify' },
   { v: 'goods', label: 'In-kind to receive', icon: 'box', badge: 'goods', perm: 'inkind.verify' },
   { v: 'donors', label: 'Donors', icon: 'users' },
   { v: 'pledges', label: 'Pledges & Installments', icon: 'calendar', badge: 'due' },
@@ -1307,7 +1308,7 @@ const NAV = [
   { v: 'users', label: 'Users & Roles', icon: 'userCog', perm: 'users' },
   { v: 'settings', label: 'Settings & Backup', icon: 'gear', perm: 'settings' }
 ];
-const TITLES = { cases: 'Cases', goods: 'In-kind to Receive', team: 'RMD Team', import: 'Import & Export', corrections: 'Corrections', dashboard: 'Dashboard', new: 'New receipt', donors: 'Donors', donations: 'Donations & Receipts', pledges: 'Pledges & Installments', messages: 'Donor Messages', signatories: 'Signatories', collect: 'Quick Collect', reports: 'Reports & Analytics', verify: 'Verify a Receipt', audit: 'Audit Trail', users: 'Users & Roles', settings: 'Settings & Backup', account: 'My Account' };
+const TITLES = { finance: 'Finance Verification', cases: 'Cases', goods: 'In-kind to Receive', team: 'RMD Team', import: 'Import & Export', corrections: 'Corrections', dashboard: 'Dashboard', new: 'New receipt', donors: 'Donors', donations: 'Donations & Receipts', pledges: 'Pledges & Installments', messages: 'Donor Messages', signatories: 'Signatories', collect: 'Quick Collect', reports: 'Reports & Analytics', verify: 'Verify a Receipt', audit: 'Audit Trail', users: 'Users & Roles', settings: 'Settings & Backup', account: 'My Account' };
 
 /* ---------------- Icons ---------------- */
 const IC = {
@@ -1515,7 +1516,7 @@ const ERP_PERMS = {
   'corrections.request': [['corrections', 'add']], 'corrections.approve': [['corrections', 'approve']], 'settings': [['settings', 'edit']]
 };
 /* the view → the tab ticked on the main page (views not listed are never shown in ERP mode) */
-const ERP_VIEW_TAB = { dashboard: 'dashboard', new: 'new', collect: 'new', donations: 'donations', donors: 'donors', pledges: 'pledges', cases: 'cases', team: 'team', import: 'import',
+const ERP_VIEW_TAB = { dashboard: 'dashboard', new: 'new', collect: 'new', donations: 'donations', finance: 'donations', donors: 'donors', pledges: 'pledges', cases: 'cases', team: 'team', import: 'import',
   corrections: 'corrections', messages: 'messages', reports: 'reports', verify: 'verify', signatories: 'signatories', audit: 'audit' };
 /* no settings page inside the portal: everything is set on the main page (Settings → Donor Management, Super Admin) */
 
@@ -2168,6 +2169,7 @@ function buildChrome() {
     due: can('reminders') ? dueInstallments().length : 0,
     outbox: can('messages') ? S.messages.filter(m => m.status === 'Queued').length : 0,
     corr: S.corrections.filter(c => c.status === 'Pending' && canDecideC(c)).length,
+    fin: can('donation.verify') ? finQueue().filter(canVerifyX).length : 0,
     goods: can('inkind.verify') ? S.donations.filter(d => d.status === 'Pending' && needsGoodsCheck(d) && canVerifyX(d)).length : 0,
     cases: (caseBoot(), viewOK('cases') ? (S.cases || []).filter(c => caseMine(c) || caseEscalated(c)).length : 0)
   };
@@ -5313,6 +5315,43 @@ VIEWS.goods = {
   bind() { const q = $('#g-q'); q.addEventListener('input', debounce(() => searchRerender(q, UI.goods, 'g-q'), 220)); }
 };
 
+/* ---------- Finance verification: every money receipt that waits for Finance, in one place.
+   Uses the Verify / Reject actions of the Donations list (maker-checker included); nothing new is stored. ---------- */
+const finQueue = () => S.donations.filter(x => x.status === 'Pending' && needsMoneyCheck(x));
+VIEWS.finance = {
+  html() {
+    const st = UI.finance || (UI.finance = { tab: 'pending', q: '', mode: '' }), pend = finQueue();
+    const done = S.donations.filter(x => x.vMoney && hasMoney(x)).sort((a, b) => String(b.vMoney.at || '').localeCompare(String(a.vMoney.at || '')));
+    const q = (st.q || '').trim().toLowerCase(), isP = st.tab !== 'verified';
+    let list = isP ? pend : done;
+    if (isP && st.mode) list = list.filter(x => (x.mode || 'Other') === st.mode);
+    if (q) list = list.filter(x => [x.receipt, donorName(donorById(x.donorId)), x.mode, userName(x.createdBy)].some(v => String(v || '').toLowerCase().includes(q)));
+    const byMode = {}; pend.forEach(x => { const m = x.mode || 'Other'; byMode[m] = (byMode[m] || 0) + 1; });
+    const items = Object.entries(byMode).map(([k, n]) => ({ key: k, label: k, value: n, note: 'receipts' }));
+    const chart = !isP || !items.length ? '' : window.AKF_CHARTS ? AKF_CHARTS.bars({ id: 'fin-mode', items })
+      : `<div class="cell-actions" style="justify-content:flex-start;flex-wrap:wrap">${items.map(i => `<button class="btn btn-ghost btn-sm" data-act="fin-mode" data-mode="${esc(i.key)}">${esc(i.label)} · <b>${i.value}</b></button>`).join('')}</div>`;
+    const tab = (k, l, n) => `<button class="tab ${st.tab === k ? 'on' : ''}" data-act="fin-tab" data-tab="${k}">${esc(l)}${n ? ` <span class="count">${n}</span>` : ''}</button>`;
+    const act = x => {
+      let h = `<button class="btn btn-ghost btn-sm" data-act="receipt" data-id="${esc(x.id)}">${ic('receipt')}Receipt</button>`;
+      if (!isP) return h;
+      if (x.createdBy === ME.email || (x.correctedBy || []).includes(ME.email)) return h + `<span class="badge" title="You recorded or corrected this receipt, so another Finance officer must verify it">Needs 2nd officer</span>`;
+      return h + `<button class="btn btn-success btn-sm" data-act="don-verify" data-id="${esc(x.id)}">${ic('check')}Verify</button><button class="btn btn-ghost btn-sm" style="color:var(--danger)" data-act="don-reject" data-id="${esc(x.id)}">Reject</button>`;
+    };
+    const row = x => `<tr><td class="nowrap"><b>${esc(x.receipt || x.id)}</b></td><td class="nowrap">${fmtDate(x.date)}</td><td>${esc(donorName(donorById(x.donorId)))}</td><td class="right num">${esc(money(moneyTotal(x)))}</td><td>${esc(x.mode || '—')}</td><td>${esc(userName(x.createdBy))}</td>${isP ? '' : `<td>${esc(userName(x.vMoney.by))}<div class="small muted">${fmtDate(x.vMoney.at)}</div></td>`}<td class="right"><div class="cell-actions">${act(x)}</div></td></tr>`;
+    return `<div class="page-head"><div><h2>Finance verification</h2><p>Donation receipts whose money waits for Finance. Check the money against the bank or cash record, then verify. A receipt you recorded yourself needs another Finance officer.</p></div></div>
+    <div class="stats-strip"><div><div class="k">Waiting for Finance</div><div class="v num">${NUM.format(pend.length)}</div></div><div><div class="k">Amount waiting</div><div class="v num">${esc(compact(pend.reduce((t, x) => t + moneyTotal(x), 0)))}</div></div><div><div class="k">Verified by Finance</div><div class="v num">${NUM.format(done.length)}</div></div></div>
+    <div class="card"><div class="tabs">${tab('pending', 'To verify', pend.length)}${tab('verified', 'Verified')}</div>
+      ${chart ? `<p class="hint" style="margin:10px 0 0">Waiting receipts by payment mode. Click a bar to show only that mode${st.mode ? `. Showing: <b>${esc(st.mode)}</b> <button class="btn btn-ghost btn-sm" data-act="fin-tab" data-tab="pending">Show all</button>` : ''}.</p>${chart}` : ''}
+      <div class="toolbar"><div class="grow search-in">${ic('search')}<input class="input" id="fin-q" type="search" placeholder="Search receipt, donor, mode or officer…" value="${esc(st.q || '')}" maxlength="60" aria-label="Search receipts"></div></div>
+      ${list.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Receipt</th><th>Date</th><th>Donor</th><th class="right">Money</th><th>Mode</th><th>Recorded by</th>${isP ? '' : '<th>Verified by</th>'}<th class="right">Actions</th></tr></thead><tbody>${list.slice(0, 300).map(row).join('')}</tbody></table></div>`
+        : emptyState('check', isP ? 'Nothing waits for Finance' : 'Nothing verified yet', q || st.mode ? 'Try another search or show all.' : 'New money receipts appear here as soon as they are recorded.')}</div>`;
+  },
+  bind() {
+    const q = $('#fin-q'); q.addEventListener('input', debounce(() => searchRerender(q, UI.finance, 'fin-q'), 220));
+    $('#view').addEventListener('akf-chart-pick', e => { const d = e.detail || {}; if (d.chart === 'fin-mode' && UI.view === 'finance') { UI.finance.mode = d.key; render(); } });
+  }
+};
+
 /* ---------- My account ---------- */
 VIEWS.account = {
   html() {
@@ -5452,6 +5491,8 @@ const ACT = {
   'cor-request': t => { closeModal(); setTimeout(() => correctionForm(t.dataset.id), 230); },
   'cor-open': t => { const was = modalOpen(); closeModal(); setTimeout(() => correctionDetail(t.dataset.id), was ? 230 : 0); },
   'cor-approve': t => decideCorrection(t.dataset.id, true),
+  'fin-mode': t => { UI.finance.mode = t.dataset.mode; render(); },
+  'fin-tab': t => { UI.finance = Object.assign(UI.finance || {}, { tab: t.dataset.tab, q: '', mode: '' }); render(); },
   'goods-tab': t => { UI.goods = Object.assign(UI.goods || {}, { tab: t.dataset.tab, q: '' }); if (UI.view !== 'goods') go('goods'); else render(); },
   'store-receive': t => { const x = S.donations.find(d => d.id === t.dataset.id); if (!x) return; const was = modalOpen(); closeModal(); setTimeout(() => storeReceive(x), was ? 230 : 0); },
   'cor-reject': t => decideCorrection(t.dataset.id, false),
