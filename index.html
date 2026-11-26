@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-a4jJ8HAzkOgiltUyAdn4emIpVTxTir6keTzCG6KPHAI=' 'sha256-I8ydE6jJbAa+rEcqJYSAXQdgr617YWccHCOeg+1n9Kg='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-a4jJ8HAzkOgiltUyAdn4emIpVTxTir6keTzCG6KPHAI=' 'sha256-hl+psU5Pi7Dxj0D6EU+Ghy+V8mSF3OohVjCeu1XMIFk='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>(function(){var em=/[?&]embed=admin(&|$)/.test(location.search),ok=window.self===window.top;if(!ok&&em){try{ok=window.parent.location.origin===location.origin;}catch(e){ok=false;}}if(ok){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);if(em&&window.self!==window.top){window.AKF_EMBED=true;document.documentElement.classList.add("embed");window.AKF_NOTIFY=function(){};window.AKF_ASSISTANT=function(){};}}else{try{window.top.location=window.self.location;}catch(e){}}})();</script>
@@ -1376,6 +1376,41 @@ function settingsPortals() {
   })();
   return box;
 }
+/* Settings → Purchase committee (064, 065): the members in the order they sign, and the one Google Meet room. Saved on its own.
+   On save the database gives each member the Procurement portal by itself. */
+function committeeCard(cur) {
+  const list = (Array.isArray(cur.committee) ? cur.committee : []).map(m => ({ uid: m.uid || "", title: m.title || "Member Committee" })); let people = [];
+  const rows = el("div", { style: "display:grid;gap:8px" }), room = el("input", { class: "input", maxlength: 70, placeholder: "https://meet.google.com/abc-defg-hij", value: cur.committeeMeet || "" });
+  const draw = () => rows.replaceChildren(...list.map((m, i) => {
+    const p = el("select", { class: "input", "aria-label": "Committee member " + (i + 1) }, el("option", { value: "", text: people.length ? "Choose a person…" : "Loading people…" }), people.map(u => el("option", { value: u.id, text: u.name + (u.designation ? " · " + u.designation : "") })));
+    p.value = m.uid; p.onchange = () => { m.uid = p.value; };
+    const t = el("select", { class: "input", "aria-label": "Role in the committee" }, ["Member Committee", "Chairman Committee"].map(x => el("option", { value: x, text: x })));
+    t.value = m.title; t.onchange = () => { m.title = t.value; };
+    return el("div", { class: "grid2" }, p, el("div", { style: "display:flex;gap:8px" }, t, el("button", { class: "btn ghost sm", type: "button", text: "Remove", onclick: () => { list.splice(i, 1); draw(); } })));
+  }), ...(list.length ? [] : [el("p", { class: "small muted", style: "margin:0", text: "No member yet. While this list is empty, the Manager Admin & HR decides at the committee step as before." })]));
+  (async () => {
+    try { people = ((await q(sb.from("portal_rows").select("id,name:data->>name,designation:data->>designation,active:data->>active,erased:data->>erased").eq("collection", "users"))) || [])
+      .filter(u => u.name && u.active !== "false" && !u.erased).sort((a, b) => a.name.localeCompare(b.name)); } catch (e) { fail(e, "The list of people could not be loaded"); }
+    draw();
+  })();
+  draw();
+  const save = el("button", { class: "btn", type: "button", text: "Save purchase committee", onclick: async () => {
+    const link = room.value.trim(), ids = list.map(m => m.uid);
+    if (ids.some(x => !x)) return toast("Choose a person in every row, or remove the empty row", true);
+    if (new Set(ids).size !== ids.length) return toast("The same person is in the list twice", true);
+    if (list.filter(m => m.title === "Chairman Committee").length > 1) return toast("Only one Chairman, please", true);
+    if (link && !/^https:\/\/meet\.google\.com\/[a-z0-9-]{3,40}$/.test(link)) return toast("The meeting room must be a Google Meet link: https://meet.google.com/abc-defg-hij", true);
+    save.disabled = true;
+    try { await saveGlobal({ committee: list.map(m => ({ uid: m.uid, title: m.title })), committeeMeet: link }, "purchase committee changed"); toast(list.length ? "Purchase committee saved. Each member now has the Procurement portal." : "Purchase committee saved"); }
+    catch (e) { fail(e, "The purchase committee was not saved"); }
+    save.disabled = false;
+  } });
+  return el("div", { class: "card", style: "padding:16px;display:grid;gap:12px" }, el("h3", { style: "margin:0;font-size:16px", text: "Purchase committee" }),
+    el("p", { class: "small muted", style: "margin:0", text: "Members in the order they sign the minutes of meeting (the Chairman last). Above the direct-purchase limit each member approves a vendor with their own login; the Head of Department who raised the request joins by itself. Each member gets the Procurement portal when you save." }),
+    rows, el("div", {}, el("button", { class: "btn ghost sm", type: "button", text: "+ Add member", onclick: () => { list.push({ uid: "", title: "Member Committee" }); draw(); } })),
+    el("label", { class: "f" }, "Committee meeting room (Google Meet link, set once). In Google Meet: New meeting → Create a meeting for later, then paste the link here. Meet now then opens this room with one click.", room),
+    el("div", {}, save));
+}
 function settingsGeneral() {
   const box = el("section", { style: "padding-bottom:40px;display:grid;gap:16px" }, el("div", { class: "empty" }, el("div", { class: "spinner", style: "margin:auto" })));
   (async () => {
@@ -1435,7 +1470,7 @@ function settingsGeneral() {
       save.disabled = false;
     } });
     box.replaceChildren(el("p", { class: "small muted", text: "The rules Procurement, Store and every other portal follow." }),
-      ...SETTING_FIELDS.map(([title, fields]) => el("div", { class: "card", style: "padding:16px;display:grid;gap:12px" }, el("h3", { style: "margin:0;font-size:16px", text: title }), el("div", { class: "grid2" }, fields.map(field)))),
+      ...SETTING_FIELDS.flatMap(([title, fields], gi) => [el("div", { class: "card", style: "padding:16px;display:grid;gap:12px" }, el("h3", { style: "margin:0;font-size:16px", text: title }), el("div", { class: "grid2" }, fields.map(field))), ...(gi === 0 ? [committeeCard(cur)] : [])]),
       emailUsage(mailStatus, v),
       el("div", { class: "row" }, save, el("button", { class: "btn btn-ghost", type: "button", text: "Test Alkhidmat AI", onclick: () => testAI() }),
         el("button", { class: "btn btn-ghost", type: "button", text: "Send test e-mail to me", onclick: () => testEmail() })));
