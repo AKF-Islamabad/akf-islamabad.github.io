@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Donor Management — one of the Alkhidmat Foundation Islamabad portals. Built by erp/tools/build-donor.js from erp/src/donor-app.html.
      Scripts allowed: this page's own (by hash, refreshed by tools/csp-hash.js on deploy), config.js, ../akf-gate.js and pinned supabase-js. Data only to Supabase. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dcaPmKDKYlmGW5AfaPKT4E+64tjervUIKwzCEvjBJlA='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-1wcX0N93SpD+qPEI4hArTXSmGT1i5rjnG7vVc7W1L7A='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; media-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'">
 <meta name="referrer" content="no-referrer">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
@@ -3985,8 +3985,8 @@ VIEWS.corrections = {
     <div class="card policy-card"><div class="card-h"><h3>${ic('shieldCheck')}Correction standard</h3></div>
       <ol class="policy">
         <li><b>Never delete, never overwrite.</b> The original entry, every corrected version, who changed it, when and why are kept for audit.</li>
-        <li><b>Not yet verified by Finance:</b> the recording officer corrects it with a reason. It becomes Rev 1, Rev 2… The person who corrected it cannot verify it.</li>
-        <li><b>Verified, detail mistake</b> (spelling of name, CNIC, address, contact, C/O, programme, cheque number): a correction request is approved by a Finance officer other than the requester. The <b>same receipt number</b> is reissued marked “REVISED · Rev n”.</li>
+        <li><b>Not yet verified by Finance:</b> the recording officer corrects it with a reason. It becomes Rev 1, Rev 2… in the office history only; the Donor Copy stays clean. The person who corrected it cannot verify it.</li>
+        <li><b>Verified, detail mistake</b> (spelling of name, CNIC, address, contact, C/O, programme, cheque number): a correction request is approved by a Finance officer other than the requester. The <b>same receipt number</b> is reissued marked “Corrected copy” with the date.</li>
         <li><b>Verified, money mistake</b> (amount, fund type such as Zakat / Sadaqah, date, payment mode, quantity of goods): never edited. After approval the receipt is <b>cancelled</b> and a <b>new receipt number</b> issued, marked “Replaces RCT-…”. Totals and reports use only the new receipt.</li>
         <li><b>The donor is informed.</b> If the donor already received a copy, the corrected receipt is sent with a message that the earlier copy is no longer valid.</li>
         <li><b>Evidence.</b> Every correction states the reason and the proof checked (CNIC copy, bank statement, store record).</li>
@@ -4003,6 +4003,10 @@ VIEWS.corrections = {
       </tbody></table></div>` : emptyState('fix', 'No corrections yet', 'Open a receipt and choose “Correct entry” or “Request correction”.')}</div>`;
   }
 };
+/* What the donor may see of a correction. A correction made before Finance verified the receipt is office work: the donor copy shows nothing.
+   A correction approved after verification shows "Corrected copy" with its date, so an earlier copy can be told apart. The Rev numbers stay in the office history. */
+const corrOf = x => (x.revisions || []).filter(r => r.approvedBy).pop() || null;
+console.assert(corrOf({}) === null && corrOf({ revisions: [{ rev: 1, approvedBy: '' }, { rev: 2, approvedBy: '' }] }) === null && corrOf({ revisions: [{ rev: 1, approvedBy: 'a' }, { rev: 2, approvedBy: '' }] }).rev === 1, 'corrOf: only approved corrections show on the donor copy');
 /* ---------- Receipt: A4 Donor Copy (matches the printed receipt book) ---------- */
 const RW = 1654, RH = 2339, RL = 90, RR = 1564, RMID = 1010, NAVY = '#14286E', PEN = '#0A2A80';
 const RF = (w, s) => `${w} ${s}px "Segoe UI", "Noto Sans", Arial, sans-serif`;
@@ -4141,8 +4145,8 @@ async function drawReceipt(canvas, x, { mask = false } = {}) {
   ctx.fillStyle = NAVY; rrect(ctx, 1290, 196, 274, 74, 18); ctx.fill();
   ctx.fillStyle = '#fff'; ctx.font = RF(600, 46); ctx.fillText('RECEIPT', 1427, 250);
   ctx.fillStyle = NAVY; ctx.font = RF(600, 27); ctx.fillText('Donor Copy', 1427, 308);
-  const tag = x.replacedBy ? `CANCELLED · see ${x.replacedBy}` : x.rev ? `REVISED · Rev ${x.rev}` : x.replaces ? `Replaces ${x.replaces}` : '';
-  if (tag) { ctx.fillStyle = '#C0262D'; ctx.font = RF(800, 22); ctx.fillText(rfit(ctx, tag, 330, 800, 22, 14), 1427, 342); }
+  const corr = corrOf(x), tag = x.replacedBy ? `CANCELLED · see ${x.replacedBy}` : corr ? `Corrected copy · ${fmtDate(corr.at)}` : x.replaces ? `Replaces ${x.replaces}` : '';
+  if (tag) { ctx.fillStyle = x.replacedBy ? '#C0262D' : NAVY; ctx.font = RF(800, 22); ctx.fillText(rfit(ctx, tag, 330, 800, 22, 14), 1427, 342); }
   // the donor's own number (the receipt number is on the "No." line below); 500 wide = the gap between the name block and the RECEIPT box
   if (d.donorNo) { ctx.fillStyle = NAVY; ctx.font = RF(600, 24); ctx.fillText('Donor No.', RMID, 248); ctx.fillStyle = '#111'; ctx.fillText(rfit(ctx, d.donorNo, 500, 700, 50, 24), RMID, 306); }
   rfield(ctx, 'No.', 820, 1172, 395, d.no); rfield(ctx, 'Date', 1190, RR, 395, fmtDate(d.date));
@@ -4201,7 +4205,7 @@ async function drawReceipt(canvas, x, { mask = false } = {}) {
   // e-receipt line
   ctx.textAlign = 'left'; ctx.fillStyle = '#5B6B82'; ctx.font = RF(500, 21);
   const stTxt = x.replacedBy ? `CANCELLED, replaced by ${x.replacedBy}` : Object.assign(isMixed(x) ? { Pending: `Pending: ${waitingFor(x)}`, Verified: `Verified by Finance; goods received${x.storeRec ? ' (' + x.storeRec.grn + ')' : ''}` } : d.ik ? { Pending: 'Pending receipt in store', Verified: `Received in store${x.storeRec ? ' (' + x.storeRec.grn + ')' : ''}` } : { Pending: 'Pending Finance verification', Verified: 'Verified by Finance' }, { Rejected: 'REJECTED', Voided: 'VOIDED' })[d.status] || d.status;
-  const extra = [x.rev ? `Revision ${x.rev} of ${fmtDate(x.revisions[x.revisions.length - 1].at)}` : '', x.replaces ? `Replaces ${x.replaces}` : '', hasGoods(x) && ikOf(x).at ? `Goods received at ${ikOf(x).at}` : '', isMixed(x) ? `Money ${money(moneyTotal(x))} + goods ${money(goodsTotal(x))} (est.)` : ''].filter(Boolean).join(' · ');
+  const extra = [corr ? `Corrected copy of ${fmtDate(corr.at)}` : '', x.replaces ? `Replaces ${x.replaces}` : '', hasGoods(x) && ikOf(x).at ? `Goods received at ${ikOf(x).at}` : '', isMixed(x) ? `Money ${money(moneyTotal(x))} + goods ${money(goodsTotal(x))} (est.)` : ''].filter(Boolean).join(' · ');
   ctx.fillText(rfit(ctx, `e-Receipt ${x.receipt} · Verification code ${code} · Status: ${stTxt} · Issued ${fmtDT(x.createdAt)} PKT${extra ? ' · ' + extra : ''}`, 1000, 500, 21, 13), RL, ys + 160);
   // footer + programme strip
   ctx.fillStyle = NAVY; ctx.textAlign = 'center'; const fy = ys + 210;
