@@ -10,7 +10,7 @@
   const PORTAL = { fleet: "fleet", assistance: "assistance", hr: "hr", procurement: "portal", store: "portal", tasks: "portal" }[seg];
   const cfg = window.AKF_SUPABASE;
   if (!PORTAL || !cfg || !cfg.url || !window.supabase) return;
-  const sb = window.supabase.createClient(cfg.url, cfg.anonKey, { auth: { storageKey: "akf-portals-auth", autoRefreshToken: false, detectSessionInUrl: false } });
+  const sb = window.supabase.createClient(cfg.url, cfg.anonKey, { auth: { storage: (() => { try { return sessionStorage.getItem("akf-as") || location.pathname.indexOf("/portal-staging/") === 0 ? sessionStorage : undefined; } catch (e) { return undefined; } })(), storageKey: "akf-portals-auth", autoRefreshToken: false, detectSessionInUrl: false } });
   const cache = new Map(), draft = new Map();   // per request number: what the database said, and text being typed (pages redraw often)
   const el = (tag, style, text) => { const e = document.createElement(tag); Object.assign(e.style, style || {}); if (text != null) e.textContent = text; return e; };
   const when = t => { const d = new Date(t); return isNaN(d) ? "" : d.toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); };

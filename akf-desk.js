@@ -77,7 +77,12 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
     const se = document.createElement("script"); se.src = BASE + "akf-superedit.js"; se.defer = true; document.head.append(se);
   }
   // the page's own client refreshes the sign-in; this one only reads it (same storage key as akf-gate.js)
-  const sb = window.supabase.createClient(cfg.url, cfg.anonKey, { auth: { storageKey: "akf-portals-auth", autoRefreshToken: false, detectSessionInUrl: false } });
+  try { const as = JSON.parse(sessionStorage.getItem("akf-as") || "null"), erp = location.pathname.indexOf("/portal-staging/") === 0;
+    if (as || erp) { const b = document.createElement("div"); b.id = "akf-as-strip"; b.setAttribute("role", "status");
+      b.textContent = (erp ? "TRAINING ERP: practice data only. Nothing here changes the real ERP." : "TRAINING VIEW") + (as && as.name ? " · " + as.name : "") + " · close this tab to leave";
+      b.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:2147483000;padding:5px 12px;background:#b45309;color:#fff;font:700 12px/1.3 system-ui,sans-serif;text-align:center;pointer-events:none";
+      (document.body || document.documentElement).append(b); } } catch (_) { }
+  const sb = window.supabase.createClient(cfg.url, cfg.anonKey, { auth: { storage: (() => { try { return sessionStorage.getItem("akf-as") || location.pathname.indexOf("/portal-staging/") === 0 ? sessionStorage : undefined; } catch (e) { return undefined; } })(), storageKey: "akf-portals-auth", autoRefreshToken: false, detectSessionInUrl: false } });
   const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (_) { return d; } },
                   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} } };
   let me = null;                                                    // { id (sign-in), pid (Tasks person id) }
@@ -582,7 +587,7 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
     const { data: s } = await sb.auth.getSession().catch(() => ({ data: {} }));
     const cur = s && s.session;
     if (!cur || signedInAt(cur) !== signedInAt(old) || !expired(cur, Date.now())) { leaving = false; return; }
-    await sb.auth.signOut({ scope: "local" }).catch(() => {}); try { localStorage.removeItem("akf-portals-auth"); } catch (_) {}
+    await sb.auth.signOut({ scope: "local" }).catch(() => {}); try { ((() => { try { return sessionStorage.getItem("akf-as") || location.pathname.indexOf("/portal-staging/") === 0 ? sessionStorage : undefined; } catch (e) { return undefined; } })() || localStorage).removeItem("akf-portals-auth"); } catch (_) {}
     if (document.visibilityState === "visible") alert("You have been signed out (sign-ins end at 6 PM and after 10 hours). Please sign in again.");
     location.href = BASE;
   }

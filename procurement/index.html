@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-F+Czj6pap3fKw+2mlKzQ4MCJENsThWbw6U6iCTKFaqA='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-VLfJEz0IUd4FFT7SFB9YFvfiZ2mTl2YLmI7iHWrOs84='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -4164,7 +4164,7 @@ const SB_CONFIG_ERR = !SB_CONFIG ? "" : (()=>{
 })();
 const SB_READY = !!(SB_CONFIG && !SB_CONFIG_ERR && typeof supabase!=="undefined");
 const SB_MODE = !!SB_CONFIG;
-const sb = SB_READY ? supabase.createClient(SB_CONFIG.url, SB_CONFIG.anonKey, { auth: { storageKey: "akf-portals-auth" } }) : null;   /* the main page's sign-in */
+const sb = SB_READY ? supabase.createClient(SB_CONFIG.url, SB_CONFIG.anonKey, { auth: { storage: (() => { try { return sessionStorage.getItem("akf-as") || location.pathname.indexOf("/portal-staging/") === 0 ? sessionStorage : undefined; } catch (e) { return undefined; } })(), storageKey: "akf-portals-auth" } }) : null;   /* the main page's sign-in */
 /* ===== which portal this file is — set by erp/tools/build-portals.js, do not edit here ===== */
 const PORTAL = "procurement";
 let PORTAL_NAME = "Procurement";   /* replaced at sign-in by the name set on the main page (Settings → Portal names) */
@@ -8652,7 +8652,7 @@ function VendorQuote({token}){
 }
 
 /* Any unexpected error is shown as a red message, so a failure is never silent ("button does nothing"). */
-const BUILD="2026-11-26 procurement";
+const BUILD="2026-11-27 procurement";
 (()=>{ let last=0;
   /* a browser notice that is no fault of the portal (a size-watcher that needs a second pass, a browser add-on's script): console only, no red message */
   const harmless=m=>/^(ResizeObserver loop|Script error\.?$)/.test(String(m||""));

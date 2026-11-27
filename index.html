@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-a4jJ8HAzkOgiltUyAdn4emIpVTxTir6keTzCG6KPHAI=' 'sha256-j2c2LuxpaSR1xLMFD1E5gytt5/iTCfwRfqlqeQ9ngM8='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-a4jJ8HAzkOgiltUyAdn4emIpVTxTir6keTzCG6KPHAI=' 'sha256-aQt2bawF8MvXXJW0et+kn06mvRYeuB43WOeS0ck4xDA='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>(function(){var em=/[?&]embed=admin(&|$)/.test(location.search),ok=window.self===window.top;if(!ok&&em){try{ok=window.parent.location.origin===location.origin;}catch(e){ok=false;}}if(ok){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);if(em&&window.self!==window.top){window.AKF_EMBED=true;document.documentElement.classList.add("embed");window.AKF_NOTIFY=function(){};window.AKF_ASSISTANT=function(){};}}else{try{window.top.location=window.self.location;}catch(e){}}})();</script>
@@ -473,11 +473,36 @@ function configError() {
   return "";
 }
 
+/* Training view ("Open as", 067): the Super Admin opens a training login in a new tab without typing a password.
+   That tab keeps its sign-in in sessionStorage (this tab only), so the Super Admin's own sign-in stays as it is.
+   The one-time pass comes from the Super Admin's tab by a same-origin message, never in the web address. */
+const asFlag = () => { try { return !!sessionStorage.getItem("akf-as"); } catch (e) { return false; } };
+/* the Training ERP (the practice copy at /portal-staging/) always keeps its sign-in in its own tab: it shares the web address with the real ERP */
+const IS_TRAINING_ERP = location.pathname.indexOf("/portal-staging/") === 0;
+const asStore = () => { try { return asFlag() || IS_TRAINING_ERP ? sessionStorage : undefined; } catch (e) { return undefined; } };
+function asWait() {
+  showLoader("Opening the training view…", true);
+  addEventListener("message", async e => {
+    if (e.origin !== location.origin || e.source !== window.opener || !e.data || !e.data.akfAs) return;
+    try {
+      sessionStorage.setItem("akf-as", JSON.stringify({ name: String(e.data.akfAs.name || "").slice(0, 80) }));
+      const c = supabase.createClient(CFG.url, CFG.anonKey, { auth: { storage: sessionStorage, storageKey: "akf-portals-auth" } });
+      let r = await c.auth.verifyOtp({ token_hash: String(e.data.akfAs.t), type: "magiclink" });
+      if (r.error) r = await c.auth.verifyOtp({ token_hash: String(e.data.akfAs.t), type: "email" });
+      if (r.error) throw r.error;
+      location.replace(location.pathname);
+    } catch (x) { try { sessionStorage.removeItem("akf-as"); } catch (y) { } document.body.textContent = "The training view could not be opened. Close this tab and try again."; }
+  });
+  window.opener.postMessage({ akfAsReady: 1 }, location.origin);
+}
 async function start() {
   const err = configError();
   if (err) { S.view = "config"; S.configErr = err; return render(); }
   /* own sign-in slot: the old Procurement & Store portal (same web address, different logins) keeps its own, so neither signs the other out */
-  sb = supabase.createClient(CFG.url, CFG.anonKey, { auth: { storageKey: "akf-portals-auth" } });   // shared by the main page and every new portal
+  if (location.hash === "#as" && window.opener && !asFlag()) return asWait();
+  sb = supabase.createClient(CFG.url, CFG.anonKey, { auth: { storage: asStore(), storageKey: "akf-portals-auth" } });
+  /* a training tab whose sign-in has ended becomes an ordinary tab again */
+  if (asFlag()) { const { data } = await sb.auth.getSession(); if (!data.session) { try { sessionStorage.removeItem("akf-as"); } catch (e) { } return location.replace(location.pathname); } }   // shared by the main page and every new portal
   sb.auth.onAuthStateChange((ev, session) => {
     if (ev === "PASSWORD_RECOVERY") S.recovery = true;
     if (ev === "SIGNED_OUT") { clearTimeout(todayTimer); S.today = null; S.session = null; S.me = null; S.view = "signin"; render(); }
@@ -963,7 +988,7 @@ function people() {
     el("span", { class: "small", text: "If the person also has an @" + CFG.emailDomain + " login, open Manage on the outside one and click Delete. Records they created stay." })) : null;
   return el("section", {},
     el("div", { class: "bar", style: "flex-wrap:wrap" }, search, dept, st, role, acc, clear, shown, el("div", { class: "grow" }), el("span", { class: "muted small", text: `${A.people.length} people` }), el("button", { class: "btn", onclick: addPerson }, icon("plus", 16), "Add person")),
-    gaps, outsideBox,
+    gaps, outsideBox, trainingBox(),
     el("div", { class: "card tblwrap" }, el("table", {},
       el("thead", {}, el("tr", {}, el("th", { text: "Person" }), el("th", { text: "Status" }), mods.map(m => el("th", { text: m.name + (m.enabled ? "" : " (off)") })), el("th", {}))), tbody)),
     el("p", { class: "small muted", text: "Click a cell to choose exactly which tabs of that portal the person sees and what they may do on each (see, add, edit, delete, approve, export). Presets fill the ticks for you. Changes apply at once and are recorded in Activity." }));
@@ -1049,8 +1074,8 @@ function dialog(title, body, actions) {
   const d = el("dialog", { "aria-label": title }, el("div", { class: "dlg-h" }, el("h3", { text: title })), el("div", { class: "dlg-b" }, body), el("div", { class: "dlg-f" }, actions(() => { d.close(); d.remove(); })));
   d.addEventListener("close", () => d.remove()); document.body.append(d); d.showModal(); return d;
 }
-function showSecret(name, pw) {
-  dialog("Temporary password", [el("p", { text: `Give this to ${name} in person or by phone — not in a group chat. It is shown only once; they must choose their own password when they first sign in.` }), el("div", { class: "secret", text: pw })],
+function showSecret(name, pw, note) {
+  dialog(note ? "New password" : "Temporary password", [el("p", { text: note || `Give this to ${name} in person or by phone — not in a group chat. It is shown only once; they must choose their own password when they first sign in.` }), el("div", { class: "secret", text: pw })],
     close => [el("button", { class: "btn ghost", text: "Copy", onclick: async () => { try { await navigator.clipboard.writeText(pw); toast("Copied"); } catch (e) {} } }), el("button", { class: "btn", text: "Done", onclick: close })]);
 }
 /* department picker with "Other…": a new name is saved as a department, so it can be picked next time */
@@ -1074,6 +1099,80 @@ const deptSelect = cur => {
   return box;
 };
 
+/* Training accounts (067): made, renewed and deleted by the Super Admin only (the account service checks it again).
+   One login per role, each with an end date; the passwords are shown once and never stored. They are never Super Admin,
+   get no Export or Delete ticks (so personal details stay masked and nothing can be removed) and cannot send e-mail. */
+const isTraining = p => String(p.email || "").startsWith("training.") && p.designation === "Training account" && !p.is_super;
+function trainingBox() {
+  if (!CFG || !S.me || !S.me.is_super) return null;
+  if (!IS_TRAINING_ERP) return el("div", { class: "notice info", style: "margin-bottom:12px;display:grid;gap:8px" },
+    el("b", { text: "Training ERP (Super Admin only)" }),
+    el("span", { class: "small", text: "A separate practice ERP with its own database. Everything works there as in the real ERP, with practice data only: nothing you or your trainees do there changes the real ERP. It opens in a new tab; close that tab and you are back here." }),
+    el("div", {}, el("button", { class: "btn", type: "button", text: "Enter the Training ERP", onclick: enterTraining })));
+  const A = S.admin, have = A.people.filter(isTraining);
+  const days = el("input", { class: "input", type: "number", min: "1", max: "60", value: "7", style: "width:90px", "aria-label": "Days until the training accounts end" });
+  const level = r => r === "gen_sec" ? "viewer" : ["hod", "finance", "finance_hod", "manager_hr", "regional_manager", "president", "director"].includes(r) ? "manager" : "staff";
+  const tabsFor = (mk, preset) => Object.fromEntries(A.tabs.filter(t => t.module_key === mk).map(t => [t.tab_key, ((t.presets && t.presets[preset]) || []).filter(a => a !== "export" && a !== "delete")]).filter(([, a]) => a && a.length));
+  const create = el("button", { class: "btn sm", type: "button", text: "Create training accounts", onclick: async () => {
+    create.disabled = true;
+    try {
+      const r = await adminCall({ action: "training_create", days: Number(days.value) || 7, domain: CFG.emailDomain || "" }), list = r.accounts || [];
+      let missed = 0;
+      for (const a of list) for (const m of A.modules.filter(m => m.enabled !== false)) {
+        try { await q(sb.rpc("core_set_access", { p_user: a.id, p_module: m.key, p_preset: level(a.role), p_tabs: tabsFor(m.key, level(a.role)) })); } catch (e) { missed++; }
+      }
+      if (list.length) showTraining(list, r.until); else toast("Every training account already exists. Delete them first to get new passwords.");
+      if (missed) toast("Some portal access was not set: tick it in the table below", true);
+      await loadAdmin();
+    } catch (e) { fail(e, "The training accounts were not created"); }
+    create.disabled = false;
+  } });
+  const del = el("button", { class: "btn danger sm", type: "button", text: `Delete all training accounts (${have.length})`, onclick: () =>
+    dialog("Delete all training accounts?", [el("p", { text: `${have.length} training login${have.length === 1 ? "" : "s"} will be deleted. Real staff are not touched. Records made during training stay in the ERP under the training name.` })],
+      close => [el("button", { class: "btn ghost", text: "Cancel", onclick: close }), el("button", { class: "btn danger", text: "Delete", onclick: async () => {
+        try { const r = await adminCall({ action: "training_delete" }); close(); toast(`${r.deleted} training account${r.deleted === 1 ? "" : "s"} deleted`); await loadAdmin(); } catch (e) { fail(e, "The training accounts were not deleted"); } } })]) });
+  return el("div", { class: "notice info", style: "margin-bottom:12px;display:grid;gap:8px" },
+    el("b", { text: "Training accounts (Super Admin only)" }),
+    el("span", { class: "small", text: "One login for each role, for testing and staff training in this Training ERP. Each one switches itself off after the days you choose, is never Super Admin, cannot export or delete and cannot send e-mail. Use Open as to see the ERP as that role, or give a login to a trainee." }),
+    el("div", { class: "bar", style: "flex-wrap:wrap;gap:8px" }, el("label", { class: "small", style: "display:flex;gap:6px;align-items:center" }, "End after (days)", days), create, have.length ? del : null,
+      have.length ? el("span", { class: "small muted", text: `${have.length} training account${have.length === 1 ? "" : "s"} now` }) : null),
+    have.length ? el("div", { style: "display:grid;gap:6px" },
+      el("span", { class: "small", text: "To use one: open a private window (Ctrl+Shift+N), open this same address and sign in with the login (the part before @ is enough) and its password. Your own Super Admin window stays signed in. Forgot a password? Click New password. For yourself there is a quicker way: Open as opens that role in a new tab without a password." }),
+      el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, el("th", { text: "Role" }), el("th", { text: "Login" }), el("th", { text: "" }))),
+        el("tbody", {}, have.map(p => el("tr", {}, el("td", { text: new Map(ORG_ROLES).get(p.org_role) || p.org_role || "" }), el("td", { text: p.email }),
+          el("td", { style: "text-align:right;white-space:nowrap" },
+            el("button", { class: "btn sm", type: "button", text: "Open as", title: "Opens this training login in a new tab. No password needed.", onclick: () => openAs(p) }), " ",
+            el("button", { class: "btn ghost sm", type: "button", text: "Copy login", onclick: async () => { try { await navigator.clipboard.writeText(p.email); toast("Login copied"); } catch (e) {} } }), " ",
+            el("button", { class: "btn ghost sm", type: "button", text: "New password", onclick: async () => {
+              try { const r = await adminCall({ action: "training_password", id: p.id }); showSecret(p.full_name, r.temp_password, `New password for ${p.email}. It is shown only once. The old password no longer works.`); } catch (e) { fail(e, "The password was not renewed"); } } }))))))) : null);
+}
+/* the new tab is opened at once (so the browser does not block it), then gets its one-time pass when both sides are ready */
+/* the real ERP's Super Admin enters the Training ERP in a new tab without a second login: the account service checks them
+   (Super Admin + authenticator code) and hands over a one-time pass for the practice copy */
+async function enterTraining() {
+  const w = window.open("/portal-staging/#as", "_blank");
+  if (!w) return toast("The browser blocked the new tab. Allow pop-ups for this site and click again.", true);
+  const ready = new Promise((ok, no) => { const h = e => { if (e.origin === location.origin && e.source === w && e.data && e.data.akfAsReady) { removeEventListener("message", h); ok(); } };
+    addEventListener("message", h); setTimeout(() => { removeEventListener("message", h); no(new Error("timeout")); }, 30000); });
+  try { const r = await adminCall({ action: "training_enter" }); await ready; w.postMessage({ akfAs: { t: r.token_hash, name: S.me.full_name } }, location.origin); }
+  catch (e) { try { w.close(); } catch (x) { } fail(e, "The Training ERP could not be opened"); }
+}
+async function openAs(p) {
+  const w = window.open(location.pathname + "#as", "_blank");
+  if (!w) return toast("The browser blocked the new tab. Allow pop-ups for this site and click again.", true);
+  const ready = new Promise((ok, no) => { const h = e => { if (e.origin === location.origin && e.source === w && e.data && e.data.akfAsReady) { removeEventListener("message", h); ok(); } };
+    addEventListener("message", h); setTimeout(() => { removeEventListener("message", h); no(new Error("timeout")); }, 20000); });
+  try { const r = await adminCall({ action: "training_open", id: p.id }); await ready; w.postMessage({ akfAs: { t: r.token_hash, name: p.full_name } }, location.origin); }
+  catch (e) { try { w.close(); } catch (x) { } fail(e, "The training view could not be opened"); }
+}
+function showTraining(list, until) {
+  const label = new Map(ORG_ROLES), text = list.map(a => `${label.get(a.role) || a.role}\t${a.email}\t${a.temp_password}`).join("\n");
+  dialog("Training accounts", [
+    el("p", { text: `Shown only once. Write them down or copy them now. They end on ${new Date(until).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}. Share each one only with the people you train, never in a group chat.` }),
+    el("table", { class: "tbl" }, el("thead", {}, el("tr", {}, el("th", { text: "Role" }), el("th", { text: "Login" }), el("th", { text: "Password" }))),
+      el("tbody", {}, list.map(a => el("tr", {}, el("td", { text: label.get(a.role) || a.role }), el("td", { text: a.email }), el("td", {}, el("code", { text: a.temp_password }))))))],
+    close => [el("button", { class: "btn ghost", text: "Copy all", onclick: async () => { try { await navigator.clipboard.writeText(text); toast("Copied"); } catch (e) {} } }), el("button", { class: "btn", text: "Done", onclick: close })]);
+}
 function addPerson() {
   const name = el("input", { class: "input", maxlength: 120, required: true }), email = el("input", { class: "input", type: "email", maxlength: 254, required: true });
   const desig = el("input", { class: "input", maxlength: 120 }), dept = deptSelect(""), orgRole = roleSelect("staff");

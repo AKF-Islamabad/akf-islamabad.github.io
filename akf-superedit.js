@@ -10,7 +10,7 @@
   const PORTAL = { fleet: "fleet", donor: "donor", assistance: "assistance", procurement: "portal", store: "portal", tasks: "portal" }[seg];
   const cfg = window.AKF_SUPABASE;
   if (!PORTAL || !cfg || !cfg.url || !window.supabase) return;
-  const sb = window.supabase.createClient(cfg.url, cfg.anonKey, { auth: { storageKey: "akf-portals-auth", autoRefreshToken: false, detectSessionInUrl: false } });
+  const sb = window.supabase.createClient(cfg.url, cfg.anonKey, { auth: { storage: (() => { try { return sessionStorage.getItem("akf-as") || location.pathname.indexOf("/portal-staging/") === 0 ? sessionStorage : undefined; } catch (e) { return undefined; } })(), storageKey: "akf-portals-auth", autoRefreshToken: false, detectSessionInUrl: false } });
 
   // fields that belong to the approval record: shown, never edited (the database refuses them too)
   const LOCKED = new Set(["id", "no", "key", "status", "stage", "state", "timeline", "history", "log", "logs", "trail", "approvals", "approval", "signs", "sig", "sigs",

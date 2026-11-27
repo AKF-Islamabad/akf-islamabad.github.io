@@ -61,6 +61,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
+      actions: read   # the result upload reads its own run; without this it fails on a repository that is or was private
     container:
       image: semgrep/semgrep
     steps:
