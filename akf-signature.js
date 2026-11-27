@@ -8,7 +8,7 @@
   if (window.AKF_SIGN) return;
   const cfg = window.AKF_SUPABASE;
   if (!cfg || !cfg.url || !window.supabase) return;
-  const sb = window.supabase.createClient(cfg.url, cfg.anonKey, { auth: { storage: (() => { try { return sessionStorage.getItem("akf-as") || location.pathname.indexOf("/portal-staging/") === 0 ? sessionStorage : undefined; } catch (e) { return undefined; } })(), storageKey: "akf-portals-auth", autoRefreshToken: false, detectSessionInUrl: false } });
+  const sb = window.supabase.createClient(cfg.url, cfg.anonKey, { auth: { storage: (() => { try { return location.pathname.indexOf("/portal-staging/") === 0 ? sessionStorage : undefined; } catch (e) { return undefined; } })(), storageKey: "akf-portals-auth", autoRefreshToken: false, detectSessionInUrl: false } });
 
   const css = (e, s) => { Object.assign(e.style, s); return e; };
   function el(tag, attrs, ...kids) {

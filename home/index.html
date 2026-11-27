@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- script-src is filled in by tools/csp-hash.js (inline scripts by hash). Fonts, the background library and images are all served from this site. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-PGtLg0ogp2fgHiIVeqHJdwEqQhdTJzvR5Xe1a4/Tta0=' 'sha256-6LcPaLDDDJOKhgrEW96B1vQmsP2RoITNd0asUQytdsY='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-k+zdwyYbYR3sAZJ2+6NUOdxjpko4Ho8LqZGp1/+SFWQ=' 'sha256-0WuBaPPKS9djr7N9MxxzYXEtr0Bw1IlSRm/e+koC7rk='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'self'; worker-src 'self'; manifest-src 'none'; media-src 'none'">
 <style id="no-frame">html{display:none!important}</style>
 <script>if(window.self===window.top){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);}else{try{window.top.location=window.self.location;}catch(e){}}</script>
 <meta name="robots" content="noindex, nofollow">
@@ -33,7 +33,9 @@
   // Apply theme before first paint to avoid a flash.
   // Lock before first paint when there is no session, so the portal never flashes behind the sign-in screen.
   // Signed-in state lives in the ERP's shared sign-in slot (akf-portals-auth); the page checks it with the database before showing anything.
-  try { if (!localStorage.getItem('akf-portals-auth')) document.documentElement.classList.add('locked'); } catch (e) { document.documentElement.classList.add('locked'); }
+  // The Training ERP (the practice copy at /portal-staging/) keeps its sign-in in this tab only (sessionStorage).
+  var AKF_AUTH_STORE = (function () { try { return location.pathname.indexOf('/portal-staging/') === 0 ? sessionStorage : localStorage; } catch (e) { return null; } })();
+  try { if (!AKF_AUTH_STORE.getItem('akf-portals-auth')) document.documentElement.classList.add('locked'); } catch (e) { document.documentElement.classList.add('locked'); }
   try { var t = localStorage.getItem('akf-theme'); document.documentElement.dataset.theme = t || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); } catch (e) {}
   // Colour style: official Alkhidmat palette by default; "royal" keeps the earlier logo-blue look.
   document.documentElement.dataset.brand = 'official';
@@ -1875,6 +1877,7 @@ svg.jf-pre .jf-bar { transform: scaleY(0); } svg.jf-pre .jf-rib { opacity: 0; }
         <div class="ap-body" id="appear-body"></div>
       </div>
     </div>
+    <button class="icon-btn" data-action="training" aria-label="Training ERP: practise with your own access" title="Training ERP: a separate practice copy. You get the same access as here; nothing there changes the real ERP." id="training-btn" hidden>🎓</button>
     <button class="icon-btn sign-btn" data-action="my-signature" aria-label="My signature" title="My signature: add or change it" id="sign-btn" hidden>✍</button>
     <button class="icon-btn theme-btn" data-action="toggle-theme" aria-label="Toggle light or dark mode" id="theme-btn"></button>
     <button class="icon-btn signout-btn" data-action="sign-out" aria-label="Sign out" title="Sign out" id="signout-btn"></button>
@@ -1993,10 +1996,25 @@ const Live = {
   },
   loginEmail(v) { v = String(v || '').trim().toLowerCase(); return v.includes('@') || !CFG.emailDomain ? v : v + '@' + CFG.emailDomain; },
   href(u) { return /^(https:\/\/|\/(?!\/))/.test(String(u || '')) ? u : '#'; },
+  /* Training ERP: any signed-in staff member opens the separate practice copy in a new tab. The server copies their own
+     profile and access there and hands over a one-time pass (same-origin message, never in the address). No password. */
+  async training() {
+    const w = window.open('/portal-staging/#as', '_blank');
+    if (!w) return toast('The browser blocked the new tab. Allow pop-ups for this site and click again.');
+    const ready = new Promise((ok, no) => { const h = e => { if (e.origin === location.origin && e.source === w && e.data && e.data.akfAsReady) { removeEventListener('message', h); ok(); } };
+      addEventListener('message', h); setTimeout(() => { removeEventListener('message', h); no(new Error('timeout')); }, 30000); });
+    try {
+      const { data } = await this.sb.auth.getSession();
+      const res = await fetch(CFG.url + '/functions/v1/training', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (data.session && data.session.access_token), apikey: CFG.anonKey }, body: JSON.stringify({ action: 'enter' }) });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.token_hash) { try { w.close(); } catch (x) {} return toast(j.error || 'The Training ERP could not be opened. Please try again.'); }
+      await ready; w.postMessage({ akfAs: { t: j.token_hash, name: j.name || '' } }, location.origin);
+    } catch (e) { try { w.close(); } catch (x) {} toast('The Training ERP could not be opened. Please try again.'); }
+  },
   async start() {
     const err = this.configError();
     if (err) { Auth.show(); Auth.error(err); $('#lg-submit').disabled = true; return; }
-    this.sb = supabase.createClient(CFG.url, CFG.anonKey, { auth: { storageKey: 'akf-portals-auth' } });
+    this.sb = supabase.createClient(CFG.url, CFG.anonKey, { auth: { storage: (() => { try { return location.pathname.indexOf('/portal-staging/') === 0 ? sessionStorage : undefined; } catch (e) { return undefined; } })(), storageKey: 'akf-portals-auth' } });
     this.sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT' && this.me) { this.me = null; Role.apply(); Auth.show(); } });
     const { data } = await this.sb.auth.getSession();
     if (!data.session) return Auth.show();
@@ -2131,7 +2149,7 @@ const Live = {
     $('.user-card .avatar').textContent = initials(name);
     $('.user-name').textContent = name;
     $('.user-role').textContent = role;
-    $('#sign-btn').hidden = false;
+    $('#sign-btn').hidden = false; $('#training-btn').hidden = location.pathname.indexOf('/portal-staging/') === 0;
   },
   // Portals as sidebar / top-tab / palette items, in the order the Super Admin set.
   nav() {
@@ -4535,7 +4553,7 @@ const Auth = {
       this.codeMode(false);
       Live.me = null; Live.portals = []; Live.inbox = [];
       clearTimeout(Live.timer); Live.today = null;
-      $('#sign-btn').hidden = true;
+      $('#sign-btn').hidden = true; $('#training-btn').hidden = true;
       try { await Live.sb?.auth.signOut({ scope: 'global' }); } catch (e) {}   // as before: signs out of every portal
       Notifs.render();
     }
@@ -4665,6 +4683,7 @@ const App = {
     'add-line': () => { Drawer.addLine().querySelector('input').focus(); Drawer.updateTotal(); },
     'remove-line': el => { if ($('#lines').children.length > 1) el.closest('.line').remove(); Drawer.updateTotal(); },
     'sign-out': () => Auth.signOut(),
+    'training': () => Live.training(),
     'not-me': () => Auth.forget(),
     'daily-tab': el => Daily.tab(+el.dataset.i),
     'login-use': Role.only(() => LoginStyle.set(LoginStyle.current())),

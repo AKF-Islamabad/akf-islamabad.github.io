@@ -77,12 +77,58 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
     const se = document.createElement("script"); se.src = BASE + "akf-superedit.js"; se.defer = true; document.head.append(se);
   }
   // the page's own client refreshes the sign-in; this one only reads it (same storage key as akf-gate.js)
-  try { const as = JSON.parse(sessionStorage.getItem("akf-as") || "null"), erp = location.pathname.indexOf("/portal-staging/") === 0;
-    if (as || erp) { const b = document.createElement("div"); b.id = "akf-as-strip"; b.setAttribute("role", "status");
-      b.textContent = (erp ? "TRAINING ERP: practice data only. Nothing here changes the real ERP." : "TRAINING VIEW") + (as && as.name ? " · " + as.name : "") + " · close this tab to leave";
+  /* Training ERP: every page says so, once per tab (not again inside the Super Admin tools frame) */
+  try { const as = JSON.parse(sessionStorage.getItem("akf-as") || "null");
+    if (location.pathname.indexOf("/portal-staging/") === 0 && window.top === window) {
+      const b = document.createElement("div"); b.id = "akf-as-strip"; b.setAttribute("role", "status");
+      b.textContent = "TRAINING ERP: practice data only. Nothing here changes the real ERP." + (as && as.name ? " · " + as.name : "") + " · close this tab to leave";
       b.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:2147483000;padding:5px 12px;background:#b45309;color:#fff;font:700 12px/1.3 system-ui,sans-serif;text-align:center;pointer-events:none";
       (document.body || document.documentElement).append(b); } } catch (_) { }
-  const sb = window.supabase.createClient(cfg.url, cfg.anonKey, { auth: { storage: (() => { try { return sessionStorage.getItem("akf-as") || location.pathname.indexOf("/portal-staging/") === 0 ? sessionStorage : undefined; } catch (e) { return undefined; } })(), storageKey: "akf-portals-auth", autoRefreshToken: false, detectSessionInUrl: false } });
+  const sb = window.supabase.createClient(cfg.url, cfg.anonKey, { auth: { storage: (() => { try { return location.pathname.indexOf("/portal-staging/") === 0 ? sessionStorage : undefined; } catch (e) { return undefined; } })(), storageKey: "akf-portals-auth", autoRefreshToken: false, detectSessionInUrl: false } });
+  /* Training ERP only (067): the Super Admin switches to a ready-made role with one click, in this tab, with no sign-in or
+     sign-out. Their own sign-in is kept aside in this tab ("akf-training-boss") and asks the account service for a one-time
+     pass; the service makes the role's login on first use and refuses anyone who is not the Super Admin. */
+  (async () => { try {
+    if (location.pathname.indexOf("/portal-staging/") !== 0) return;
+    const strip = document.getElementById("akf-as-strip"); if (!strip) return;
+    const MAIN = "akf-portals-auth", BOSS = "akf-training-boss", HOME_T = "/portal-staging/";
+    if (!sessionStorage.getItem(BOSS)) {   // not switched yet: only the Super Admin gets the switch
+      const { data } = await sb.auth.getSession(); const u = data && data.session && data.session.user; if (!u) return;
+      const { data: p } = await sb.from("core_profiles").select("is_super").eq("id", u.id).maybeSingle(); if (!p || !p.is_super) return;
+    }
+    const ROLES = [["super", "Super Admin (back to myself)"], ["hod", "HOD"], ["director", "Department Director"], ["finance", "Finance"], ["finance_hod", "Finance + HOD"], ["manager_hr", "Manager Admin & HR"],
+      ["regional_manager", "Regional Manager"], ["president", "President"], ["gen_sec", "General Secretary"], ["admin_officer", "Admin Officer"], ["store_officer", "Store Officer"],
+      ["store_transport_officer", "Store & Transport Officer"], ["transport_officer", "Transport Officer"], ["driver", "Driver"], ["ambulance_driver", "Ambulance Driver"], ["front_desk", "Front Desk Officer"], ["staff", "Staff"]];
+    const sel = document.createElement("select"); sel.setAttribute("aria-label", "Switch role");
+    sel.style.cssText = "margin-left:10px;padding:2px 6px;border:0;border-radius:6px;font:700 12px system-ui,sans-serif;color:#7c2d12;background:#fff;max-width:60vw";
+    const o0 = document.createElement("option"); o0.value = ""; o0.textContent = "Switch role…"; sel.append(o0);
+    ROLES.forEach(([k, t]) => { if (k === "super" && !sessionStorage.getItem(BOSS)) return; const o = document.createElement("option"); o.value = k; o.textContent = t; sel.append(o); });
+    strip.style.pointerEvents = "auto"; strip.append(sel);
+    const stop = m => { const e = new Error(m); e.say = m; return e; };
+    sel.onchange = async () => {
+      const role = sel.value; if (!role) return; sel.disabled = true; let made = false;
+      try {
+        if (role === "super") { sessionStorage.setItem(MAIN, sessionStorage.getItem(BOSS)); sessionStorage.removeItem(BOSS); sessionStorage.removeItem("akf-as"); location.href = HOME_T; return; }
+        if (!sessionStorage.getItem(BOSS)) { sessionStorage.setItem(BOSS, sessionStorage.getItem(MAIN)); made = true; }
+        const bc = window.supabase.createClient(cfg.url, cfg.anonKey, { auth: { storage: sessionStorage, storageKey: BOSS, detectSessionInUrl: false } });
+        const { data } = await bc.auth.getSession();
+        if (!data || !data.session) throw stop("Your Super Admin sign-in in this tab has ended. Close this tab and enter the Training ERP again.");
+        const res = await fetch(cfg.url + "/functions/v1/admin-users", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + data.session.access_token, apikey: cfg.anonKey },
+          body: JSON.stringify({ action: "training_switch", role, domain: cfg.emailDomain || "" }) });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok || !j.token_hash) throw stop(j.error || "The role could not be opened. Please try again.");
+        const c = window.supabase.createClient(cfg.url, cfg.anonKey, { auth: { storage: sessionStorage, storageKey: MAIN, autoRefreshToken: false, detectSessionInUrl: false } });
+        let r = await c.auth.verifyOtp({ token_hash: j.token_hash, type: "magiclink" });
+        if (r.error) r = await c.auth.verifyOtp({ token_hash: j.token_hash, type: "email" });
+        if (r.error) throw stop("The role could not be opened. Please try again.");
+        sessionStorage.setItem("akf-as", JSON.stringify({ name: (ROLES.find(x => x[0] === role) || [])[1] || role }));
+        location.href = HOME_T;
+      } catch (e) {
+        if (made) sessionStorage.removeItem(BOSS);
+        sel.disabled = false; sel.value = ""; alert(e && e.say ? e.say : "The role could not be opened. Check the internet connection and try again.");
+      }
+    };
+  } catch (_) { } })();
   const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (_) { return d; } },
                   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} } };
   let me = null;                                                    // { id (sign-in), pid (Tasks person id) }
@@ -587,7 +633,7 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
     const { data: s } = await sb.auth.getSession().catch(() => ({ data: {} }));
     const cur = s && s.session;
     if (!cur || signedInAt(cur) !== signedInAt(old) || !expired(cur, Date.now())) { leaving = false; return; }
-    await sb.auth.signOut({ scope: "local" }).catch(() => {}); try { ((() => { try { return sessionStorage.getItem("akf-as") || location.pathname.indexOf("/portal-staging/") === 0 ? sessionStorage : undefined; } catch (e) { return undefined; } })() || localStorage).removeItem("akf-portals-auth"); } catch (_) {}
+    await sb.auth.signOut({ scope: "local" }).catch(() => {}); try { ((() => { try { return location.pathname.indexOf("/portal-staging/") === 0 ? sessionStorage : undefined; } catch (e) { return undefined; } })() || localStorage).removeItem("akf-portals-auth"); } catch (_) {}
     if (document.visibilityState === "visible") alert("You have been signed out (sign-ins end at 6 PM and after 10 hours). Please sign in again.");
     location.href = BASE;
   }
