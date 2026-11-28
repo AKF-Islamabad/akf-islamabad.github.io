@@ -6,7 +6,7 @@
 <title>Jazba · Alkhidmat Foundation Islamabad</title>
 <meta name="description" content="One sign-in for every Alkhidmat Foundation Islamabad portal">
 <!-- Scripts only from this site (by hash), config.js and pinned CDN files; data only to Supabase. Run: node tools/csp-hash.js erp/home/index.html -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-a4jJ8HAzkOgiltUyAdn4emIpVTxTir6keTzCG6KPHAI=' 'sha256-PsEYaurZUdZg1fGO0bT4n4h7ojGQ+4/Sj0+SDMnWgWI='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-a4jJ8HAzkOgiltUyAdn4emIpVTxTir6keTzCG6KPHAI=' 'sha256-Gaq1zqqU6Ch+mO/g8PcVHo9S6YO01QIfrZsdHChgchw='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <style id="no-frame">html{display:none!important}</style>
 <script>(function(){var em=/[?&]embed=admin(&|$)/.test(location.search),ok=window.self===window.top;if(!ok&&em){try{ok=window.parent.location.origin===location.origin;}catch(e){ok=false;}}if(ok){var nf=document.getElementById("no-frame");nf.parentNode.removeChild(nf);if(em&&window.self!==window.top){window.AKF_EMBED=true;document.documentElement.classList.add("embed");window.AKF_NOTIFY=function(){};window.AKF_ASSISTANT=function(){};}}else{try{window.top.location=window.self.location;}catch(e){}}})();</script>
@@ -1477,7 +1477,7 @@ function committeeCard(cur) {
     if (list.filter(m => m.title === "Chairman Committee").length > 1) return toast("Only one Chairman, please", true);
     if (link && !/^https:\/\/meet\.google\.com\/[a-z0-9-]{3,40}$/.test(link)) return toast("The meeting room must be a Google Meet link: https://meet.google.com/abc-defg-hij", true);
     save.disabled = true;
-    try { await saveGlobal({ committee: list.map(m => ({ uid: m.uid, title: m.title })), committeeMeet: link }, "purchase committee changed"); toast(list.length ? "Purchase committee saved. Each member now has the Procurement portal." : "Purchase committee saved"); }
+    try { await saveGlobal({ committee: list.map(m => ({ uid: m.uid, title: m.title })), committeeMeet: link }, "purchase committee changed"); toast(list.length ? "Purchase committee saved. Each member now has the Procurement portal." : "Purchase committee saved"); if (window.AKF_MOTION) AKF_MOTION.done(save); }
     catch (e) { fail(e, "The purchase committee was not saved"); }
     save.disabled = false;
   } });

@@ -61,6 +61,8 @@ window.AKF_shrinkImage = async function (file, maxSide = 1600, quality = 0.75, l
   if (!window.AKF_DATES && !document.querySelector('script[src*="akf-dates.js"]')) { const dj = document.createElement("script"); dj.src = BASE + "akf-dates.js"; document.head.append(dj); }
   // the Jazba look on every portal: maps the portal's own colour/font settings (never on the main page)
   if (document.documentElement.dataset.jzPage !== "hub" && !document.querySelector('link[href*="jazba-portals.css"]')) { const jp = document.createElement("link"); jp.rel = "stylesheet"; jp.href = BASE + "jazba-portals.css?v=16"; document.head.append(jp); }
+  // small motion on every page, the main page too: button morph, list cascade, bell swing (akf-motion.js)
+  if (!window.AKF_MOTION) { const mo = document.createElement("script"); mo.src = BASE + "akf-motion.js?v=1"; mo.defer = true; document.head.append(mo); }
   // the same Jazba frame on every portal (Jazba Portal Standard): top strip + menu + Ctrl+K; the sticky note shows on every page
   if (document.documentElement.dataset.jzPage !== "hub" && !window.JAZBA_SHELL) {
     document.documentElement.dataset.jzShell = "on";
