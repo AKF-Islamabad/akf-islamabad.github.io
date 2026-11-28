@@ -7,7 +7,7 @@
 <style>.side-home{display:block;font-size:11px;font-weight:700;color:var(--brand-2);text-decoration:none;margin-top:2px}</style>
 <!-- Content-Security-Policy: the page may only load code from itself and jsDelivr, and may only send data to Supabase and
      (when the AI assistant is switched to Gemini) Google's Gemini API. An injected script could not post data anywhere else. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-SytIUAoxOyvnXxmnK87LGmRuFy35W1FCJKCXAAHwNis='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/ https://cdn.jsdelivr.net/npm/xlsx@0.18.5/ https://cdn.jsdelivr.net/npm/jsqr@1.4.0/ https://cdn.jsdelivr.net/npm/chart.js@4.4.1/ 'sha256-Ovsc7wZc/kr+SZM6+f5RJiXPE+JkAT02qS624mh6cBQ=' 'sha256-dGtsQ78YcNPCbsSZ1VSOj3UVGjkiqdTH4JJg2AXeYSo=' 'sha256-n191IR93lvOKaVt6fBF+MhjV+1pyqBUhuL8dj2cLt1I=' 'sha256-/HA6Go7UAGNfHYZ36yXfyyM5Venq86EAL3ZeM4w4HTg=' 'sha256-L27/EWc1ep/OiGB5hqPVyRAqUyLz1tSt4BVKnlae4ps='; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' data: blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; media-src 'self' blob: mediastream:; frame-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="stylesheet" href="../fonts/manrope.css">
 <link rel="icon" href="../icon.jpg">
 <meta name="referrer" content="strict-origin-when-cross-origin">
@@ -6838,10 +6838,10 @@ function App(){
   const [theme,setTheme]=useState(()=>{ try{ return localStorage.getItem("akf-theme")||""; }catch(e){ return ""; } });
   useEffect(()=>{ if(theme) document.documentElement.setAttribute("data-theme",theme); else document.documentElement.removeAttribute("data-theme"); try{ localStorage.setItem("akf-theme",theme); }catch(e){} },[theme]);
 
-  const toast=(msg,tone="")=>{ const id=uid(); setToasts(t=>[...t.slice(-2),{id,msg,tone}]); setTimeout(()=>setToasts(t=>t.filter(x=>x.id!==id)),3200); };
+  const toast=(msg,tone="",ms=3200)=>{ const id=uid(); setToasts(t=>[...t.slice(-2),{id,msg,tone}]); setTimeout(()=>setToasts(t=>t.filter(x=>x.id!==id)),ms); };
   window.__toast=toast;
   const commit=fn=>{ const prev=stateRef.current; const d=JSON.parse(JSON.stringify(prev)); fn(d); stateRef.current=d; setState(d);
-    if(SB_MODE){ saving.current=saving.current.then(()=>DB.save(prev,d)).catch(e=>{ toast(errRef(e,"Could not save to the server"),"bad"); }); } else saveState(d); };
+    if(SB_MODE){ saving.current=saving.current.then(()=>DB.save(prev,d)).catch(async e=>{ toast(errRef(e,"Not saved. Check the internet and try again. The screen now shows what is really saved"),"bad",12000); try{ const fresh=await DB.load(true); stateRef.current=fresh; setState(fresh); }catch(x){} }); } else saveState(d); };
 
   /* in-kind donations waiting in Donor Management (Store portal, live only): polled for people who may act in the Store */
   const dqUser=donorGoodsOn()&&authUser&&state?profileFor(state,authUser):null;

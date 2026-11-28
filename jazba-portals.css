@@ -223,3 +223,44 @@ html[data-jz-family="app"] .overlay > .modal:has(.track){width:min(1120px,100vw)
 
 /* UI standard, step 1: tables and form labels read at one line height everywhere */
 table :is(td, th), label, .hint, .help { line-height: var(--jz-lh, 1.5); }
+
+/* =====================================================================
+   UI standard, steps 2-4 (2026-11-28). One size and shape for the same thing in every portal.
+   Sizes, shapes, spacing and behaviour only: no colour is set here. Both portal families use the class names
+   .btn .input .select .textarea .tbl .card; the status pill is .tag (Procurement / Store / Tasks) or .badge (the others).
+   ===================================================================== */
+/* buttons: one height, one corner, one weight. Save = primary, Cancel = outline, Delete = red keep their own classes. */
+html .btn { min-height: 40px; border-radius: 10px; font-weight: 600; font-size: var(--jz-fs-body, 14px); line-height: 1.2; }
+html .btn.btn-sm, html .btn.btn-xs, html .btn.sm { min-height: 32px; font-size: var(--jz-fs-help, 12px); }
+/* fields */
+html .input, html .select, html .textarea { min-height: 40px; border-radius: 10px; font-size: var(--jz-fs-body, 14px); line-height: var(--jz-lh, 1.5); }
+/* status pills: the same shape everywhere */
+html[data-jz-family="app"] .tag, html .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
+  font-size: var(--jz-fs-help, 12px); font-weight: 600; line-height: 1.4; letter-spacing: 0; white-space: nowrap; }
+/* cards and tables */
+html .card { border-radius: var(--jz-radius, 14px); }
+html .tbl td { font-size: var(--jz-fs-body, 14px); }
+html .tbl th { font-size: var(--jz-fs-help, 12px); font-weight: 600; }
+html .tbl :is(td, th):is(.r, .right) { text-align: right; font-variant-numeric: tabular-nums; }
+/* icons: 18px in buttons, 20px in the side menu, one line weight */
+html .btn svg { width: 18px; height: 18px; flex: none; }
+html .jz-shell-rail svg { width: 20px; height: 20px; }
+html .btn svg, html .jz-shell-rail svg { stroke-width: 1.75; }
+/* small icon-only buttons get a 32px target */
+html .iconbtn, html .icon-btn { min-width: 32px; min-height: 32px; }
+/* keyboard: a clear outline on whatever has the focus (Tab + Enter works through an approval) */
+html :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 2px solid var(--jz-bright, #0A74C9); outline-offset: 2px; }
+/* touch screens: 44px targets, most of all Approve / Reject */
+@media (pointer: coarse) {
+  html .btn, html .input, html .select { min-height: 44px; }
+  html .btn.btn-sm, html .btn.btn-xs, html .btn.sm, html .iconbtn, html .icon-btn { min-height: 40px; min-width: 40px; }
+}
+/* phones: action buttons wrap and share the width, so Approve / Reject / Send back are never cut off */
+@media (max-width: 560px) {
+  html .actions .row, html .cell-actions, html .modal-foot, html .dlg-f { flex-wrap: wrap; }
+  html .actions .row > .btn { flex: 1 1 140px; }
+}
+/* loading placeholder (shimmer) any list can use while its data arrives */
+.jz-skel { display: block; min-height: 16px; border-radius: 8px; background: linear-gradient(90deg, var(--jz-card-2) 25%, var(--jz-line) 37%, var(--jz-card-2) 63%); background-size: 400% 100%; animation: jz-skel 1.3s ease infinite; }
+@keyframes jz-skel { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .jz-skel { animation: none; } }
